@@ -252,7 +252,7 @@ const filteredClients = clientData.filter((client) =>
       const amount = parseFloat(paperToAdd);
       console.log(updatingNotify);      
       if (amount <= 0) {
-        alert("Количество должно быть больше 0");
+        alert("Количество должно быть больше 0.");
         return;
       }
 
