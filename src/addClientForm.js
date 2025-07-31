@@ -57,8 +57,8 @@ export default function AddClientForm({ onClientAdded, onClose }) {
     if (!formData.productType) errors.push("Тип продукции обязателен");
     if (!formData.shellNum.trim()) errors.push("Номер полки обязателен");
     
-    if (!formData.totalKg || parseFloat(formData.totalKg) <= 0) 
-      errors.push("Общий вес должен быть больше 0");
+    // f (!formData.totalKg || parseFloat(formData.totalKg) <= 0) 
+      // errors.push("Общий вес должен быть больше 0");
     
     if (!formData.paperRemaining || parseFloat(formData.paperRemaining) < 0) 
       errors.push("Остаток бумаги не может быть отрицательным");
