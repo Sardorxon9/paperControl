@@ -31,7 +31,8 @@ export default function AddClientForm({ onClientAdded, onClose }) {
     shellNum: "",
     totalKg: "",
     paperRemaining: "",
-    notifyWhen: ""
+    notifyWhen: "",
+    comment: "" // NEW FIELD
   });
 
   const [loading, setLoading] = useState(false);
@@ -123,7 +124,9 @@ export default function AddClientForm({ onClientAdded, onClose }) {
         totalKg: totalKg,
         paperRemaining: paperRemaining,
         paperUsed: paperUsed,
-        notifyWhen: parseFloat(formData.notifyWhen)
+        notifyWhen: parseFloat(formData.notifyWhen),
+        comment: formData.comment.trim() // ✅ Save comment
+
       };
 
       await addDoc(collection(db, "clients"), clientData);
@@ -139,7 +142,9 @@ export default function AddClientForm({ onClientAdded, onClose }) {
         shellNum: "",
         totalKg: "",
         paperRemaining: "",
-        notifyWhen: ""
+        notifyWhen: "",
+        comment: "" // ✅ Reset
+
       });
 
       if (onClientAdded) {
@@ -256,7 +261,6 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                       onChange={handleInputChange('name')}
                       required
                       size="small"
-                      placeholder="Например: BBQ"
                       sx={{ fontSize: '1.15em' }}
                     />
                   </Grid>
@@ -270,7 +274,6 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                       onChange={handleInputChange('shellNum')}
                       required
                       size="small"
-                      placeholder="Например: A-5"
                       sx={{ fontSize: '1.15em' }}
                     />
                   </Grid>
@@ -284,7 +287,6 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                       onChange={handleInputChange('addressShort')}
                       required
                       size="small"
-                      placeholder="Например: улица Истиклол, 6, Ташкент"
                       sx={{ fontSize: '1.15em' }}
                     />
                   </Grid>
@@ -298,8 +300,6 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                       onChange={handleInputChange('geoPoint')}
                       required
                       size="small"
-                      placeholder="Например: 41.31409, 69.281165"
-                      helperText="Введите координаты через запятую"
                       sx={{ fontSize: '1.15em' }}
                     />
                   </Grid>
@@ -399,34 +399,56 @@ export default function AddClientForm({ onClientAdded, onClose }) {
 
             {/* --- Actions --- */}
             <Grid item xs={12}>
-              <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
-                <Button 
-                  variant="outlined" 
-                  onClick={onClose} 
-                  disabled={loading} 
-                  size="medium"
-                  sx={{ fontSize: '1.15em' }}
-                >
-                  Отмена
-                </Button>
-                <Button 
-                  type="submit" 
-                  variant="contained" 
-                  size="medium" 
-                  disabled={loading}
-                  sx={{ fontSize: '1.15em' }}
-                >
-                  {loading ? (
-                    <>
-                      <CircularProgress size={20} sx={{ mr: 1 }} />
-                      Сохранение...
-                    </>
-                  ) : (
-                    'Сохранить'
-                  )}
-                </Button>
-              </Stack>
+
+<Grid item xs={12}>
+  <TextField
+    fullWidth
+    label="Комментарий"
+    variant="outlined"
+    multiline
+    minRows={4}
+    value={formData.comment}
+    onChange={handleInputChange('comment')}
+    size="small"
+    placeholder="Дополнительная информация, например, особенности доставки или учета"
+    sx={{
+      fontSize: '1.15em',
+      mt: 3.7
+    }}
+  />
+</Grid>
+
+
+               <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{mt: 3.7}}>
+    <Button 
+      variant="outlined" 
+      onClick={onClose} 
+      disabled={loading} 
+      size="medium"
+      sx={{ fontSize: '1.15em' }}
+    >
+      Отмена
+    </Button>
+    <Button 
+      type="submit" 
+      variant="contained" 
+      size="medium" 
+      disabled={loading}
+      sx={{ fontSize: '1.15em' }}
+    >
+      {loading ? (
+        <>
+          <CircularProgress size={20} sx={{ mr: 1 }} />
+          Сохранение...
+        </>
+      ) : (
+        'Сохранить'
+      )}
+    </Button>
+  </Stack>
             </Grid>
+
+            
           </Grid>
         </Box>
       </Paper>
