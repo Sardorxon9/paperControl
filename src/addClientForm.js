@@ -57,7 +57,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
     if (!formData.productType) errors.push("Тип продукции обязателен");
     if (!formData.shellNum.trim()) errors.push("Номер полки обязателен");
     
-    // f (!formData.totalKg || parseFloat(formData.totalKg) <= 0) 
+    // if (!formData.totalKg || parseFloat(formData.totalKg) <= 0) 
       // errors.push("Общий вес должен быть больше 0");
     
     if (!formData.paperRemaining || parseFloat(formData.paperRemaining) < 0) 
@@ -88,11 +88,9 @@ export default function AddClientForm({ onClientAdded, onClose }) {
       if (remaining > total) {
         errors.push("Остаток бумаги не может превышать общий вес");
       }
-
-      
     }
-      console.log(111, formData.totalKg, formData.paperRemaining)
-
+    
+    console.log(111, formData.totalKg, formData.paperRemaining)
     formData.totalKg = parseFloat(formData.paperRemaining);
 
     return errors;
@@ -158,204 +156,280 @@ export default function AddClientForm({ onClientAdded, onClose }) {
     }
   };
 
-return (
-  <Paper elevation={3} sx={{ p: 4, position: 'relative', maxWidth: 'md', mx: 'auto', my: 4 }}>
-    {/* Close Button */}
-    <IconButton
-      onClick={onClose}
-      sx={{
-        position: 'absolute',
-        top: 16,
-        right: 16,
-        color: 'text.secondary'
-      }}
-    >
-      <CloseIcon />
-    </IconButton>
+  return (
+    <Box sx={{ 
+      position: 'fixed', 
+      top: 0, 
+      left: 0, 
+      width: '100vw',
+      height: '100vh',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      zIndex: 9999,
+      overflow: 'auto',
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      pt: 4,
+      pb: 4
+    }}>
+      <Paper 
+        elevation={24} 
+        sx={{ 
+          p: 4, 
+          position: 'relative', 
+          width: '90%',
+          maxWidth: 900,
+          minHeight: 'auto',
+          fontSize: '1.15em',
+          backgroundColor: 'white',
+          mx: 'auto'
+        }}
+      >
+        {/* Close Button */}
+        <IconButton
+          onClick={onClose}
+          sx={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            color: 'text.secondary'
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
 
-    {/* Title */}
-    <Typography
-      variant="h5"
-      gutterBottom
-      sx={{
-        mb: 3,
-        textAlign: 'center',
-        fontWeight: 600,
-        color: 'primary.dark'
-      }}
-    >
-      Добавить нового клиента
-    </Typography>
+        {/* Title */}
+        <Typography
+          variant="h5"
+          gutterBottom
+          sx={{
+            mb: 3,
+            textAlign: 'center',
+            fontWeight: 600,
+            color: 'primary.dark',
+            fontSize: '1.15em' // Increased font size
+          }}
+        >
+          Добавить нового клиента
+        </Typography>
 
-    <Divider sx={{ mb: 3 }} />
+        <Divider sx={{ mb: 3 }} />
 
-    {message.text && (
-      <Alert severity={message.type} sx={{ mb: 3 }}>
-        {message.text}
-      </Alert>
-    )}
+        {message.text && (
+          <Alert severity={message.type} sx={{ mb: 3 }}>
+            {message.text}
+          </Alert>
+        )}
 
-    <Box component="form" onSubmit={handleSubmit}>
-      <Grid container spacing={3}>
-        {/* --- Restaurant Info --- */}
-        <Grid item xs={12}>
-          <Typography
-            variant="subtitle1"
-            sx={{
-              fontWeight: 600,
-              mb: 1,
-              color: 'text.primary',
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              pb: 1
-            }}
-          >
-            Информация о ресторане
-          </Typography>
-        </Grid>
+        <Box component="form" onSubmit={handleSubmit}>
+          <Grid container spacing={4}>
+            {/* --- Restaurant Info Section --- */}
+            <Grid item xs={12}>
+              <Paper 
+                variant="outlined" 
+                sx={{ 
+                  p: 3, 
+                  backgroundColor: 'grey.50',
+                  border: '1px solid',
+                  borderColor: 'grey.200'
+                }}
+              >
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    fontWeight: 600,
+                    mb: 3,
+                    color: 'text.primary',
+                    fontSize: '1.15em' // Increased font size
+                  }}
+                >
+                  Информация о ресторане
+                </Typography>
 
-        <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label="Название ресторана"
-            variant="outlined"
-            value={formData.name}
-            onChange={handleInputChange('name')}
-            required
-            size="small"
-            placeholder="Например: BBQ"
-          />
-        </Grid>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Название ресторана"
+                      variant="outlined"
+                      value={formData.name}
+                      onChange={handleInputChange('name')}
+                      required
+                      size="small"
+                      placeholder="Например: BBQ"
+                      sx={{ fontSize: '1.15em' }}
+                    />
+                  </Grid>
 
-        <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label="Номер полки"
-            variant="outlined"
-            value={formData.shellNum}
-            onChange={handleInputChange('shellNum')}
-            required
-            size="small"
-            placeholder="Например: A-5"
-          />
-        </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Номер полки"
+                      variant="outlined"
+                      value={formData.shellNum}
+                      onChange={handleInputChange('shellNum')}
+                      required
+                      size="small"
+                      placeholder="Например: A-5"
+                      sx={{ fontSize: '1.15em' }}
+                    />
+                  </Grid>
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Адрес"
-            variant="outlined"
-            value={formData.addressShort}
-            onChange={handleInputChange('addressShort')}
-            required
-            size="small"
-            placeholder="Например: улица Истиклол, 6, Ташкент"
-          />
-        </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Адрес"
+                      variant="outlined"
+                      value={formData.addressShort}
+                      onChange={handleInputChange('addressShort')}
+                      required
+                      size="small"
+                      placeholder="Например: улица Истиклол, 6, Ташкент"
+                      sx={{ fontSize: '1.15em' }}
+                    />
+                  </Grid>
 
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Координаты (широта, долгота)"
-            variant="outlined"
-            value={formData.geoPoint}
-            onChange={handleInputChange('geoPoint')}
-            required
-            size="small"
-            placeholder="Например: 41.31409, 69.281165"
-            helperText="Введите координаты через запятую"
-          />
-        </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Координаты (широта, долгота)"
+                      variant="outlined"
+                      value={formData.geoPoint}
+                      onChange={handleInputChange('geoPoint')}
+                      required
+                      size="small"
+                      placeholder="Например: 41.31409, 69.281165"
+                      helperText="Введите координаты через запятую"
+                      sx={{ fontSize: '1.15em' }}
+                    />
+                  </Grid>
 
-        <Grid item xs={12}>
-          <FormControl component="fieldset">
-            <FormLabel component="legend" sx={{ mb: 1, fontWeight: 500 }}>
-              Тип продукции
-            </FormLabel>
-            <RadioGroup
-              row
-              value={formData.productType}
-              onChange={handleInputChange('productType')}
-            >
-              <FormControlLabel value="stick" control={<Radio size="small" />} label="Stick" />
-              <FormControlLabel value="sachet" control={<Radio size="small" />} label="Sachet" />
-            </RadioGroup>
-          </FormControl>
-        </Grid>
+                  <Grid item xs={12}>
+                    <FormControl component="fieldset">
+                      <FormLabel component="legend" sx={{ mb: 1, fontWeight: 500, fontSize: '1.15em' }}>
+                        Тип продукции
+                      </FormLabel>
+                      <RadioGroup
+                        row
+                        value={formData.productType}
+                        onChange={handleInputChange('productType')}
+                      >
+                        <FormControlLabel 
+                          value="stick" 
+                          control={<Radio size="small" />} 
+                          label="Stick"
+                          sx={{ '& .MuiFormControlLabel-label': { fontSize: '1.15em' } }}
+                        />
+                        <FormControlLabel 
+                          value="sachet" 
+                          control={<Radio size="small" />} 
+                          label="Sachet"
+                          sx={{ '& .MuiFormControlLabel-label': { fontSize: '1.15em' } }}
+                        />
+                      </RadioGroup>
+                    </FormControl>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Grid>
 
-        {/* --- Paper Info --- */}
-        <Grid item xs={12}>
-          <Typography
-            variant="subtitle1"
-            sx={{
-              fontWeight: 600,
-              mb: 1,
-              color: 'text.primary',
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              pb: 1
-            }}
-          >
-            Информация о бумаге
-          </Typography>
-        </Grid>
+            {/* --- Paper Info Section --- */}
+            <Grid item xs={12} sx={{ pt: '30px !important' }}>
+              <Paper 
+                variant="outlined" 
+                sx={{ 
+                  p: 3, 
+                  backgroundColor: 'grey.50',
+                  border: '1px solid',
+                  borderColor: 'grey.200'
+                }}
+              >
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    fontWeight: 600,
+                    mb: 3,
+                    color: 'text.primary',
+                    fontSize: '1.15em' // Increased font size
+                  }}
+                >
+                  Информация о бумаге
+                </Typography>
 
-        <Grid item xs={12} sm={4}>
-          <TextField
-            fullWidth
-            label="Остаток (кг)"
-            variant="outlined"
-            type="number"
-            value={formData.paperRemaining}
-            onChange={handleInputChange('paperRemaining')}
-            required
-            size="small"
-            inputProps={{
-              step: '0.01',
-              min: '0',
-              max: formData.totalKg || undefined
-            }}
-            placeholder="55"
-          />
-        </Grid>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Остаток (кг)"
+                      variant="outlined"
+                      type="number"
+                      value={formData.paperRemaining}
+                      onChange={handleInputChange('paperRemaining')}
+                      required
+                      size="small"
+                      inputProps={{
+                        step: '0.01',
+                        min: '0',
+                        max: formData.totalKg || undefined
+                      }}
+                      placeholder="55"
+                      sx={{ fontSize: '1.15em' }}
+                    />
+                  </Grid>
 
-        <Grid item xs={12} sm={4}>
-          <TextField
-            fullWidth
-            label="Уведомить при (кг)"
-            variant="outlined"
-            type="number"
-            value={formData.notifyWhen}
-            onChange={handleInputChange('notifyWhen')}
-            required
-            size="small"
-            inputProps={{ step: '0.01', min: '0' }}
-            placeholder="4"
-            helperText="Минимальный остаток для уведомления"
-          />
-        </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Уведомить при (кг)"
+                      variant="outlined"
+                      type="number"
+                      value={formData.notifyWhen}
+                      onChange={handleInputChange('notifyWhen')}
+                      required
+                      size="small"
+                      inputProps={{ step: '0.01', min: '0' }}
+                      placeholder="4"
+                      helperText="Минимальный остаток для уведомления"
+                      sx={{ fontSize: '1.15em' }}
+                    />
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Grid>
 
-        {/* --- Actions --- */}
-        <Grid item xs={12}>
-          <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
-            <Button variant="outlined" onClick={onClose} disabled={loading} size="medium">
-              Отмена
-            </Button>
-            <Button type="submit" variant="contained" size="medium" disabled={loading}>
-              {loading ? (
-                <>
-                  <CircularProgress size={20} sx={{ mr: 1 }} />
-                  Сохранение...
-                </>
-              ) : (
-                'Сохранить'
-              )}
-            </Button>
-          </Stack>
-        </Grid>
-      </Grid>
+            {/* --- Actions --- */}
+            <Grid item xs={12}>
+              <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
+                <Button 
+                  variant="outlined" 
+                  onClick={onClose} 
+                  disabled={loading} 
+                  size="medium"
+                  sx={{ fontSize: '1.15em' }}
+                >
+                  Отмена
+                </Button>
+                <Button 
+                  type="submit" 
+                  variant="contained" 
+                  size="medium" 
+                  disabled={loading}
+                  sx={{ fontSize: '1.15em' }}
+                >
+                  {loading ? (
+                    <>
+                      <CircularProgress size={20} sx={{ mr: 1 }} />
+                      Сохранение...
+                    </>
+                  ) : (
+                    'Сохранить'
+                  )}
+                </Button>
+              </Stack>
+            </Grid>
+          </Grid>
+        </Box>
+      </Paper>
     </Box>
-  </Paper>
-);
-
+  );
 }

@@ -469,7 +469,7 @@ const filteredClients = clientData.filter((client) =>
   onClose={handleCloseAddClientModal}
   aria-labelledby="add-client-modal"
 >
-  <Box sx={modalStyle}>
+  <Box >
     <AddClientForm onClose={handleCloseAddClientModal} onClientAdded={handleClientAdded} />
   </Box>
 </Modal>
