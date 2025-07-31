@@ -25,6 +25,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add'; // Add this import
 import AddClientForm from './addClientForm'; // Add this import
+import ReportGmailerrorredIcon from '@mui/icons-material/ReportGmailerrorred';
 
 const modalStyle = {
   position: 'absolute',
@@ -365,33 +366,31 @@ const filteredClients = clientData.filter((client) =>
     return client[field] ?? "-";
   };
 
-  return (
+ return (
   <Container maxWidth="lg" sx={{ pt: 6 }}>
-    {/* Header with Add Client Button */}
+    {/* Header */}
     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
       <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>
         Использование бумаги в ресторанах
       </Typography>
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-    <TextField
-      size="small"
-      variant="outlined"
-      placeholder="Поиск по названию"
-      value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
-    />
-  </Box>
-      
+        <TextField
+          size="small"
+          variant="outlined"
+          placeholder="Поиск по названию"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </Box>
+
       <Button
         variant="contained"
         startIcon={<AddIcon />}
         onClick={handleOpenAddClientModal}
         sx={{
-          backgroundColor: '#2e7d32',
-          '&:hover': {
-            backgroundColor: '#1b5e20'
-          },
+          backgroundColor: '#038a7aff',
+          '&:hover': { backgroundColor: '#004d40' },
           fontSize: '1rem',
           px: 3,
           py: 1.5
@@ -401,457 +400,318 @@ const filteredClients = clientData.filter((client) =>
       </Button>
     </Box>
 
-      {loading ? (
-        <Box display="flex" justifyContent="center" mt={4}>
-          <CircularProgress />
-        </Box>
-      ) : clientData.length === 0 ? (
-        <Typography variant="h6" color="text.secondary">
-          Данные клиентов не найдены.
-        </Typography>
-      ) : (
+    {loading ? (
+      <Box display="flex" justifyContent="center" mt={4}>
+        <CircularProgress />
+      </Box>
+    ) : clientData.length === 0 ? (
+      <Typography variant="h6" color="text.secondary">
+        Данные клиентов не найдены.
+      </Typography>
+    ) : (
+      <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
+        <Table sx={{ minWidth: 650 }}>
+          <TableHead>
+            <TableRow sx={{ backgroundColor: '#0F9D8C' }}>
+              {columnHeaders.map((header) => (
+                <TableCell
+                  key={header}
+                  sx={{
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    fontSize: '1.1rem',
+                    padding: '16px'
+                  }}
+                >
+                  {header === '№' ? '№' :
+                   header === 'name' ? 'Название ресторана' :
+                   header === 'totalKg' ? 'Общий вес' :
+                   header === 'paperUsed' ? 'Использовано бумаги' :
+                   header === 'paperRemaining' ? 'Остаток бумаги' :
+                   header === 'Actions' ? 'Действия' :
+                   header.charAt(0).toUpperCase() + header.slice(1)}
+                </TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
 
-        <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
-          <Table sx={{ minWidth: 650 }}>
-            <TableHead>
-              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                {columnHeaders.map((header) => (
-                  <TableCell 
-                    key={header}
-                    sx={{ 
-                      fontWeight: 'bold',
-                      fontSize: '1.1rem',
-                      padding: '16px'
-                    }}
-                  >
-                    {header === "№" ? "№" : 
-                     header === "name" ? "Название ресторана" :
-                     header === "totalKg" ? "Общий вес" :
-                     header === "paperUsed" ? "Использовано бумаги" :
-                     header === "paperRemaining" ? "Остаток бумаги" :
-                     header === "Actions" ? "Действия" :
-                     header.charAt(0).toUpperCase() + header.slice(1)}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredClients.map((client, index) => (
-                <TableRow 
+          <TableBody>
+            {filteredClients.map((client, index) => {
+              const lowPaper =
+                client.paperRemaining !== undefined &&
+                client.notifyWhen !== undefined &&
+                client.paperRemaining <= client.notifyWhen;
+
+              return (
+                <TableRow
                   key={client.id}
-                  sx={{ 
-                    '&:nth-of-type(odd)': {
-                      backgroundColor: '#fafafa',
-                    },
-                    '&:hover': {
-                      backgroundColor: '#e3f2fd',
-                    },
+                  sx={{
+                    borderBottom: lowPaper ? '3px solid #f44336' : '1px solid #e0e0e0',
+                    '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
+                    '&:hover': { backgroundColor: '#e3f2fd' }
                   }}
                 >
                   {columnHeaders.map((field) => (
-                    <TableCell 
-                      key={field}
-                      sx={{ padding: '16px' }}
-                    >
-                      {renderCellContent(client, field, index)}
+                    <TableCell key={field} sx={{ padding: '16px' }}>
+                      {field === '№' ? index + 1 :
+                       field === 'name' ? (
+                         <Box display="flex" alignItems="center" gap={1}>
+                           {lowPaper && (
+                             <ReportGmailerrorredIcon color="error" />
+                           )}
+                           <Box>
+                             <Typography fontWeight={600}>
+                               {client.restaurant || client.name || '-'}
+                             </Typography>
+                             <Typography variant="body2" color="#0F9D8C">
+                               {client.productType || ''}
+                             </Typography>
+                           </Box>
+                         </Box>
+                       ) : field === 'Actions' ? (
+                         <Button
+                           variant="outlined"
+                           color="primary"
+                           size="small"
+                           sx={{
+                             color: '#0F9D8C',
+                             borderColor: '#0F9D8C',
+                             '&:hover': { borderColor: '#004d40', color: '#004d40' }
+                           }}
+                           onClick={() => handleOpenModal(client)}
+                         >
+                           Подробно
+                         </Button>
+                       ) : ['totalKg', 'paperUsed', 'paperRemaining'].includes(field) ? (
+                         `${client[field] ?? 0} кг`
+                       ) : (
+                         client[field] ?? '-'
+                       )}
                     </TableCell>
                   ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    )}
 
-      {/* Enhanced Modal */}
-      <Modal
+    {/* Modals */}
+ <Modal
   open={addClientModalOpen}
   onClose={handleCloseAddClientModal}
   aria-labelledby="add-client-modal"
+  sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
 >
-  <Box >
-    <AddClientForm onClose={handleCloseAddClientModal} onClientAdded={handleClientAdded} />
-  </Box>
+  <AddClientForm
+    onClose={handleCloseAddClientModal}
+    onClientAdded={handleClientAdded}
+  />
 </Modal>
 
-     <Modal
-        open={modalOpen}
-        onClose={handleCloseModal}
-        aria-labelledby="client-details-modal"
-      >
-        <Box sx={modalStyle}>
-          {/* Close Button */}
-          <IconButton
-            onClick={handleCloseModal}
-            sx={{
-              position: 'absolute',
-              right: 16,
-              top: 16,
-              color: 'grey.500',
-              '&:hover': {
-                backgroundColor: 'grey.100'
-              }
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-
-          <Typography variant="h4" gutterBottom sx={{ pr: 6, fontWeight: 'bold', fontSize: '2rem' }}>
-            Детали клиента
-          </Typography>
-          <Divider sx={{ mb: 4 }} />
-
-          {selectedClient && (
-            <Grid container spacing={4} sx={{ height: 'calc(100% - 140px)' }}>
-              {/* Block 1: Client Info & Controls */}
-             <Grid item xs={4}>
-  <Paper 
-    elevation={2} 
-    sx={{ 
-      p: 2.5, // Reduced padding for better space usage
-      height: '100%',
-      width: '300px', // Reduced width
-      display: 'flex', 
-      flexDirection: 'column',
-      backgroundColor: '#fafafa'
-    }}
-  >
-    <Typography variant="h6" gutterBottom color="primary" sx={{ textAlign: 'center', mb: 2, fontSize: '1.2rem' }}>
-      Информация о ресторане
-    </Typography>
-    
-    {/* Space for logo */}
-    <Box sx={{ height: '120px', mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #ccc', borderRadius: '8px' }}>
-      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
-        Место для логотипа
-      </Typography>
-    </Box>
-    
-    <Stack spacing={2} sx={{ flex: 1 }}> {/* Reduced spacing */}
-      <Box>
-        <Typography variant="subtitle1" color="text.secondary" gutterBottom sx={{ fontSize: '1rem' }}>
-          Название ресторана:
-        </Typography>
-        <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#212121', fontSize: '1.6rem', lineHeight: 1.3 }}>
-          {selectedClient.restaurant || selectedClient.name || "Н/Д"}
-        </Typography>
-      </Box>
-
-      <Box>
-        <Typography variant="subtitle1" color="text.secondary" gutterBottom sx={{ fontSize: '0.9rem' }}>
-          Тип продукции:
-        </Typography>
-        <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#424242', fontSize: '1.2rem', lineHeight: 1.3 }}>
-          {selectedClient.productType || "Не указано"}
-        </Typography>
-      </Box>
-
-      <Box>
-        <Typography variant="subtitle1" color="text.secondary" gutterBottom sx={{ fontSize: '0.9rem' }}>
-          Адрес:
-        </Typography>
-        <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#616161', fontSize: '1.1rem', lineHeight: 1.3 }}>
-          {selectedClient.addressShort || "Не указан"}
-        </Typography>
-      </Box>
-
-      {/* Spacer to push paper field and buttons down */}
-      <Box sx={{ flex: 1 }} />
-
-      <Box>
-        <TextField
-          fullWidth
-          label="Остаток бумаги (кг)"
-          variant="outlined"
-          type="number"
-          value={paperRemaining}
-          onChange={(e) => setPaperRemaining(e.target.value)}
-          inputProps={{
-            step: "0.01",
-            min: "0",
-            max: selectedClient?.totalKg || undefined
-          }}
-          sx={{ 
-            mb: 2.5, // Reduced margin
-            mt: -5,
-            '& .MuiInputLabel-root': { fontSize: '1.4rem' },
-            '& .MuiInputBase-input': { fontSize: '1.6rem' },
-            '& .MuiFormHelperText-root': { fontSize: '1.2rem' }
-          }}
-        />
-      </Box>
-
-      <Stack spacing={2}>
-        <Button
-          fullWidth
-          variant="contained"
-          onClick={handleSave}
-          disabled={saving}
-          size="medium"
-          sx={{ 
-            fontSize: '1rem',
-            py: 1.2 // Reduced button height
-          }}
-        >
-          {saving ? "Сохранение..." : "Сохранить"}
-        </Button>
-
-        <Button
-          fullWidth
-          variant="outlined"
+    <Modal
+      open={modalOpen}
+      onClose={handleCloseModal}
+      aria-labelledby="client-details-modal"
+    >
+      <Box sx={modalStyle}>
+        <IconButton
           onClick={handleCloseModal}
-          disabled={saving}
-          size="medium"
-          sx={{ 
-            fontSize: '1rem',
-            py: 1.2 // Reduced button height
-          }}
+          sx={{ position: 'absolute', right: 16, top: 16, color: 'grey.500' }}
         >
-          Отмена
-        </Button>
-      </Stack>
+          <CloseIcon />
+        </IconButton>
 
-    </Stack>
-  </Paper>
-              </Grid>
+        <Typography variant="h4" gutterBottom fontWeight="bold">
+          Детали клиента
+        </Typography>
+        <Divider sx={{ mb: 4 }} />
 
-              {/* Block 2: Chart */}
-              <Grid item xs={4}>
-                <Paper 
-                  elevation={2} 
-                  sx={{ 
-                    p: 2.5, // Reduced padding
-                    height: '100%',
-                    width: '380px', // Slightly reduced width
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    backgroundColor: '#fafafa'
-                  }}
-                >
-                  <Typography variant="h6" gutterBottom color="primary" sx={{ textAlign: 'center', mb: 2, fontSize: '1.2rem' }}>
-                    Использование бумаги
+        {selectedClient && (
+          <Grid container spacing={4} sx={{ height: 'calc(100% - 140px)' }}>
+            {/* Left: Restaurant info */}
+            <Grid item xs={4}>
+              <Paper elevation={2} sx={{ p: 2.5, height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#fafafa' }}>
+                <Typography variant="h6" color="primary" textAlign="center" mb={2}>
+                  Информация о ресторане
+                </Typography>
+
+                <Box textAlign="center" mb={2}>
+                  <Typography variant="h5" fontWeight="bold">
+                    {selectedClient.restaurant || selectedClient.name}
                   </Typography>
-                  
-                  {/* Shell Number Above Chart */}
-                  <Box sx={{ textAlign: 'center', mb: 1 }}>
-                    <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '2.5rem', mb: 0.5 }}>
-                      Номер полки:
-                    </Typography>
-                    <Typography variant="h2" sx={{ fontWeight: 'bold', color: '#1976d2', fontSize: '5.2rem', border: '2px solid #616060ff', backgroundColor: '#E9F1F1', borderRadius: '9px' }}>
-                      {selectedClient.shellNum || "Не указано"}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Box sx={{ width: 280, height: 280, position: "relative" }}> {/* Reduced chart size */}
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={getPaperData(
-                              selectedClient.totalKg,
-                              paperRemaining || selectedClient.paperRemaining,
-                              notifyWhen || selectedClient.notifyWhen
-                            )}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={70} 
-                            outerRadius={120} 
-                            paddingAngle={3}
-                            dataKey="value"
-                          >
-                            {getPaperData(
-                              selectedClient.totalKg,
-                              paperRemaining || selectedClient.paperRemaining,
-                              notifyWhen || selectedClient.notifyWhen
-                            ).map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <Box
-                        sx={{
-                          position: "absolute",
-                          top: "50%",
-                          left: "50%",
-                          transform: "translate(-50%, -50%)",
-                          textAlign: "center"
-                        }}
+                  <Typography variant="body1" color="#0F9D8C">
+                    {selectedClient.productType}
+                  </Typography>
+                </Box>
+
+                <TextField
+                  label="Остаток (кг)"
+                  type="number"
+                  value={paperRemaining}
+                  onChange={(e) => setPaperRemaining(e.target.value)}
+                  sx={{ mb: 2 }}
+                />
+
+                <Stack spacing={2}>
+                  <Button variant="contained" onClick={handleSave} disabled={saving}>
+                    {saving ? 'Сохранение…' : 'Сохранить'}
+                  </Button>
+                  <Button variant="outlined" onClick={handleCloseModal} disabled={saving}>
+                    Отмена
+                  </Button>
+                </Stack>
+              </Paper>
+            </Grid>
+
+            {/* Center: Chart */}
+            <Grid item xs={4}>
+              <Paper elevation={2} sx={{ p: 2.5, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: '#fafafa' }}>
+                <Typography variant="h6" color="primary" mb={2}>
+                  Использование бумаги
+                </Typography>
+
+                <Typography variant="h2" fontWeight="bold" color="#1976d2" border="2px solid #616060ff" borderRadius={1} px={2} mb={2}>
+                  {selectedClient.shellNum}
+                </Typography>
+
+                <Box sx={{ position: 'relative', width: 280, height: 280 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={getPaperData(
+                          selectedClient.totalKg,
+                          paperRemaining || selectedClient.paperRemaining,
+                          notifyWhen || selectedClient.notifyWhen
+                        )}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={70}
+                        outerRadius={120}
+                        paddingAngle={3}
+                        dataKey="value"
                       >
-                        <Typography variant="h2" fontWeight="bold" color="primary" sx={{ fontSize: '2rem' }}> {/* Reduced font size */}
-                          {paperRemaining || selectedClient.paperRemaining || 0}
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1rem' }}> {/* Reduced font size */}
-                          кг осталось
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, mt: 2, mb: 1 }}> {/* Reduced margins */}
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Box sx={{ width: 16, height: 16, bgcolor: '#e0e0e0', borderRadius: '50%' }} /> {/* Reduced size */}
-                      <Typography variant="body1" sx={{ fontSize: '1rem' }}>Использовано</Typography> {/* Reduced font size */}
-                    </Box>
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Box sx={{ 
-                        width: 16, 
-                        height: 16, 
-                        bgcolor: (paperRemaining || selectedClient.paperRemaining) < (selectedClient.notifyWhen || 3) ? '#f44336' : '#4caf50', 
-                        borderRadius: '50%' 
-                      }} />
-                      <Typography variant="body1" sx={{ fontSize: '1rem' }}>Остаток</Typography> {/* Reduced font size */}
-                    </Box>
-                  </Box>
-                </Paper>
-              </Grid>
+                        {getPaperData(
+                          selectedClient.totalKg,
+                          paperRemaining || selectedClient.paperRemaining,
+                          notifyWhen || selectedClient.notifyWhen
+                        ).map((entry, i) => (
+                          <Cell key={`cell-${i}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
 
-              {/* Block 3: Paper Management & History */}
-              <Grid item xs={4}>
-                <Paper 
-                  elevation={2} 
-                  sx={{ 
-                    p: 2.5, // Reduced padding
-                    height: '100%', 
-                    display: 'flex',
-                    width: '330px', // Reduced width
-                    flexDirection: 'column',
-                    backgroundColor: '#fafafa'
-                  }}
-                >
-                  <Typography variant="h6" gutterBottom color="primary" sx={{ textAlign: 'center', mb: 2, fontSize: '1.2rem' }}>
-                    Приёмка бумаги
-                  </Typography>
+                  <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                    <Typography variant="h2" fontWeight="bold" color="primary">
+                      {paperRemaining || selectedClient.paperRemaining || 0}
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary">
+                      кг осталось
+                    </Typography>
+                  </Box>
+                </Box>
 
-                  <Stack spacing={2} sx={{ mb: 2 }}> {/* Reduced spacing and margin */}
-                    {showAddPaperInput ? (
-                      <Stack spacing={2}> {/* Reduced spacing */}
-                        <TextField
-                          fullWidth
-                          variant="outlined"
-                          value={paperToAdd}
-                          onChange={(e) => setPaperToAdd(e.target.value)}
-                          label="Количество (кг)"
-                          type="number"
-                          inputProps={{ step: "0.01", min: "0" }}
-                          sx={{
-                            '& .MuiInputLabel-root': { fontSize: '1rem' },
-                            '& .MuiInputBase-input': { fontSize: '1.1rem' }
-                          }}
-                        />
-                        <Box sx={{ display: 'flex', gap: 1.5 }}> {/* Reduced gap */}
-                          <Button
-                            variant="contained"
-                            onClick={handleAddPaper}
-                            disabled={addingPaper || !paperToAdd}
-                            sx={{ 
-                              flex: 1,
-                              fontSize: '0.9rem',
-                              py: 1
-                            }}
-                          >
-                            {addingPaper ? "Сохранение..." : "Сохранить"}
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            onClick={() => {
-                              setShowAddPaperInput(false);
-                              setPaperToAdd("");
-                            }}
-                            disabled={addingPaper}
-                            sx={{
-                              fontSize: '0.9rem',
-                              py: 1
-                            }}
-                          >
-                            Отмена
-                          </Button>
-                        </Box>
-                      </Stack>
-                    ) : (
-                      <Button 
-                        variant="contained" 
-                        onClick={() => setShowAddPaperInput(true)}
-                        size="medium"
+                <Stack direction="row" spacing={3} mt={2}>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Box sx={{ width: 16, height: 16, bgcolor: '#e0e0e0', borderRadius: '50%' }} />
+                    <Typography>Использовано</Typography>
+                  </Box>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Box sx={{ width: 16, height: 16, bgcolor: '#4caf50', borderRadius: '50%' }} />
+                    <Typography>Остаток</Typography>
+                  </Box>
+                </Stack>
+              </Paper>
+            </Grid>
+
+            {/* Right: Paper management */}
+            <Grid item xs={4}>
+              <Paper elevation={2} sx={{ p: 2.5, height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#fafafa' }}>
+                <Typography variant="h6" color="primary" textAlign="center" mb={2}>
+                  Приёмка бумаги
+                </Typography>
+
+                {showAddPaperInput ? (
+                  <Stack spacing={2} mb={2}>
+                    <TextField
+                      label="Количество (кг)"
+                      type="number"
+                      value={paperToAdd}
+                      onChange={(e) => setPaperToAdd(e.target.value)}
+                      inputProps={{ step: '0.01', min: 0 }}
+                    />
+                    <Box display="flex" gap={1.5}>
+                      <Button
+                        variant="contained"
+                        onClick={handleAddPaper}
+                        disabled={addingPaper || !paperToAdd}
                         fullWidth
-                        sx={{ 
-                          backgroundColor: '#ed6c02',
-                          '&:hover': { backgroundColor: '#e65100' },
-                          fontSize: '1rem',
-                          py: 1.2
-                        }}
                       >
-                        Добавить бумагу
+                        {addingPaper ? 'Сохранение…' : 'Сохранить'}
                       </Button>
-                    )}
-                  </Stack>
-
-                  {logs.length > 0 && (
-                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <Typography variant="h6" gutterBottom sx={{ textAlign: 'center', mb: 2, fontSize: '1.1rem' }}>
-                        История приёмки
-                      </Typography>
-                      <TableContainer 
-                        component={Paper} 
-                        sx={{ 
-                          flex: 1,
-                          maxHeight: 220, // Reduced height for scrolling
-                          border: '1px solid #e0e0e0',
-                          overflowY: 'auto' // Enable vertical scrolling
+                      <Button
+                        variant="outlined"
+                        onClick={() => {
+                          setShowAddPaperInput(false);
+                          setPaperToAdd('');
                         }}
+                        disabled={addingPaper}
+                        fullWidth
                       >
-                        <Table size="small" stickyHeader> {/* Changed back to small */}
-                          <TableHead>
-                            <TableRow>
-                              <TableCell sx={{ 
-                                backgroundColor: '#f5f5f5', 
-                                fontWeight: 'bold',
-                                fontSize: '0.9rem'
-                              }}>
-                                Дата
-                              </TableCell>
-                              <TableCell sx={{ 
-                                backgroundColor: '#f5f5f5', 
-                                fontWeight: 'bold',
-                                fontSize: '0.9rem'
-                              }}>
-                                Бумага (кг)
+                        Отмена
+                      </Button>
+                    </Box>
+                  </Stack>
+                ) : (
+                  <Button
+                    variant="contained"
+                    color="warning"
+                    onClick={() => setShowAddPaperInput(true)}
+                    fullWidth
+                  >
+                    Добавить бумагу
+                  </Button>
+                )}
+
+                {logs.length > 0 && (
+                  <Box mt={3} flex={1}>
+                    <Typography variant="h6" textAlign="center" mb={1}>
+                      История приёмки
+                    </Typography>
+                    <TableContainer sx={{ maxHeight: 220, border: '1px solid #e0e0e0' }}>
+                      <Table size="small" stickyHeader>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
+                              Дата
+                            </TableCell>
+                            <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
+                              Бумага (кг)
+                            </TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {logs.map((log) => (
+                            <TableRow key={log.id} hover>
+                              <TableCell>{log.dateRecorded.toDate().toLocaleDateString()}</TableCell>
+                              <TableCell sx={{ color: '#2e7d32', fontWeight: 'bold' }}>
+                                {log.paperIN}
                               </TableCell>
                             </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {logs.map((log) => (
-                              <TableRow key={log.id} hover>
-                                <TableCell sx={{ 
-                                  minWidth: 120,
-                                  fontSize: '0.85rem',
-                                  py: 1 // Reduced row height
-                                }}>
-                                  {log.dateRecorded.toDate().toLocaleDateString()}
-                                </TableCell>
-                                <TableCell sx={{ 
-                                  fontWeight: 'bold', 
-                                  color: '#2e7d32',
-                                  fontSize: '0.85rem',
-                                  py: 1 // Reduced row height
-                                }}>
-                                  {log.paperIN}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </Box>
-                  )}
-                </Paper>
-              </Grid>
-
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                )}
+              </Paper>
             </Grid>
-          )}
-        </Box>
-      </Modal>
-
-    </Container>
-  );
+          </Grid>
+        )}
+      </Box>
+    </Modal>
+  </Container>
+);
 }
