@@ -159,31 +159,27 @@ export default function AddClientForm({ onClientAdded, onClose }) {
   };
 
 return (
-  <Paper elevation={3} sx={{ p: 4, position: 'relative', maxWidth: 'md', mx: 'auto', my: 4 }}>
-    {/* Close Button */}
+  <Paper
+    elevation={0} /* let the Modal handle shadow & positioning */
+    sx={{
+      width: 900,               /* fixed width for the form itself */
+      maxWidth: '90vw',
+      maxHeight: '90vh',
+      overflowY: 'auto',
+      p: { xs: 3, md: 5 },
+      borderRadius: 2,
+      backgroundColor: 'background.paper'
+    }}
+  >
+    {/* Close button */}
     <IconButton
       onClick={onClose}
-      sx={{
-        position: 'absolute',
-        top: 16,
-        right: 16,
-        color: 'text.secondary'
-      }}
+      sx={{ position: 'absolute', top: 16, right: 16 }}
     >
       <CloseIcon />
     </IconButton>
 
-    {/* Title */}
-    <Typography
-      variant="h5"
-      gutterBottom
-      sx={{
-        mb: 3,
-        textAlign: 'center',
-        fontWeight: 600,
-        color: 'primary.dark'
-      }}
-    >
+    <Typography variant="h4" align="center" gutterBottom fontWeight="bold">
       Добавить нового клиента
     </Typography>
 
@@ -196,34 +192,19 @@ return (
     )}
 
     <Box component="form" onSubmit={handleSubmit}>
-      <Grid container spacing={3}>
-        {/* --- Restaurant Info --- */}
-        <Grid item xs={12}>
-          <Typography
-            variant="subtitle1"
-            sx={{
-              fontWeight: 600,
-              mb: 1,
-              color: 'text.primary',
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              pb: 1
-            }}
-          >
-            Информация о ресторане
-          </Typography>
-        </Grid>
+      {/* RESTAURANT SECTION */}
+      <Typography variant="h6" gutterBottom color="primary" fontWeight="600">
+        Информация о ресторане
+      </Typography>
 
+      <Grid container spacing={3} mb={4}>
         <Grid item xs={12} sm={6}>
           <TextField
             fullWidth
             label="Название ресторана"
-            variant="outlined"
             value={formData.name}
             onChange={handleInputChange('name')}
             required
-            size="small"
-            placeholder="Например: BBQ"
           />
         </Grid>
 
@@ -231,12 +212,9 @@ return (
           <TextField
             fullWidth
             label="Номер полки"
-            variant="outlined"
             value={formData.shellNum}
             onChange={handleInputChange('shellNum')}
             required
-            size="small"
-            placeholder="Например: A-5"
           />
         </Grid>
 
@@ -244,12 +222,9 @@ return (
           <TextField
             fullWidth
             label="Адрес"
-            variant="outlined"
             value={formData.addressShort}
             onChange={handleInputChange('addressShort')}
             required
-            size="small"
-            placeholder="Например: улица Истиклол, 6, Ташкент"
           />
         </Grid>
 
@@ -257,19 +232,16 @@ return (
           <TextField
             fullWidth
             label="Координаты (широта, долгота)"
-            variant="outlined"
             value={formData.geoPoint}
             onChange={handleInputChange('geoPoint')}
             required
-            size="small"
-            placeholder="Например: 41.31409, 69.281165"
-            helperText="Введите координаты через запятую"
+            helperText="Пример: 41.31409, 69.281165"
           />
         </Grid>
 
         <Grid item xs={12}>
           <FormControl component="fieldset">
-            <FormLabel component="legend" sx={{ mb: 1, fontWeight: 500 }}>
+            <FormLabel component="legend" sx={{ mb: 1 }}>
               Тип продукции
             </FormLabel>
             <RadioGroup
@@ -277,83 +249,63 @@ return (
               value={formData.productType}
               onChange={handleInputChange('productType')}
             >
-              <FormControlLabel value="stick" control={<Radio size="small" />} label="Stick" />
-              <FormControlLabel value="sachet" control={<Radio size="small" />} label="Sachet" />
+              <FormControlLabel value="stick" control={<Radio />} label="Stick" />
+              <FormControlLabel value="sachet" control={<Radio />} label="Sachet" />
             </RadioGroup>
           </FormControl>
         </Grid>
+      </Grid>
 
-        {/* --- Paper Info --- */}
-        <Grid item xs={12}>
-          <Typography
-            variant="subtitle1"
-            sx={{
-              fontWeight: 600,
-              mb: 1,
-              color: 'text.primary',
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              pb: 1
-            }}
-          >
-            Информация о бумаге
-          </Typography>
-        </Grid>
+      <Divider sx={{ mb: 3 }} />
 
-        <Grid item xs={12} sm={4}>
+      {/* PAPER SECTION */}
+      <Typography variant="h6" gutterBottom color="primary" fontWeight="600">
+        Информация о бумаге
+      </Typography>
+
+      <Grid container spacing={3} mb={4}>
+        <Grid item xs={12} sm={6}>
           <TextField
             fullWidth
-            label="Остаток (кг)"
-            variant="outlined"
             type="number"
+            label="Остаток (кг)"
             value={formData.paperRemaining}
             onChange={handleInputChange('paperRemaining')}
             required
-            size="small"
-            inputProps={{
-              step: '0.01',
-              min: '0',
-              max: formData.totalKg || undefined
-            }}
-            placeholder="55"
+            inputProps={{ step: '0.01', min: 0 }}
           />
         </Grid>
 
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6}>
           <TextField
             fullWidth
-            label="Уведомить при (кг)"
-            variant="outlined"
             type="number"
+            label="Уведомить при (кг)"
             value={formData.notifyWhen}
             onChange={handleInputChange('notifyWhen')}
             required
-            size="small"
-            inputProps={{ step: '0.01', min: '0' }}
-            placeholder="4"
+            inputProps={{ step: '0.01', min: 0 }}
             helperText="Минимальный остаток для уведомления"
           />
         </Grid>
-
-        {/* --- Actions --- */}
-        <Grid item xs={12}>
-          <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
-            <Button variant="outlined" onClick={onClose} disabled={loading} size="medium">
-              Отмена
-            </Button>
-            <Button type="submit" variant="contained" size="medium" disabled={loading}>
-              {loading ? (
-                <>
-                  <CircularProgress size={20} sx={{ mr: 1 }} />
-                  Сохранение...
-                </>
-              ) : (
-                'Сохранить'
-              )}
-            </Button>
-          </Stack>
-        </Grid>
       </Grid>
+
+      {/* ACTIONS */}
+      <Stack direction="row" spacing={2} justifyContent="flex-end">
+        <Button variant="outlined" onClick={onClose} disabled={loading}>
+          Отмена
+        </Button>
+        <Button type="submit" variant="contained" disabled={loading}>
+          {loading ? (
+            <>
+              <CircularProgress size={20} sx={{ mr: 1 }} />
+              Сохранение...
+            </>
+          ) : (
+            'Сохранить'
+          )}
+        </Button>
+      </Stack>
     </Box>
   </Paper>
 );
