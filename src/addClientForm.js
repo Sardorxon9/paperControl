@@ -88,7 +88,12 @@ export default function AddClientForm({ onClientAdded, onClose }) {
       if (remaining > total) {
         errors.push("Остаток бумаги не может превышать общий вес");
       }
+
+      
     }
+      console.log(111, formData.totalKg, formData.paperRemaining)
+
+    formData.totalKg = parseFloat(formData.paperRemaining);
 
     return errors;
   };
