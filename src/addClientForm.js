@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { collection, addDoc, GeoPoint } from "firebase/firestore";
+import { useState , useEffect} from "react";
+import { collection, addDoc, GeoPoint , getDocs} from "firebase/firestore";
 import { db } from "./firebase";
 import {
   Container,
@@ -23,6 +23,12 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 
 export default function AddClientForm({ onClientAdded, onClose }) {
+  const [products, setProducts] = useState([]);
+const [productInputs, setProductInputs] = useState({
+  type: "",
+  packaging: "stick",
+  gram: ""
+});
   const [formData, setFormData] = useState({
     name: "",
     addressShort: "",
@@ -38,6 +44,8 @@ export default function AddClientForm({ onClientAdded, onClose }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
+
+
   const handleInputChange = (field) => (event) => {
     setFormData(prev => ({
       ...prev,
@@ -48,6 +56,21 @@ export default function AddClientForm({ onClientAdded, onClose }) {
       setMessage({ type: "", text: "" });
     }
   };
+  
+
+  useEffect(() => {
+  const fetchProducts = async () => {
+    const snapshot = await getDocs(collection(db, "products"));
+    const productList = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    setProducts(productList);
+  };
+
+  fetchProducts();
+}, []);
+
 
   const validateForm = () => {
     const errors = [];
@@ -66,6 +89,11 @@ export default function AddClientForm({ onClientAdded, onClose }) {
     
     if (!formData.notifyWhen || parseFloat(formData.notifyWhen) <= 0) 
       errors.push("Уведомление при остатке должно быть больше 0");
+
+    if (!productInputs.type || !productInputs.packaging || !productInputs.gram) {
+  errors.push("Заполните все поля продукта");
+}
+
 
     // Validate coordinates format
     if (formData.geoPoint) {
@@ -119,7 +147,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
         name: formData.name.trim(),
         addressShort: formData.addressShort.trim(),
         addressLong: new GeoPoint(latitude, longitude),
-        productType: formData.productType,
+        productId: matchedProduct.id,
         shellNum: formData.shellNum.trim(),
         totalKg: totalKg,
         paperRemaining: paperRemaining,
@@ -159,6 +187,19 @@ export default function AddClientForm({ onClientAdded, onClose }) {
     } finally {
       setLoading(false);
     }
+
+    const matchedProduct = products.find(p => 
+  p.type === productInputs.type &&
+  p.packaging === productInputs.packaging &&
+  Number(p.gram) === Number(productInputs.gram)
+);
+
+if (!matchedProduct) {
+  setMessage({ type: "error", text: "Такой продукт не найден в базе." });
+  setLoading(false);
+  return;
+}
+
   };
 
   return (
@@ -304,31 +345,8 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                     />
                   </Grid>
 
-                  <Grid item xs={12}>
-                    <FormControl component="fieldset">
-                      <FormLabel component="legend" sx={{ mb: 1, fontWeight: 500, fontSize: '1.15em' }}>
-                        Тип продукции
-                      </FormLabel>
-                      <RadioGroup
-                        row
-                        value={formData.productType}
-                        onChange={handleInputChange('productType')}
-                      >
-                        <FormControlLabel 
-                          value="stick" 
-                          control={<Radio size="small" />} 
-                          label="Stick"
-                          sx={{ '& .MuiFormControlLabel-label': { fontSize: '1.15em' } }}
-                        />
-                        <FormControlLabel 
-                          value="sachet" 
-                          control={<Radio size="small" />} 
-                          label="Sachet"
-                          sx={{ '& .MuiFormControlLabel-label': { fontSize: '1.15em' } }}
-                        />
-                      </RadioGroup>
-                    </FormControl>
-                  </Grid>
+                  
+
                 </Grid>
               </Paper>
             </Grid>
@@ -396,6 +414,93 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                 </Grid>
               </Paper>
             </Grid>
+
+
+
+
+<Grid item xs={12}>
+  <Paper 
+    variant="outlined" 
+    sx={{ 
+      p: 3, 
+      backgroundColor: 'grey.50',
+      border: '1px solid',
+      borderColor: 'grey.200'
+    }}
+  >
+    <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 3 }}>
+      Продукт
+    </Typography>
+
+    <Grid container spacing={3}>
+      {/* Тип продукта */}
+      <Grid item xs={12} sm={4}>
+        <TextField
+          select
+          fullWidth
+          label="Тип продукта"
+          value={productInputs.type}
+          onChange={(e) =>
+            setProductInputs((prev) => ({ ...prev, type: e.target.value }))
+          }
+          size="small"
+        >
+          <option value="">-- Выберите --</option>
+          {["sugar white", "sugar brown", "salt", "cream", "sweetener"].map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </TextField>
+      </Grid>
+
+      {/* Тип упаковки */}
+      <Grid item xs={12} sm={4}>
+        <TextField
+          select
+          fullWidth
+          label="Тип упаковки"
+          value={productInputs.packaging}
+          onChange={(e) =>
+            setProductInputs((prev) => ({ ...prev, packaging: e.target.value }))
+          }
+          size="small"
+        >
+          <option value="">-- Выберите --</option>
+          {["stick", "sachet"].map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </TextField>
+      </Grid>
+
+      {/* Грамм */}
+      <Grid item xs={12} sm={4}>
+        <TextField
+          select
+          fullWidth
+          label="Грамм"
+          value={productInputs.gram}
+          onChange={(e) =>
+            setProductInputs((prev) => ({ ...prev, gram: e.target.value }))
+          }
+          size="small"
+        >
+          <option value="">-- Выберите --</option>
+          {[1, 2, 3, 4, 5].map((gram) => (
+            <option key={gram} value={gram}>
+              {gram} г
+            </option>
+          ))}
+        </TextField>
+      </Grid>
+    </Grid>
+  </Paper>
+</Grid>
+
+
+
 
             {/* --- Actions --- */}
             <Grid item xs={12}>
