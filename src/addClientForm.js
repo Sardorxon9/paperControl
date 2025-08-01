@@ -18,17 +18,18 @@ import {
   FormControlLabel,
   Radio,
   FormLabel,
-  FormControl
+  FormControl,
+  MenuItem
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 
 export default function AddClientForm({ onClientAdded, onClose }) {
   const [products, setProducts] = useState([]);
-const [productInputs, setProductInputs] = useState({
-  type: "",
-  packaging: "stick",
-  gram: ""
-});
+  const [productInputs, setProductInputs] = useState({
+    type: "",
+    packaging: "",
+    gramm: ""
+  });
   const [formData, setFormData] = useState({
     name: "",
     addressShort: "",
@@ -38,13 +39,11 @@ const [productInputs, setProductInputs] = useState({
     totalKg: "",
     paperRemaining: "",
     notifyWhen: "",
-    comment: "" // NEW FIELD
+    comment: ""
   });
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
-
-
 
   const handleInputChange = (field) => (event) => {
     setFormData(prev => ({
@@ -56,21 +55,27 @@ const [productInputs, setProductInputs] = useState({
       setMessage({ type: "", text: "" });
     }
   };
-  
 
   useEffect(() => {
-  const fetchProducts = async () => {
-    const snapshot = await getDocs(collection(db, "products"));
-    const productList = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    setProducts(productList);
-  };
+    const fetchProducts = async () => {
+      try {
+        // Changed from "products" to "productTypes"
+        const snapshot = await getDocs(collection(db, "productTypes"));
+        const productList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          productId: doc.data().productId,
+          ...doc.data()
+        }));
+        setProducts(productList);
+        console.log("Fetched products:", productList); // Debug log
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        setMessage({ type: "error", text: "Ошибка при загрузке продуктов" });
+      }
+    };
 
-  fetchProducts();
-}, []);
-
+    fetchProducts();
+  }, []);
 
   const validateForm = () => {
     const errors = [];
@@ -78,11 +83,7 @@ const [productInputs, setProductInputs] = useState({
     if (!formData.name.trim()) errors.push("Название ресторана обязательно");
     if (!formData.addressShort.trim()) errors.push("Адрес обязателен");
     if (!formData.geoPoint.trim()) errors.push("Координаты обязательны");
-    if (!formData.productType) errors.push("Тип продукции обязателен");
     if (!formData.shellNum.trim()) errors.push("Номер полки обязателен");
-    
-    // if (!formData.totalKg || parseFloat(formData.totalKg) <= 0) 
-      // errors.push("Общий вес должен быть больше 0");
     
     if (!formData.paperRemaining || parseFloat(formData.paperRemaining) < 0) 
       errors.push("Остаток бумаги не может быть отрицательным");
@@ -90,10 +91,9 @@ const [productInputs, setProductInputs] = useState({
     if (!formData.notifyWhen || parseFloat(formData.notifyWhen) <= 0) 
       errors.push("Уведомление при остатке должно быть больше 0");
 
-    if (!productInputs.type || !productInputs.packaging || !productInputs.gram) {
-  errors.push("Заполните все поля продукта");
-}
-
+    if (!productInputs.type || !productInputs.packaging || !productInputs.gramm) {
+      errors.push("Заполните все поля продукта");
+    }
 
     // Validate coordinates format
     if (formData.geoPoint) {
@@ -109,19 +109,6 @@ const [productInputs, setProductInputs] = useState({
       }
     }
 
-    // Validate paper quantities
-    if (formData.totalKg && formData.paperRemaining) {
-      const total = parseFloat(formData.totalKg);
-      const remaining = parseFloat(formData.paperRemaining);
-      
-      if (remaining > total) {
-        errors.push("Остаток бумаги не может превышать общий вес");
-      }
-    }
-    
-    console.log(111, formData.totalKg, formData.paperRemaining)
-    formData.totalKg = parseFloat(formData.paperRemaining);
-
     return errors;
   };
 
@@ -134,28 +121,53 @@ const [productInputs, setProductInputs] = useState({
       return;
     }
 
+    // Find matching product with improved matching logic
+    const matchedProduct = products.find(p => {
+      const typeMatch = p.type === productInputs.type;
+      const packagingMatch = p.packaging === productInputs.packaging;
+      const grammMatch = Number(p.gramm) === Number(productInputs.gramm);
+      
+      console.log("Comparing product:", p); // Debug log
+      console.log("Input:", productInputs); // Debug log
+      console.log("Matches:", { typeMatch, packagingMatch, grammMatch }); // Debug log
+      
+      return typeMatch && packagingMatch && grammMatch;
+    });
+
+    console.log("Matched product:", matchedProduct); // Debug log
+
+    if (!matchedProduct) {
+      setMessage({ 
+        type: "error", 
+        text: `Продукт не найден: ${productInputs.type}, ${productInputs.packaging}, ${productInputs.gramm}г. Проверьте данные в базе.` 
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       // Parse coordinates
       const [latitude, longitude] = formData.geoPoint.split(',').map(coord => parseFloat(coord.trim()));
       
-      const totalKg = parseFloat(formData.totalKg);
       const paperRemaining = parseFloat(formData.paperRemaining);
-      const paperUsed = totalKg - paperRemaining;
+      const totalKg = paperRemaining; // Set totalKg to paperRemaining as per your logic
+      const paperUsed = 0; // Since totalKg equals paperRemaining, paperUsed is 0
 
       const clientData = {
         name: formData.name.trim(),
         addressShort: formData.addressShort.trim(),
         addressLong: new GeoPoint(latitude, longitude),
-        productId: matchedProduct.id,
+        // Use the productId from the matched product
+        productId: matchedProduct.productId || matchedProduct.id,
         shellNum: formData.shellNum.trim(),
         totalKg: totalKg,
         paperRemaining: paperRemaining,
         paperUsed: paperUsed,
         notifyWhen: parseFloat(formData.notifyWhen),
-        comment: formData.comment.trim() // ✅ Save comment
-
+        comment: formData.comment.trim()
       };
+
+      console.log("Saving client data:", clientData); // Debug log
 
       await addDoc(collection(db, "clients"), clientData);
       
@@ -171,8 +183,13 @@ const [productInputs, setProductInputs] = useState({
         totalKg: "",
         paperRemaining: "",
         notifyWhen: "",
-        comment: "" // ✅ Reset
+        comment: ""
+      });
 
+      setProductInputs({
+        type: "",
+        packaging: "",
+        gramm: ""
       });
 
       if (onClientAdded) {
@@ -187,19 +204,22 @@ const [productInputs, setProductInputs] = useState({
     } finally {
       setLoading(false);
     }
+  };
 
-    const matchedProduct = products.find(p => 
-  p.type === productInputs.type &&
-  p.packaging === productInputs.packaging &&
-  Number(p.gram) === Number(productInputs.gram)
-);
+  // Get unique values for dropdowns from fetched products
+  const getUniqueTypes = () => {
+    const types = [...new Set(products.map(p => p.type))];
+    return types.filter(Boolean); // Remove empty values
+  };
 
-if (!matchedProduct) {
-  setMessage({ type: "error", text: "Такой продукт не найден в базе." });
-  setLoading(false);
-  return;
-}
+  const getUniquePackaging = () => {
+    const packaging = [...new Set(products.map(p => p.packaging))];
+    return packaging.filter(Boolean); // Remove empty values  
+  };
 
+  const getUniqueGramms = () => {
+    const gramms = [...new Set(products.map(p => p.gramm))];
+    return gramms.filter(Boolean).sort((a, b) => Number(a) - Number(b)); // Sort numerically
   };
 
   return (
@@ -253,7 +273,7 @@ if (!matchedProduct) {
             textAlign: 'center',
             fontWeight: 600,
             color: 'primary.dark',
-            fontSize: '1.15em' // Increased font size
+            fontSize: '1.15em'
           }}
         >
           Добавить нового клиента
@@ -286,7 +306,7 @@ if (!matchedProduct) {
                     fontWeight: 600,
                     mb: 3,
                     color: 'text.primary',
-                    fontSize: '1.15em' // Increased font size
+                    fontSize: '1.15em'
                   }}
                 >
                   Информация о ресторане
@@ -344,9 +364,6 @@ if (!matchedProduct) {
                       sx={{ fontSize: '1.15em' }}
                     />
                   </Grid>
-
-                  
-
                 </Grid>
               </Paper>
             </Grid>
@@ -368,7 +385,7 @@ if (!matchedProduct) {
                     fontWeight: 600,
                     mb: 3,
                     color: 'text.primary',
-                    fontSize: '1.15em' // Increased font size
+                    fontSize: '1.15em'
                   }}
                 >
                   Информация о бумаге
@@ -415,145 +432,137 @@ if (!matchedProduct) {
               </Paper>
             </Grid>
 
-
-
-
-<Grid item xs={12}>
-  <Paper 
-    variant="outlined" 
-    sx={{ 
-      p: 3, 
-      backgroundColor: 'grey.50',
-      border: '1px solid',
-      borderColor: 'grey.200'
-    }}
-  >
-    <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 3 }}>
-      Продукт
-    </Typography>
-
-    <Grid container spacing={3}>
-      {/* Тип продукта */}
-      <Grid item xs={12} sm={4}>
-        <TextField
-          select
-          fullWidth
-          label="Тип продукта"
-          value={productInputs.type}
-          onChange={(e) =>
-            setProductInputs((prev) => ({ ...prev, type: e.target.value }))
-          }
-          size="small"
-        >
-          <option value="">-- Выберите --</option>
-          {["sugar white", "sugar brown", "salt", "cream", "sweetener"].map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </TextField>
-      </Grid>
-
-      {/* Тип упаковки */}
-      <Grid item xs={12} sm={4}>
-        <TextField
-          select
-          fullWidth
-          label="Тип упаковки"
-          value={productInputs.packaging}
-          onChange={(e) =>
-            setProductInputs((prev) => ({ ...prev, packaging: e.target.value }))
-          }
-          size="small"
-        >
-          <option value="">-- Выберите --</option>
-          {["stick", "sachet"].map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </TextField>
-      </Grid>
-
-      {/* Грамм */}
-      <Grid item xs={12} sm={4}>
-        <TextField
-          select
-          fullWidth
-          label="Грамм"
-          value={productInputs.gram}
-          onChange={(e) =>
-            setProductInputs((prev) => ({ ...prev, gram: e.target.value }))
-          }
-          size="small"
-        >
-          <option value="">-- Выберите --</option>
-          {[1, 2, 3, 4, 5].map((gram) => (
-            <option key={gram} value={gram}>
-              {gram} г
-            </option>
-          ))}
-        </TextField>
-      </Grid>
-    </Grid>
-  </Paper>
-</Grid>
-
-
-
-
-            {/* --- Actions --- */}
+            {/* --- Product Section --- */}
             <Grid item xs={12}>
+              <Paper 
+                variant="outlined" 
+                sx={{ 
+                  p: 3, 
+                  backgroundColor: 'grey.50',
+                  border: '1px solid',
+                  borderColor: 'grey.200'
+                }}
+              >
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 3, fontSize: '1.15em' }}>
+                  Продукт
+                </Typography>
 
-<Grid item xs={12}>
-  <TextField
-    fullWidth
-    label="Комментарий"
-    variant="outlined"
-    multiline
-    minRows={4}
-    value={formData.comment}
-    onChange={handleInputChange('comment')}
-    size="small"
-    placeholder="Дополнительная информация, например, особенности доставки или учета"
-    sx={{
-      fontSize: '1.15em',
-      mt: 3.7
-    }}
-  />
-</Grid>
+                <Grid container spacing={3}>
+                  {/* Тип продукта */}
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Тип продукта"
+                      value={productInputs.type}
+                      onChange={(e) =>
+                        setProductInputs((prev) => ({ ...prev, type: e.target.value }))
+                      }
+                      size="small"
+                      sx={{ fontSize: '1.15em' }}
+                    >
+                      <MenuItem value="">-- Выберите --</MenuItem>
+                      {getUniqueTypes().map((type) => (
+                        <MenuItem key={type} value={type}>
+                          {type}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
 
+                  {/* Тип упаковки */}
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Тип упаковки"
+                      value={productInputs.packaging}
+                      onChange={(e) =>
+                        setProductInputs((prev) => ({ ...prev, packaging: e.target.value }))
+                      }
+                      size="small"
+                      sx={{ fontSize: '1.15em' }}
+                    >
+                      <MenuItem value="">-- Выберите --</MenuItem>
+                      {getUniquePackaging().map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
 
-               <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{mt: 3.7}}>
-    <Button 
-      variant="outlined" 
-      onClick={onClose} 
-      disabled={loading} 
-      size="medium"
-      sx={{ fontSize: '1.15em' }}
-    >
-      Отмена
-    </Button>
-    <Button 
-      type="submit" 
-      variant="contained" 
-      size="medium" 
-      disabled={loading}
-      sx={{ fontSize: '1.15em' }}
-    >
-      {loading ? (
-        <>
-          <CircularProgress size={20} sx={{ mr: 1 }} />
-          Сохранение...
-        </>
-      ) : (
-        'Сохранить'
-      )}
-    </Button>
-  </Stack>
+                  {/* Грамм */}
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Грамм"
+                      value={productInputs.gramm}
+                      onChange={(e) =>
+                        setProductInputs((prev) => ({ ...prev, gramm: e.target.value }))
+                      }
+                      size="small"
+                      sx={{ fontSize: '1.15em' }}
+                    >
+                      <MenuItem value="">-- Выберите --</MenuItem>
+                      {getUniqueGramms().map((gram) => (
+                        <MenuItem key={gram} value={gram}>
+                          {gram} г
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+                </Grid>
+
+                {/* Comment Field */}
+                <Grid container sx={{ mt: 2 }}>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Комментарий"
+                      variant="outlined"
+                      multiline
+                      minRows={4}
+                      value={formData.comment}
+                      onChange={handleInputChange('comment')}
+                      size="small"
+                      placeholder="Дополнительная информация, например, особенности доставки или учета"
+                      sx={{ fontSize: '1.15em' }}
+                    />
+                  </Grid>
+                </Grid>
+
+                {/* Action Buttons */}
+                <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3 }}>
+                  <Button 
+                    variant="outlined" 
+                    onClick={onClose} 
+                    disabled={loading} 
+                    size="medium"
+                    sx={{ fontSize: '1.15em' }}
+                  >
+                    Отмена
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    variant="contained" 
+                    size="medium" 
+                    disabled={loading}
+                    sx={{ fontSize: '1.15em' }}
+                  >
+                    {loading ? (
+                      <>
+                        <CircularProgress size={20} sx={{ mr: 1 }} />
+                        Сохранение...
+                      </>
+                    ) : (
+                      'Сохранить'
+                    )}
+                  </Button>
+                </Stack>
+              </Paper>
             </Grid>
-
-            
           </Grid>
         </Box>
       </Paper>
