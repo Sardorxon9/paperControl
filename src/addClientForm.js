@@ -1,27 +1,26 @@
-import { useState , useEffect} from "react";
-import { collection, addDoc, GeoPoint , getDocs} from "firebase/firestore";
-import { db } from "./firebase";
+import { useState, useEffect } from "react";
 import {
-  Container,
+  Box,
+  Paper,
   Typography,
   TextField,
   Button,
-  Paper,
-  Box,
   Grid,
   Alert,
   CircularProgress,
   Stack,
   Divider,
   IconButton,
+  MenuItem,
+  FormControl,
+  FormLabel,
   RadioGroup,
   FormControlLabel,
-  Radio,
-  FormLabel,
-  FormControl,
-  MenuItem
+  Radio
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
+import { collection, getDocs, addDoc, GeoPoint } from "firebase/firestore";
+import { db } from "./firebase";
 
 export default function AddClientForm({ onClientAdded, onClose }) {
   const [products, setProducts] = useState([]);
@@ -34,7 +33,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
     name: "",
     addressShort: "",
     geoPoint: "",
-    productType: "stick",
+    designType: "unique", // Default to unique
     shellNum: "",
     totalKg: "",
     paperRemaining: "",
@@ -56,18 +55,31 @@ export default function AddClientForm({ onClientAdded, onClose }) {
     }
   };
 
+  const handleDesignTypeChange = (event) => {
+    const newDesignType = event.target.value;
+    setFormData(prev => ({
+      ...prev,
+      designType: newDesignType,
+      // Clear fields that are not needed for standard design
+      ...(newDesignType === "standart" && {
+        shellNum: "",
+        paperRemaining: "",
+        notifyWhen: ""
+      })
+    }));
+  };
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        // Changed from "products" to "productTypes"
         const snapshot = await getDocs(collection(db, "productTypes"));
         const productList = snapshot.docs.map(doc => ({
           id: doc.id,
-          productId: doc.data().productId,
+          productId: doc.data().productId || doc.id, // Fallback to doc.id if productId doesn't exist
           ...doc.data()
         }));
         setProducts(productList);
-        console.log("Fetched products:", productList); // Debug log
+        console.log("Fetched products:", productList);
       } catch (error) {
         console.error("Error fetching products:", error);
         setMessage({ type: "error", text: "Ошибка при загрузке продуктов" });
@@ -80,19 +92,24 @@ export default function AddClientForm({ onClientAdded, onClose }) {
   const validateForm = () => {
     const errors = [];
 
+    // Basic required fields
     if (!formData.name.trim()) errors.push("Название ресторана обязательно");
     if (!formData.addressShort.trim()) errors.push("Адрес обязателен");
     if (!formData.geoPoint.trim()) errors.push("Координаты обязательны");
-    if (!formData.shellNum.trim()) errors.push("Номер полки обязателен");
-    
-    if (!formData.paperRemaining || parseFloat(formData.paperRemaining) < 0) 
-      errors.push("Остаток бумаги не может быть отрицательным");
-    
-    if (!formData.notifyWhen || parseFloat(formData.notifyWhen) <= 0) 
-      errors.push("Уведомление при остатке должно быть больше 0");
+    if (!formData.designType) errors.push("Тип дизайна обязателен");
 
+    // Product selection validation
     if (!productInputs.type || !productInputs.packaging || !productInputs.gramm) {
       errors.push("Заполните все поля продукта");
+    }
+
+    // Design type specific validation
+    if (formData.designType === "unique") {
+      if (!formData.shellNum.trim()) errors.push("Номер полки обязателен для уникального дизайна");
+      if (!formData.paperRemaining || parseFloat(formData.paperRemaining) < 0) 
+        errors.push("Остаток бумаги не может быть отрицательным");
+      if (!formData.notifyWhen || parseFloat(formData.notifyWhen) <= 0) 
+        errors.push("Уведомление при остатке должно быть больше 0");
     }
 
     // Validate coordinates format
@@ -121,20 +138,14 @@ export default function AddClientForm({ onClientAdded, onClose }) {
       return;
     }
 
-    // Find matching product with improved matching logic
+    // Find matching product
     const matchedProduct = products.find(p => {
       const typeMatch = p.type === productInputs.type;
       const packagingMatch = p.packaging === productInputs.packaging;
       const grammMatch = Number(p.gramm) === Number(productInputs.gramm);
       
-      console.log("Comparing product:", p); // Debug log
-      console.log("Input:", productInputs); // Debug log
-      console.log("Matches:", { typeMatch, packagingMatch, grammMatch }); // Debug log
-      
       return typeMatch && packagingMatch && grammMatch;
     });
-
-    console.log("Matched product:", matchedProduct); // Debug log
 
     if (!matchedProduct) {
       setMessage({ 
@@ -149,25 +160,43 @@ export default function AddClientForm({ onClientAdded, onClose }) {
       // Parse coordinates
       const [latitude, longitude] = formData.geoPoint.split(',').map(coord => parseFloat(coord.trim()));
       
-      const paperRemaining = parseFloat(formData.paperRemaining);
-      const totalKg = paperRemaining; // Set totalKg to paperRemaining as per your logic
-      const paperUsed = 0; // Since totalKg equals paperRemaining, paperUsed is 0
-
-      const clientData = {
+      // Build client data based on design type
+      const baseClientData = {
         name: formData.name.trim(),
+        restaurant: formData.name.trim(), // Add restaurant field for compatibility
         addressShort: formData.addressShort.trim(),
         addressLong: new GeoPoint(latitude, longitude),
-        // Use the productId from the matched product
         productId: matchedProduct.productId || matchedProduct.id,
-        shellNum: formData.shellNum.trim(),
-        totalKg: totalKg,
-        paperRemaining: paperRemaining,
-        paperUsed: paperUsed,
-        notifyWhen: parseFloat(formData.notifyWhen),
+        designType: formData.designType,
         comment: formData.comment.trim()
       };
 
-      console.log("Saving client data:", clientData); // Debug log
+      let clientData;
+
+      if (formData.designType === "standart") {
+        // For standard design type, don't store individual paper data
+        // Paper data will be fetched from productTypes -> paperInfo
+        clientData = {
+          ...baseClientData
+          // No shellNum, paperRemaining, totalKg, paperUsed, notifyWhen
+        };
+      } else {
+        // For unique design type, store individual paper tracking data
+        const paperRemaining = parseFloat(formData.paperRemaining);
+        const totalKg = paperRemaining; // Set totalKg to paperRemaining
+        const paperUsed = 0; // Since totalKg equals paperRemaining, paperUsed is 0
+
+        clientData = {
+          ...baseClientData,
+          shellNum: formData.shellNum.trim(),
+          totalKg: totalKg,
+          paperRemaining: paperRemaining,
+          paperUsed: paperUsed,
+          notifyWhen: parseFloat(formData.notifyWhen)
+        };
+      }
+
+      console.log("Saving client data:", clientData);
 
       await addDoc(collection(db, "clients"), clientData);
       
@@ -178,7 +207,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
         name: "",
         addressShort: "",
         geoPoint: "",
-        productType: "stick",
+        designType: "unique",
         shellNum: "",
         totalKg: "",
         paperRemaining: "",
@@ -209,18 +238,20 @@ export default function AddClientForm({ onClientAdded, onClose }) {
   // Get unique values for dropdowns from fetched products
   const getUniqueTypes = () => {
     const types = [...new Set(products.map(p => p.type))];
-    return types.filter(Boolean); // Remove empty values
+    return types.filter(Boolean);
   };
 
   const getUniquePackaging = () => {
     const packaging = [...new Set(products.map(p => p.packaging))];
-    return packaging.filter(Boolean); // Remove empty values  
+    return packaging.filter(Boolean);
   };
 
   const getUniqueGramms = () => {
     const gramms = [...new Set(products.map(p => p.gramm))];
-    return gramms.filter(Boolean).sort((a, b) => Number(a) - Number(b)); // Sort numerically
+    return gramms.filter(Boolean).sort((a, b) => Number(a) - Number(b));
   };
+
+  const isStandardDesign = formData.designType === "standart";
 
   return (
     <Box sx={{ 
@@ -289,6 +320,48 @@ export default function AddClientForm({ onClientAdded, onClose }) {
 
         <Box component="form" onSubmit={handleSubmit}>
           <Grid container spacing={4}>
+            {/* --- Design Type Selection --- */}
+            <Grid item xs={12}>
+              <Paper 
+                variant="outlined" 
+                sx={{ 
+                  p: 3, 
+                  backgroundColor: 'primary.50',
+                  border: '2px solid',
+                  borderColor: 'primary.200'
+                }}
+              >
+                <FormControl component="fieldset">
+                  <FormLabel component="legend" sx={{ fontWeight: 600, fontSize: '1.15em', mb: 2 }}>
+                    Тип дизайна *
+                  </FormLabel>
+                  <RadioGroup
+                    row
+                    value={formData.designType}
+                    onChange={handleDesignTypeChange}
+                  >
+                    <FormControlLabel 
+                      value="unique" 
+                      control={<Radio />} 
+                      label="Уникальный (индивидуальный учет бумаги)" 
+                    />
+                    <FormControlLabel 
+                      value="standart" 
+                      control={<Radio />} 
+                      label="Стандартный (общий учет по типу продукта)" 
+                    />
+                  </RadioGroup>
+                </FormControl>
+                
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  {isStandardDesign 
+                    ? "Для стандартного дизайна данные о бумаге берутся из общего склада по типу продукта"
+                    : "Для уникального дизайна ведется индивидуальный учет бумаги для каждого клиента"
+                  }
+                </Typography>
+              </Paper>
+            </Grid>
+
             {/* --- Restaurant Info Section --- */}
             <Grid item xs={12}>
               <Paper 
@@ -326,18 +399,21 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                     />
                   </Grid>
 
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Номер полки"
-                      variant="outlined"
-                      value={formData.shellNum}
-                      onChange={handleInputChange('shellNum')}
-                      required
-                      size="small"
-                      sx={{ fontSize: '1.15em' }}
-                    />
-                  </Grid>
+                  {/* Show shellNum only for unique design */}
+                  {!isStandardDesign && (
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Номер полки"
+                        variant="outlined"
+                        value={formData.shellNum}
+                        onChange={handleInputChange('shellNum')}
+                        required
+                        size="small"
+                        sx={{ fontSize: '1.15em' }}
+                      />
+                    </Grid>
+                  )}
 
                   <Grid item xs={12}>
                     <TextField
@@ -361,6 +437,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                       onChange={handleInputChange('geoPoint')}
                       required
                       size="small"
+                      placeholder="41.2995, 69.2401"
                       sx={{ fontSize: '1.15em' }}
                     />
                   </Grid>
@@ -368,69 +445,70 @@ export default function AddClientForm({ onClientAdded, onClose }) {
               </Paper>
             </Grid>
 
-            {/* --- Paper Info Section --- */}
-            <Grid item xs={12} sx={{ pt: '30px !important' }}>
-              <Paper 
-                variant="outlined" 
-                sx={{ 
-                  p: 3, 
-                  backgroundColor: 'grey.50',
-                  border: '1px solid',
-                  borderColor: 'grey.200'
-                }}
-              >
-                <Typography
-                  variant="subtitle1"
-                  sx={{
-                    fontWeight: 600,
-                    mb: 3,
-                    color: 'text.primary',
-                    fontSize: '1.15em'
+            {/* --- Paper Info Section (Only for Unique Design) --- */}
+            {!isStandardDesign && (
+              <Grid item xs={12}>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 3, 
+                    backgroundColor: 'grey.50',
+                    border: '1px solid',
+                    borderColor: 'grey.200'
                   }}
                 >
-                  Информация о бумаге
-                </Typography>
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      fontWeight: 600,
+                      mb: 3,
+                      color: 'text.primary',
+                      fontSize: '1.15em'
+                    }}
+                  >
+                    Информация о бумаге (Индивидуальный учет)
+                  </Typography>
 
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Остаток (кг)"
-                      variant="outlined"
-                      type="number"
-                      value={formData.paperRemaining}
-                      onChange={handleInputChange('paperRemaining')}
-                      required
-                      size="small"
-                      inputProps={{
-                        step: '0.01',
-                        min: '0',
-                        max: formData.totalKg || undefined
-                      }}
-                      placeholder="55"
-                      sx={{ fontSize: '1.15em' }}
-                    />
-                  </Grid>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Остаток (кг)"
+                        variant="outlined"
+                        type="number"
+                        value={formData.paperRemaining}
+                        onChange={handleInputChange('paperRemaining')}
+                        required
+                        size="small"
+                        inputProps={{
+                          step: '0.01',
+                          min: '0'
+                        }}
+                        placeholder="55"
+                        sx={{ fontSize: '1.15em' }}
+                      />
+                    </Grid>
 
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Уведомить при (кг)"
-                      variant="outlined"
-                      type="number"
-                      value={formData.notifyWhen}
-                      onChange={handleInputChange('notifyWhen')}
-                      required
-                      size="small"
-                      inputProps={{ step: '0.01', min: '0' }}
-                      placeholder="4"
-                      helperText="Минимальный остаток для уведомления"
-                      sx={{ fontSize: '1.15em' }}
-                    />
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Уведомить при (кг)"
+                        variant="outlined"
+                        type="number"
+                        value={formData.notifyWhen}
+                        onChange={handleInputChange('notifyWhen')}
+                        required
+                        size="small"
+                        inputProps={{ step: '0.01', min: '0' }}
+                        placeholder="4"
+                        helperText="Минимальный остаток для уведомления"
+                        sx={{ fontSize: '1.15em' }}
+                      />
+                    </Grid>
                   </Grid>
-                </Grid>
-              </Paper>
-            </Grid>
+                </Paper>
+              </Grid>
+            )}
 
             {/* --- Product Section --- */}
             <Grid item xs={12}>
@@ -458,6 +536,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                       onChange={(e) =>
                         setProductInputs((prev) => ({ ...prev, type: e.target.value }))
                       }
+                      required
                       size="small"
                       sx={{ fontSize: '1.15em' }}
                     >
@@ -480,6 +559,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                       onChange={(e) =>
                         setProductInputs((prev) => ({ ...prev, packaging: e.target.value }))
                       }
+                      required
                       size="small"
                       sx={{ fontSize: '1.15em' }}
                     >
@@ -502,6 +582,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                       onChange={(e) =>
                         setProductInputs((prev) => ({ ...prev, gramm: e.target.value }))
                       }
+                      required
                       size="small"
                       sx={{ fontSize: '1.15em' }}
                     >
