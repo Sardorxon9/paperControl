@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { collection, addDoc, updateDoc, doc, Timestamp, query, orderBy, getDocs, getDoc } from "firebase/firestore";
+import EditIcon from '@mui/icons-material/Edit';
+
 import { db } from "./firebase";
 import {
   Box,
@@ -272,28 +274,45 @@ export default function ClientDetailsModal({
 
               <Stack spacing={2}>
                 <Box>
-                  <Typography variant="body1" color="text.secondary" fontWeight="bold" sx={{ fontSize: '1.125rem' }}>
-                    Полный адрес:
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontSize: '1.25rem' }}>
+                <Typography
+  variant="body1"
+  color="#727d7b"
+  sx={{ fontSize: '1.125rem' }}
+>
+Гео-локация :</Typography>
+                  <Typography variant="h6" color="#3b403fff" sx={{ fontSize: '1.25rem', fontWeight: '600' }}>
                     {client.addressLong ? `${client.addressLong.latitude}, ${client.addressLong.longitude}` : 'Не указан'}
                   </Typography>
                 </Box>
 
-                <Box>
-                  <Typography variant="body1" color="text.secondary" fontWeight="bold" sx={{ fontSize: '1.125rem' }}>
-                    Короткий адрес:
+  <Box>
+                  <Typography variant="body1" color="#727d7b"
+   sx={{ fontSize: '1.125rem' }}>
+                    Название фирмы:
                   </Typography>
-                  <Typography variant="h6" sx={{ fontSize: '1.25rem' }}>
+                  <Typography variant="h6" color="#3b403fff" sx={{ fontSize: '1.25rem', fontWeight: '600'}}>
+                    {client.orgName || 'Не указан'}
+                  </Typography>
+                </Box>
+
+
+
+
+                <Box>
+                  <Typography variant="body1" color="#727d7b"
+   sx={{ fontSize: '1.125rem' }}>
+                    Адрес:
+                  </Typography>
+                  <Typography variant="h6" color="#3b403fff" sx={{ fontSize: '1.25rem', fontWeight: '600'}}>
                     {client.addressShort || 'Не указан'}
                   </Typography>
                 </Box>
 
                 <Box>
-                  <Typography variant="body1" color="text.secondary" fontWeight="bold" sx={{ fontSize: '1.125rem' }}>
+                  <Typography variant="body1" color="#727d7b"  sx={{ fontSize: '1.125rem' }}>
                     Комментарий:
                   </Typography>
-                  <Typography variant="h6" sx={{ fontSize: '1.25rem' }}>
+                  <Typography variant="h6"color="#3b403fff" sx={{ fontSize: '1.25rem', fontWeight: "600" }}>
                     {client.comment || 'Нет комментария'}
                   </Typography>
                 </Box>
@@ -304,51 +323,72 @@ export default function ClientDetailsModal({
           {/* Box 2: Paper remaining with edit */}
           <Grid item xs={12} sm={3}>
             <Paper elevation={2} sx={{ p: 2.5, height: '100%', display: 'flex', width:'245px', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: '#fafafa' }}>
-              <Box display="flex" flexDirection="column" alignItems="center" mb={3}>
-                <Typography variant="h6" fontWeight="bold" color="text.secondary" mb={1} sx={{ fontSize: '1.25rem' }}>
-                  Номер полки
-                </Typography>
-                <Typography 
-                  variant="h2" 
-                  fontWeight="bold" 
-                  color="#1976d2" 
-                  border="2px solid #616060ff" 
-                  borderRadius={1} 
-                  sx={{ 
-                    width: '120px', 
-                    height: '80px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    fontSize: '2rem'
-                  }}
-                >
-                  {client.shellNum}
-                </Typography>
-              </Box>
+             
+{/* Номер полки */}
+<Box display="flex" flexDirection="column" alignItems="center" mb={3}>
+  <Typography
+    variant="body1"
+    color="#9fb1af"
+    sx={{ fontSize: '1.125rem', mb: 1 }}
+  >
+    Номер полки
+  </Typography>
+  <Box
+    sx={{
+      width: 120,
+      height: 80,
+      border: '2px solid #BDDCD8',
+      borderRadius: 3,
+      backgroundColor: '#E2F0EE',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}
+  >
+    <Typography
+      sx={{
+        color: '#065345',
+        fontSize: 34,
+        fontWeight: 800,
+      }}
+    >
+      {client.shellNum}
+    </Typography>
+  </Box>
+</Box>
 
-              <Box display="flex" flexDirection="column" alignItems="center" mb={3}>
-                <Typography variant="h6" fontWeight="bold" color="text.secondary" mb={1} sx={{ fontSize: '1.25rem' }}>
-                  Остаток бумаги
-                </Typography>
-                <Typography 
-                  variant="h2" 
-                  fontWeight="bold" 
-                  color="primary" 
-                  border="2px solid #616060ff" 
-                  borderRadius={1} 
-                  sx={{ 
-                    width: '120px', 
-                    height: '80px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    fontSize: '2rem'
-                  }}
-                >
-                  {paperRemaining || client.paperRemaining || 0}
-                </Typography>
-              </Box>
+{/* Остаток бумаги */}
+<Box display="flex" flexDirection="column" alignItems="center" mb={3}>
+  <Typography
+    variant="body1"
+    color="#9fb1af"
+    sx={{ fontSize: '1.125rem', mb: 1 }}
+  >
+    Остаток бумаги
+  </Typography>
+  <Box
+    sx={{
+      width: 120,
+      height: 80,
+      border: '2px solid #BDDCD8',
+      borderRadius: 3,
+      backgroundColor: '#E2F0EE',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}
+  >
+    <Typography
+      sx={{
+        color: '#065345',
+        fontSize: 34,
+        fontWeight: 800,
+      }}
+    >
+      {paperRemaining || client.paperRemaining || 0}
+    </Typography>
+  </Box>
+</Box>
               
               <Typography variant="body1" color="text.secondary" mb={3}>
                 кг осталось
@@ -378,12 +418,20 @@ export default function ClientDetailsModal({
                   </Stack>
                 </Stack>
               ) : (
-                <Button
-                  variant="contained"
-                  onClick={() => setShowEditPaperInput(true)}
-                >
-                  Редактировать
-                </Button>
+            <Button
+  variant="contained"
+  onClick={() => setShowEditPaperInput(true)}
+  sx={{
+    backgroundColor: '#0F9D8C',
+    color: '#ffffff',
+    '&:hover': {
+      backgroundColor: '#0b7f73', // slightly darker on hover
+    },
+  }}
+  startIcon={<EditIcon />}
+>
+  Редактировать
+</Button>
               )}
             </Paper>
           </Grid>
@@ -469,57 +517,7 @@ export default function ClientDetailsModal({
           </Grid>
 
           {/* Box 4: Donut chart */}
-          <Grid item xs={12} sm={3}>
-            <Paper elevation={2} sx={{ p: 2.5, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: '#fafafa' }}>
-              <Box sx={{ position: 'relative', width: 250, height: 200 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={getPaperData(
-                        client.totalKg,
-                        paperRemaining || client.paperRemaining,
-                        notifyWhen || client.notifyWhen
-                      )}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={90}
-                      paddingAngle={3}
-                      dataKey="value"
-                    >
-                      {getPaperData(
-                        client.totalKg,
-                        paperRemaining || client.paperRemaining,
-                        notifyWhen || client.notifyWhen
-                      ).map((entry, i) => (
-                        <Cell key={`cell-${i}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-
-                <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                  <Typography variant="h4" fontWeight="bold" color="primary">
-                    {paperRemaining || client.paperRemaining || 0}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    кг
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Stack direction="row" spacing={2} mt={2}>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <Box sx={{ width: 12, height: 12, bgcolor: '#e0e0e0', borderRadius: '50%' }} />
-                  <Typography variant="body2">Использовано</Typography>
-                </Box>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <Box sx={{ width: 12, height: 12, bgcolor: '#4caf50', borderRadius: '50%' }} />
-                  <Typography variant="body2">Остаток</Typography>
-                </Box>
-              </Stack>
-            </Paper>
-          </Grid>
+         
         </Grid>
       </Box>
     </Modal>

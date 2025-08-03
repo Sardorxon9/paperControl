@@ -228,23 +228,26 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
             <Grid item xs={12} md={4}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom color="primary">
+                  <Typography variant="h6" paddingBottom={2} fontWeight={700} gutterBottom color="primary">
                     Основная информация
                   </Typography>
                   <Stack spacing={2}>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
-                        Тип продукта
-                      </Typography>
-                      <Typography variant="body1">
-                        {product.type}
-                      </Typography>
-                    </Box>
+                  <Box>
+  <Typography variant="body2" color="text.secondary">
+    Тип продукта
+  </Typography>
+
+
+
+  <Typography variant="body1" fontWeight={700} >
+    {product.type}
+  </Typography>
+</Box>
                     <Box>
                       <Typography variant="body2" color="text.secondary">
                         Номер полки
                       </Typography>
-                      <Typography variant="body1">
+                      <Typography variant="body1" fontWeight={700} fontSize={18} >
                         {paperInfo?.shellNum || '-'}
                       </Typography>
                     </Box>
@@ -252,7 +255,7 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
                       <Typography variant="body2" color="text.secondary">
                         Остаток в наличии
                       </Typography>
-                      <Typography variant="body1">
+                      <Typography variant="body1" fontWeight={700} fontSize={18}>
                         {paperInfo?.paperRemaining || 0} кг
                       </Typography>
                     </Box>
@@ -265,7 +268,7 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
             <Grid item xs={12} md={4}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom color="primary">
+                  <Typography variant="h6" fontWeight={700} gutterBottom color="primary">
                     Использование бумаги
                   </Typography>
                   
@@ -337,12 +340,14 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
                   ) : (
                     <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 200 }}>
                       <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Дата</TableCell>
-                            <TableCell>Клиент</TableCell>
-                            <TableCell>Использовано (кг)</TableCell>
-                          </TableRow>
+                        <TableHead sx={{ backgroundColor: '#e1e9f2' }}>
+                         <TableRow>
+        <TableCell sx={{ color: '#3d5066', fontWeight: 600 }}>Дата</TableCell>
+        <TableCell sx={{ color: '#3d5066', fontWeight: 600 }}>Клиент</TableCell>
+        <TableCell sx={{ color: '#3d5066', fontWeight: 600 }}>
+          Использовано (кг)
+        </TableCell>
+      </TableRow>
                         </TableHead>
                         <TableBody>
                           {logs.map((log) => (
@@ -366,7 +371,7 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
             <Grid item xs={12} md={4}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom color="primary">
+                  <Typography variant="h6" fontWeight={700} gutterBottom color="primary">
                     Приемка
                   </Typography>
                   
@@ -499,10 +504,10 @@ function SimpleClientModal({ open, onClose, client, product }) {
           {product ? (
             <>
               <Box>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography variant="subtitle2" color="#bfc9c9">
                   Тип продукта
                 </Typography>
-                <Typography variant="body1">
+                <Typography variant="body1" fontWeight={700}>
                   {product.type || '-'}
                 </Typography>
               </Box>
@@ -727,8 +732,11 @@ const handleOpenModal = (client) => {
         try {
           const productRef = doc(db, "productTypes", client.productId);
           const productSnap = await getDoc(productRef);
+          console.log(11)
           if (productSnap.exists()) {
             setSelectedClientProduct(productSnap.data());
+          console.log(22, productSnap.data())
+
           } else {
             console.warn("Product not found for client:", client.id);
             setSelectedClientProduct(null); // Ensure state is cleared if not found
@@ -739,6 +747,8 @@ const handleOpenModal = (client) => {
         }
       } else {
         setSelectedClientProduct(null); // Ensure state is cleared if no productId
+        console.log(33)
+        
       }
       setSimpleModalOpen(true); // MOVE THIS LINE HERE
     };
@@ -1032,12 +1042,24 @@ const handleOpenModal = (client) => {
       {/* Main Content with Tabs */}
       <Container maxWidth="lg" sx={{ pt: 1, pb: 6 }}>
         {/* Tabs */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Tabs value={currentTab} onChange={handleTabChange}>
-            <Tab label="Клиенты и этикетки" />
-            <Tab label="Стандартные рулоны" />
-          </Tabs>
-        </Box>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+  <Tabs
+    value={currentTab}
+    onChange={handleTabChange}
+    sx={{
+      '& .MuiTab-root.Mui-selected': {
+        color: '#0F9D8C',
+      },
+      '& .MuiTabs-indicator': {
+        backgroundColor: '#0F9D8C',
+        fontWeight : '700',
+      },
+    }}
+  >
+    <Tab label="Клиенты и этикетки" />
+    <Tab label="Стандартные рулоны" />
+  </Tabs>
+</Box>
 
         {/* Tab Content */}
         {currentTab === 0 && (
