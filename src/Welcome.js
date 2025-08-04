@@ -1,3 +1,5 @@
+// Welcome.js
+
 import { useEffect, useState } from "react";
 import {
   collection,
@@ -34,7 +36,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Divider
+  Divider,
+  IconButton // <-- Import IconButton
 } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
 import Shield from '@mui/icons-material/Shield';
@@ -42,6 +45,7 @@ import Work from '@mui/icons-material/Work';
 import AddClientForm from './addClientForm';
 import ClientDetailsModal from './ClientDetailsModal';
 import ReportGmailerrorredIcon from '@mui/icons-material/ReportGmailerrorred';
+import LogoutIcon from '@mui/icons-material/Logout'; // <-- Import LogoutIcon
 
 // Product Details Modal Component
 function ProductDetailsModal({ open, onClose, product, clients }) {
@@ -1037,11 +1041,19 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
         <Container maxWidth="lg" disableGutters>
           <Stack direction="row" alignItems="center" justifyContent="space-between">
             {/* Logo */}
-            <img
-              src="https://whiteray.uz/images/whiteray_1200px_logo_green.png"
-              alt="WhiteRay"
-              style={{ height: 38, objectFit: 'contain' }}
-            />
+            <Box
+              sx={{
+                cursor: 'pointer', // Make it clear it's clickable
+                "&:hover": { opacity: 0.8 } // Add hover effect
+              }}
+              onClick={onBackToDashboard} // <-- Add onClick handler to go back
+            >
+              <img
+                src="https://whiteray.uz/images/whiteray_1200px_logo_green.png"
+                alt="WhiteRay"
+                style={{ height: 38, objectFit: 'contain' }}
+              />
+            </Box>
 
             {/* Center Section - Search and Add Client Button */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -1095,9 +1107,14 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                 </Box>
               </Box>
               
-             
-              
-            
+              <Button // <-- Add the logout button
+                variant="outlined"
+                color="error"
+                startIcon={<LogoutIcon />}
+                onClick={onLogout}
+              >
+                Выйти
+              </Button>
             </Stack>
           </Stack>
         </Container>
