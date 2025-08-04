@@ -37,11 +37,11 @@ import {
   Divider
 } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
+import Shield from '@mui/icons-material/Shield';
+import Work from '@mui/icons-material/Work';
 import AddClientForm from './addClientForm';
 import ClientDetailsModal from './ClientDetailsModal';
 import ReportGmailerrorredIcon from '@mui/icons-material/ReportGmailerrorred';
-
-
 
 // Product Details Modal Component
 function ProductDetailsModal({ open, onClose, product, clients }) {
@@ -56,7 +56,6 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
   const [usedAmount, setUsedAmount] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
   const [paperIn, setPaperIn] = useState('');
-
 
   const fetchProductDetails = async () => {
     if (!product) return;
@@ -238,9 +237,6 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
   <Typography variant="body2" color="text.secondary">
     Тип продукта
   </Typography>
-
-
-
   <Typography variant="body1" fontWeight={700} >
     {product.type}
   </Typography>
@@ -464,8 +460,8 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
     </Modal>
   );
 }
+
 // Simple Modal Component for Standard Design Type
-// Change the function signature to accept 'product'
 function SimpleClientModal({ open, onClose, client, product }) {
   if (!client) return null;
 
@@ -502,7 +498,6 @@ function SimpleClientModal({ open, onClose, client, product }) {
             </Typography>
           </Box>
 
-          {/* ADD A CONDITIONAL CHECK FOR 'product' */}
           {product ? (
             <>
               <Box>
@@ -531,7 +526,6 @@ function SimpleClientModal({ open, onClose, client, product }) {
               </Box>
             </>
           ) : (
-            // You can optionally add a placeholder or loading spinner here
             <Box>
               <Typography variant="body2" color="text.secondary">
                 Продукт не найден.
@@ -539,7 +533,6 @@ function SimpleClientModal({ open, onClose, client, product }) {
             </Box>
           )}
 
-          {/* ... existing address and comment sections */}
           <Box>
             <Typography variant="subtitle2" color="text.secondary">
               Полный адрес
@@ -613,10 +606,8 @@ const getColumnHeaders = (userRole) => {
   }
 };
 
-
-export default function Welcome(user, userRole) {
+export default function Welcome({ user, userRole, onBackToDashboard, onLogout }) {
   const [clientData, setClientData] = useState([]);
-  
   const [productTypesData, setProductTypesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [productTypesLoading, setProductTypesLoading] = useState(true);
@@ -630,10 +621,7 @@ export default function Welcome(user, userRole) {
   const [addClientModalOpen, setAddClientModalOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
 
-  const hiddenColumns = ["totalKg", "paperUsed"];
-
-   const hiddenColumn = getHiddenColumns(userRole);
-
+  const hiddenColumns = getHiddenColumns(userRole);
 
   const fetchProductTypeData = async (productId, designType) => {
     if (!productId) return { packaging: '', shellNum: '', paperRemaining: '' };
@@ -687,7 +675,7 @@ export default function Welcome(user, userRole) {
             // For unique design type, use the client's own shellNum and paperRemaining
             shellNum: data.designType === "standart" ? productTypeData.shellNum : (data.shellNum || ''),
             paperRemaining: data.designType === "standart" ? productTypeData.paperRemaining : (data.paperRemaining || ''),
-            // Add orgName from client data (you might need to adjust this field name based on your Firestore structure)
+            // Add orgName from client data
             orgName: data.orgName || data.organization || '-'
           };
         })
@@ -754,49 +742,40 @@ export default function Welcome(user, userRole) {
   useEffect(() => {
     fetchClientData();
     fetchProductTypesData();
-  }, []);
+  }, [userRole]);
 
-  // ... (keep all your existing state and other functions)
-const [selectedClientProduct, setSelectedClientProduct] = useState(null);
+  const [selectedClientProduct, setSelectedClientProduct] = useState(null);
 
-const handleOpenModal = (client) => {
-  setSelectedClient(client);
+  const handleOpenModal = (client) => {
+    setSelectedClient(client);
 
-
-  if (client.designType === "standart") {
-    const fetchProductData = async () => {
-      if (client.productId) {
-        try {
-          const productRef = doc(db, "productTypes", client.productId);
-          const productSnap = await getDoc(productRef);
-          console.log(11)
-          if (productSnap.exists()) {
-            setSelectedClientProduct(productSnap.data());
-          console.log(22, productSnap.data())
-
-          } else {
-            console.warn("Product not found for client:", client.id);
-            setSelectedClientProduct(null); // Ensure state is cleared if not found
+    if (client.designType === "standart") {
+      const fetchProductData = async () => {
+        if (client.productId) {
+          try {
+            const productRef = doc(db, "productTypes", client.productId);
+            const productSnap = await getDoc(productRef);
+            if (productSnap.exists()) {
+              setSelectedClientProduct(productSnap.data());
+            } else {
+              console.warn("Product not found for client:", client.id);
+              setSelectedClientProduct(null);
+            }
+          } catch (error) {
+            console.error("Error fetching product data:", error);
+            setSelectedClientProduct(null);
           }
-        } catch (error) {
-          console.error("Error fetching product data:", error);
-          setSelectedClientProduct(null); // Ensure state is cleared on error
+        } else {
+          setSelectedClientProduct(null);
         }
-      } else {
-        setSelectedClientProduct(null); // Ensure state is cleared if no productId
-        console.log(33)
-        
-      }
-      setSimpleModalOpen(true); // MOVE THIS LINE HERE
-    };
-    fetchProductData();
-  } else {
-    // For "unique" or any other designType, use the full modal
-    setModalOpen(true);
-  }
-};
-
-// ... (keep the rest of your Welcome component code)
+        setSimpleModalOpen(true);
+      };
+      fetchProductData();
+    } else {
+      // For "unique" or any other designType, use the full modal
+      setModalOpen(true);
+    }
+  };
 
   const handleOpenProductModal = (product) => {
     setSelectedProduct(product);
@@ -811,14 +790,13 @@ const handleOpenModal = (client) => {
   const handleCloseSimpleModal = () => {
     setSimpleModalOpen(false);
     setSelectedClient(null);
+    setSelectedClientProduct(null);
   };
 
   const handleCloseProductModal = () => {
     setProductModalOpen(false);
     setSelectedProduct(null);
   };
-
-  
 
   const handleClientUpdate = (updatedClient) => {
     setClientData(prevData =>
@@ -852,7 +830,7 @@ const handleOpenModal = (client) => {
       .includes(searchQuery.toLowerCase())
   );
 
-   const ClientsTable = () => (
+  const ClientsTable = () => (
     <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
       <Table sx={{ minWidth: 650 }}>
         <TableHead>
@@ -962,6 +940,7 @@ const handleOpenModal = (client) => {
       </Table>
     </TableContainer>
   );
+
   const ProductTypesTable = () => (
     <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
       <Table sx={{ minWidth: 650 }}>
@@ -1054,12 +1033,14 @@ const handleOpenModal = (client) => {
       >
         <Container maxWidth="lg" disableGutters>
           <Stack direction="row" alignItems="center" justifyContent="space-between">
+            {/* Logo */}
             <img
               src="https://whiteray.uz/images/whiteray_1200px_logo_green.png"
               alt="WhiteRay"
               style={{ height: 38, objectFit: 'contain' }}
             />
 
+            {/* Center Section - Search and Add Client Button */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               {currentTab === 0 && (
                 <>
@@ -1088,6 +1069,47 @@ const handleOpenModal = (client) => {
                 </>
               )}
             </Box>
+
+            {/* User Info Section */}
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Box 
+                display="flex" 
+                alignItems="center" 
+                gap={1} 
+                px={2} 
+                py={1} 
+                bgcolor="#f5f5f5" 
+                borderRadius={2}
+              >
+                {userRole === 'admin' ? <Shield color="primary" /> : <Work color="success" />}
+                <Box>
+                  <Typography variant="body2" fontWeight={600}>
+                    {user?.name || 'Пользователь'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {userRole === 'admin' ? 'Администратор' : 'Сотрудник'}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              <Button 
+                variant="outlined" 
+                size="small"
+                onClick={onBackToDashboard}
+                sx={{ minWidth: 'auto' }}
+              >
+                Назад
+              </Button>
+              
+              <Button 
+                color="error" 
+                variant="outlined"
+                size="small"
+                onClick={onLogout}
+              >
+                Выйти
+              </Button>
+            </Stack>
           </Stack>
         </Container>
       </Box>
@@ -1095,24 +1117,24 @@ const handleOpenModal = (client) => {
       {/* Main Content with Tabs */}
       <Container maxWidth="lg" sx={{ pt: 1, pb: 6 }}>
         {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-  <Tabs
-    value={currentTab}
-    onChange={handleTabChange}
-    sx={{
-      '& .MuiTab-root.Mui-selected': {
-        color: '#0F9D8C',
-      },
-      '& .MuiTabs-indicator': {
-        backgroundColor: '#0F9D8C',
-        fontWeight : '700',
-      },
-    }}
-  >
-    <Tab label="Клиенты и этикетки" />
-    <Tab label="Стандартные рулоны" />
-  </Tabs>
-</Box>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs
+            value={currentTab}
+            onChange={handleTabChange}
+            sx={{
+              '& .MuiTab-root.Mui-selected': {
+                color: '#0F9D8C',
+              },
+              '& .MuiTabs-indicator': {
+                backgroundColor: '#0F9D8C',
+                fontWeight: '700',
+              },
+            }}
+          >
+            <Tab label="Клиенты и этикетки" />
+            <Tab label="Стандартные рулоны" />
+          </Tabs>
+        </Box>
 
         {/* Tab Content */}
         {currentTab === 0 && (
@@ -1173,6 +1195,7 @@ const handleOpenModal = (client) => {
           open={simpleModalOpen}
           onClose={handleCloseSimpleModal}
           client={selectedClient}
+          product={selectedClientProduct}
         />
 
         {/* Full Client Details Modal (for designType: "unique") */}
@@ -1181,6 +1204,7 @@ const handleOpenModal = (client) => {
           onClose={handleCloseModal}
           client={selectedClient}
           onClientUpdate={handleClientUpdate}
+          currentUser={user} // Pass user for Telegram integration
         />
       </Container>
     </>

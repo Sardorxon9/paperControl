@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { collection, addDoc, updateDoc, doc, Timestamp, query, orderBy, getDocs, getDoc } from "firebase/firestore";
 import EditIcon from '@mui/icons-material/Edit';
+import TelegramIcon from '@mui/icons-material/Telegram';
 
 import { db } from "./firebase";
 import {
@@ -19,7 +20,9 @@ import {
   TableHead,
   TableRow,
   TableCell,
-  TableBody
+  TableBody,
+  Snackbar,
+  Alert
 } from "@mui/material";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import CloseIcon from '@mui/icons-material/Close';
@@ -43,7 +46,8 @@ export default function ClientDetailsModal({
   open, 
   onClose, 
   client, 
-  onClientUpdate 
+  onClientUpdate,
+  currentUser // Add this prop to get current user info including chatId
 }) {
   const [paperRemaining, setPaperRemaining] = useState("");
   const [saving, setSaving] = useState(false);
@@ -55,6 +59,14 @@ export default function ClientDetailsModal({
   const [showEditPaperInput, setShowEditPaperInput] = useState(false);
   const [logs, setLogs] = useState([]);
   const [productType, setProductType] = useState(null);
+  
+  // Telegram integration states
+  const [sendingTelegram, setSendingTelegram] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   // Initialize state when client changes
   useEffect(() => {
@@ -94,6 +106,65 @@ export default function ClientDetailsModal({
       setLogs(logsArr);
     } catch (error) {
       console.error("Error fetching logs:", error);
+    }
+  };
+
+  // Telegram integration function
+  const handleSendViaTelegram = async () => {
+    if (!client || !currentUser?.chatId) {
+      setSnackbar({
+        open: true,
+        message: 'Ошибка: отсутствует chatId пользователя',
+        severity: 'error'
+      });
+      return;
+    }
+
+    if (!client.addressLong?.latitude || !client.addressLong?.longitude) {
+      setSnackbar({
+        open: true,
+        message: 'Ошибка: отсутствуют координаты ресторана',
+        severity: 'error'
+      });
+      return;
+    }
+
+    setSendingTelegram(true);
+    
+    try {
+      const response = await fetch('http://localhost:3001/send-location', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chatId: currentUser.chatId,
+          restaurantName: client.restaurant || client.name,
+          latitude: client.addressLong.latitude,
+          longitude: client.addressLong.longitude
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSnackbar({
+          open: true,
+          message: 'Локация успешно отправлена в Telegram!',
+          severity: 'success'
+        });
+      } else {
+        throw new Error(result.error || 'Неизвестная ошибка');
+      }
+    } catch (error) {
+      console.error('Error sending via Telegram:', error);
+      setSnackbar({
+        open: true,
+        message: `Ошибка отправки: ${error.message}`,
+        severity: 'error'
+      });
+    } finally {
+      setSendingTelegram(false);
     }
   };
 
@@ -241,285 +312,325 @@ export default function ClientDetailsModal({
   if (!client) return null;
 
   return (
-    <Modal
-      open={open}
-      onClose={handleCloseModal}
-      aria-labelledby="client-details-modal"
-    >
-      <Box sx={modalStyle}>
-        <IconButton
-          onClick={handleCloseModal}
-          sx={{ position: 'absolute', right: 16, top: 16, color: 'grey.500' }}
-        >
-          <CloseIcon />
-        </IconButton>
+    <>
+      <Modal
+        open={open}
+        onClose={handleCloseModal}
+        aria-labelledby="client-details-modal"
+      >
+        <Box sx={modalStyle}>
+          <IconButton
+            onClick={handleCloseModal}
+            sx={{ position: 'absolute', right: 16, top: 16, color: 'grey.500' }}
+          >
+            <CloseIcon />
+          </IconButton>
 
-        <Typography variant="h4" gutterBottom fontWeight="bold">
-          Детали клиента
-        </Typography>
-        <Divider sx={{ mb: 4 }} />
+          <Typography variant="h4" gutterBottom fontWeight="bold">
+            Детали клиента
+          </Typography>
+          <Divider sx={{ mb: 4 }} />
 
-        <Grid container spacing={2} sx={{ height: 'calc(100% - 140px)' }}>
-          {/* Box 1: Restaurant info */}
-          <Grid item xs={12} sm={3}>
-            <Paper elevation={2} sx={{ p: 2.5, height: '100%', width:'245px', display: 'flex', flexDirection: 'column', bgcolor: '#fafafa' }}>
-              <Box textAlign="left" mb={3}>
-                
-                <Typography variant="h4" fontWeight="bold" mb={1} sx={{ fontSize: '2rem' }}>Имя: {client.restaurant || client.name}
-                </Typography>
-                <Typography variant="h6" color="#0F9D8C" mb={2} sx={{ fontSize: '1.7rem' }}>
-                  {productType ? ` ${productType.packaging}, ${productType.type}, ${productType.gramm}г` : 'Загрузка...'}
-                </Typography>
-              </Box>
-
-              <Stack spacing={2}>
-                <Box>
-                <Typography
-  variant="body1"
-  color="#727d7b"
-  sx={{ fontSize: '1.125rem' }}
->
-Гео-локация :</Typography>
-                  <Typography variant="h6" color="#3b403fff" sx={{ fontSize: '1.25rem', fontWeight: '600' }}>
-                    {client.addressLong ? `${client.addressLong.latitude}, ${client.addressLong.longitude}` : 'Не указан'}
+          <Grid container spacing={2} sx={{ height: 'calc(100% - 140px)' }}>
+            {/* Box 1: Restaurant info */}
+            <Grid item xs={12} sm={3}>
+              <Paper elevation={2} sx={{ p: 2.5, height: '100%', width:'245px', display: 'flex', flexDirection: 'column', bgcolor: '#fafafa' }}>
+                <Box textAlign="left" mb={3}>
+                  
+                  <Typography variant="h4" fontWeight="bold" mb={1} sx={{ fontSize: '2rem' }}>Имя: {client.restaurant || client.name}
+                  </Typography>
+                  <Typography variant="h6" color="#0F9D8C" mb={2} sx={{ fontSize: '1.7rem' }}>
+                    {productType ? ` ${productType.packaging}, ${productType.type}, ${productType.gramm}г` : 'Загрузка...'}
                   </Typography>
                 </Box>
 
-  <Box>
-                  <Typography variant="body1" color="#727d7b"
-   sx={{ fontSize: '1.125rem' }}>
-                    Название фирмы:
-                  </Typography>
-                  <Typography variant="h6" color="#3b403fff" sx={{ fontSize: '1.25rem', fontWeight: '600'}}>
-                    {client.orgName || 'Не указан'}
-                  </Typography>
-                </Box>
+                <Stack spacing={2}>
+                  <Box>
+                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                      <Typography
+                        variant="body1"
+                        color="#727d7b"
+                        sx={{ fontSize: '1.125rem' }}
+                      >
+                        Гео-локация :
+                      </Typography>
+                      {client.addressLong?.latitude && client.addressLong?.longitude && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="primary"
+                          startIcon={<TelegramIcon />}
+                          onClick={handleSendViaTelegram}
+                          disabled={sendingTelegram || !currentUser?.chatId}
+                          sx={{
+                            minWidth: 'auto',
+                            px: 1,
+                            py: 0.5,
+                            fontSize: '0.75rem',
+                            backgroundColor: '#0088cc',
+                            '&:hover': {
+                              backgroundColor: '#006aa3',
+                            }
+                          }}
+                        >
+                          {sendingTelegram ? '...' : 'Отправить'}
+                        </Button>
+                      )}
+                    </Box>
+                    <Typography variant="h6" color="#3b403fff" sx={{ fontSize: '1.25rem', fontWeight: '600' }}>
+                      {client.addressLong ? `${client.addressLong.latitude}, ${client.addressLong.longitude}` : 'Не указан'}
+                    </Typography>
+                  </Box>
 
+                  <Box>
+                    <Typography variant="body1" color="#727d7b"
+                     sx={{ fontSize: '1.125rem' }}>
+                      Название фирмы:
+                    </Typography>
+                    <Typography variant="h6" color="#3b403fff" sx={{ fontSize: '1.25rem', fontWeight: '600'}}>
+                      {client.orgName || 'Не указан'}
+                    </Typography>
+                  </Box>
 
+                  <Box>
+                    <Typography variant="body1" color="#727d7b"
+                     sx={{ fontSize: '1.125rem' }}>
+                      Адрес:
+                    </Typography>
+                    <Typography variant="h6" color="#3b403fff" sx={{ fontSize: '1.25rem', fontWeight: '600'}}>
+                      {client.addressShort || 'Не указан'}
+                    </Typography>
+                  </Box>
 
-
-                <Box>
-                  <Typography variant="body1" color="#727d7b"
-   sx={{ fontSize: '1.125rem' }}>
-                    Адрес:
-                  </Typography>
-                  <Typography variant="h6" color="#3b403fff" sx={{ fontSize: '1.25rem', fontWeight: '600'}}>
-                    {client.addressShort || 'Не указан'}
-                  </Typography>
-                </Box>
-
-                <Box>
-                  <Typography variant="body1" color="#727d7b"  sx={{ fontSize: '1.125rem' }}>
-                    Комментарий:
-                  </Typography>
-                  <Typography variant="h6"color="#3b403fff" sx={{ fontSize: '1.25rem', fontWeight: "600" }}>
-                    {client.comment || 'Нет комментария'}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Paper>
-          </Grid>
-
-          {/* Box 2: Paper remaining with edit */}
-          <Grid item xs={12} sm={3}>
-            <Paper elevation={2} sx={{ p: 2.5, height: '100%', display: 'flex', width:'245px', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: '#fafafa' }}>
-             
-{/* Номер полки */}
-<Box display="flex" flexDirection="column" alignItems="center" mb={3}>
-  <Typography
-    variant="body1"
-    color="#9fb1af"
-    sx={{ fontSize: '1.125rem', mb: 1 }}
-  >
-    Номер полки
-  </Typography>
-  <Box
-    sx={{
-      width: 120,
-      height: 80,
-      border: '2px solid #BDDCD8',
-      borderRadius: 3,
-      backgroundColor: '#E2F0EE',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}
-  >
-    <Typography
-      sx={{
-        color: '#065345',
-        fontSize: 34,
-        fontWeight: 800,
-      }}
-    >
-      {client.shellNum}
-    </Typography>
-  </Box>
-</Box>
-
-{/* Остаток бумаги */}
-<Box display="flex" flexDirection="column" alignItems="center" mb={3}>
-  <Typography
-    variant="body1"
-    color="#9fb1af"
-    sx={{ fontSize: '1.125rem', mb: 1 }}
-  >
-    Остаток бумаги
-  </Typography>
-  <Box
-    sx={{
-      width: 120,
-      height: 80,
-      border: '2px solid #BDDCD8',
-      borderRadius: 3,
-      backgroundColor: '#E2F0EE',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}
-  >
-    <Typography
-      sx={{
-        color: '#065345',
-        fontSize: 34,
-        fontWeight: 800,
-      }}
-    >
-      {paperRemaining || client.paperRemaining || 0}
-    </Typography>
-  </Box>
-</Box>
-              
-              <Typography variant="body1" color="text.secondary" mb={3}>
-                кг осталось
-              </Typography>
-
-              {showEditPaperInput ? (
-                <Stack spacing={2} width="100%">
-                  <TextField
-                    label="Остаток (кг)"
-                    type="number"
-                    value={paperRemaining}
-                    onChange={(e) => setPaperRemaining(e.target.value)}
-                    fullWidth
-                  />
-                  <Stack direction="row" spacing={1}>
-                    <Button variant="contained" onClick={handleSave} disabled={saving} fullWidth>
-                      {saving ? 'Сохранение…' : 'Сохранить'}
-                    </Button>
-                    <Button 
-                      variant="outlined" 
-                      onClick={() => setShowEditPaperInput(false)} 
-                      disabled={saving}
-                      fullWidth
-                    >
-                      Отмена
-                    </Button>
-                  </Stack>
-                </Stack>
-              ) : (
-            <Button
-  variant="contained"
-  onClick={() => setShowEditPaperInput(true)}
-  sx={{
-    backgroundColor: '#0F9D8C',
-    color: '#ffffff',
-    '&:hover': {
-      backgroundColor: '#0b7f73', // slightly darker on hover
-    },
-  }}
-  startIcon={<EditIcon />}
->
-  Редактировать
-</Button>
-              )}
-            </Paper>
-          </Grid>
-
-          {/* Box 3: Paper management */}
-          <Grid item xs={12} sm={3}>
-            <Paper elevation={2} sx={{ p: 2.5, height: '100%', width:'250px', display: 'flex', flexDirection: 'column', bgcolor: '#fafafa' }}>
-              {showAddPaperInput ? (
-                <Stack spacing={2} mb={2}>
-                  <TextField
-                    label="Количество (кг)"
-                    type="number"
-                    value={paperToAdd}
-                    onChange={(e) => setPaperToAdd(e.target.value)}
-                    inputProps={{ step: '0.01', min: 0 }}
-                  />
-                  <Box display="flex" gap={1.5}>
-                    <Button
-                      variant="contained"
-                      onClick={handleAddPaper}
-                      disabled={addingPaper || !paperToAdd}
-                      fullWidth
-                    >
-                      {addingPaper ? 'Сохранение…' : 'Сохранить'}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={() => {
-                        setShowAddPaperInput(false);
-                        setPaperToAdd('');
-                      }}
-                      disabled={addingPaper}
-                      fullWidth
-                    >
-                      Отмена
-                    </Button>
+                  <Box>
+                    <Typography variant="body1" color="#727d7b"  sx={{ fontSize: '1.125rem' }}>
+                      Комментарий:
+                    </Typography>
+                    <Typography variant="h6"color="#3b403fff" sx={{ fontSize: '1.25rem', fontWeight: "600" }}>
+                      {client.comment || 'Нет комментария'}
+                    </Typography>
                   </Box>
                 </Stack>
-              ) : (
-                <Button
-                  variant="contained"
-                  color="warning"
-                  onClick={() => setShowAddPaperInput(true)}
-                  fullWidth
-                  sx={{ mb: 2 }}
-                >
-                  Добавить бумагу
-                </Button>
-              )}
+              </Paper>
+            </Grid>
 
-              {logs.length > 0 && (
-                <Box flex={1}>
-                  <Typography variant="h6" textAlign="center" mb={1}>
-                    История приёмки
-                  </Typography>
-                  <TableContainer sx={{ maxHeight: 220, border: '1px solid #e0e0e0' }}>
-                    <Table size="small" stickyHeader>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
-                            Дата
-                          </TableCell>
-                          <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
-                            Бумага (кг)
-                          </TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {logs.map((log) => (
-                          <TableRow key={log.id} hover>
-                            <TableCell>{log.dateRecorded.toDate().toLocaleDateString()}</TableCell>
-                            <TableCell sx={{ color: '#2e7d32', fontWeight: 'bold' }}>
-                              {log.paperIN}
+            {/* Box 2: Paper remaining with edit */}
+            <Grid item xs={12} sm={3}>
+              <Paper elevation={2} sx={{ p: 2.5, height: '100%', display: 'flex', width:'245px', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: '#fafafa' }}>
+               
+          {/* Номер полки */}
+          <Box display="flex" flexDirection="column" alignItems="center" mb={3}>
+            <Typography
+              variant="body1"
+              color="#9fb1af"
+              sx={{ fontSize: '1.125rem', mb: 1 }}
+            >
+              Номер полки
+            </Typography>
+            <Box
+              sx={{
+                width: 120,
+                height: 80,
+                border: '2px solid #BDDCD8',
+                borderRadius: 3,
+                backgroundColor: '#E2F0EE',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Typography
+                sx={{
+                  color: '#065345',
+                  fontSize: 34,
+                  fontWeight: 800,
+                }}
+              >
+                {client.shellNum}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Остаток бумаги */}
+          <Box display="flex" flexDirection="column" alignItems="center" mb={3}>
+            <Typography
+              variant="body1"
+              color="#9fb1af"
+              sx={{ fontSize: '1.125rem', mb: 1 }}
+            >
+              Остаток бумаги
+            </Typography>
+            <Box
+              sx={{
+                width: 120,
+                height: 80,
+                border: '2px solid #BDDCD8',
+                borderRadius: 3,
+                backgroundColor: '#E2F0EE',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Typography
+                sx={{
+                  color: '#065345',
+                  fontSize: 34,
+                  fontWeight: 800,
+                }}
+              >
+                {paperRemaining || client.paperRemaining || 0}
+              </Typography>
+            </Box>
+          </Box>
+                        
+                <Typography variant="body1" color="text.secondary" mb={3}>
+                  кг осталось
+                </Typography>
+
+                {showEditPaperInput ? (
+                  <Stack spacing={2} width="100%">
+                    <TextField
+                      label="Остаток (кг)"
+                      type="number"
+                      value={paperRemaining}
+                      onChange={(e) => setPaperRemaining(e.target.value)}
+                      fullWidth
+                    />
+                    <Stack direction="row" spacing={1}>
+                      <Button variant="contained" onClick={handleSave} disabled={saving} fullWidth>
+                        {saving ? 'Сохранение…' : 'Сохранить'}
+                      </Button>
+                      <Button 
+                        variant="outlined" 
+                        onClick={() => setShowEditPaperInput(false)} 
+                        disabled={saving}
+                        fullWidth
+                      >
+                        Отмена
+                      </Button>
+                    </Stack>
+                  </Stack>
+                ) : (
+              <Button
+        variant="contained"
+        onClick={() => setShowEditPaperInput(true)}
+        sx={{
+          backgroundColor: '#0F9D8C',
+          color: '#ffffff',
+          '&:hover': {
+            backgroundColor: '#0b7f73', // slightly darker on hover
+          },
+        }}
+        startIcon={<EditIcon />}
+      >
+        Редактировать
+      </Button>
+                )}
+              </Paper>
+            </Grid>
+
+            {/* Box 3: Paper management */}
+            <Grid item xs={12} sm={3}>
+              <Paper elevation={2} sx={{ p: 2.5, height: '100%', width:'250px', display: 'flex', flexDirection: 'column', bgcolor: '#fafafa' }}>
+                {showAddPaperInput ? (
+                  <Stack spacing={2} mb={2}>
+                    <TextField
+                      label="Количество (кг)"
+                      type="number"
+                      value={paperToAdd}
+                      onChange={(e) => setPaperToAdd(e.target.value)}
+                      inputProps={{ step: '0.01', min: 0 }}
+                    />
+                    <Box display="flex" gap={1.5}>
+                      <Button
+                        variant="contained"
+                        onClick={handleAddPaper}
+                        disabled={addingPaper || !paperToAdd}
+                        fullWidth
+                      >
+                        {addingPaper ? 'Сохранение…' : 'Сохранить'}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        onClick={() => {
+                          setShowAddPaperInput(false);
+                          setPaperToAdd('');
+                        }}
+                        disabled={addingPaper}
+                        fullWidth
+                      >
+                        Отмена
+                      </Button>
+                    </Box>
+                  </Stack>
+                ) : (
+                  <Button
+                    variant="contained"
+                    color="warning"
+                    onClick={() => setShowAddPaperInput(true)}
+                    fullWidth
+                    sx={{ mb: 2 }}
+                  >
+                    Добавить бумагу
+                  </Button>
+                )}
+
+                {logs.length > 0 && (
+                  <Box flex={1}>
+                    <Typography variant="h6" textAlign="center" mb={1}>
+                      История приёмки
+                    </Typography>
+                    <TableContainer sx={{ maxHeight: 220, border: '1px solid #e0e0e0' }}>
+                      <Table size="small" stickyHeader>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
+                              Дата
+                            </TableCell>
+                            <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
+                              Бумага (кг)
                             </TableCell>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Box>
-              )}
-            </Paper>
-          </Grid>
+                        </TableHead>
+                        <TableBody>
+                          {logs.map((log) => (
+                            <TableRow key={log.id} hover>
+                              <TableCell>{log.dateRecorded.toDate().toLocaleDateString()}</TableCell>
+                              <TableCell sx={{ color: '#2e7d32', fontWeight: 'bold' }}>
+                                {log.paperIN}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                )}
+              </Paper>
+            </Grid>
 
-          {/* Box 4: Donut chart */}
-         
-        </Grid>
-      </Box>
-    </Modal>
+            {/* Box 4: Donut chart - you can add this back if needed */}
+           
+          </Grid>
+        </Box>
+      </Modal>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </>
   );
 }

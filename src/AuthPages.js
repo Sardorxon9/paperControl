@@ -20,14 +20,30 @@ import {
   ArrowForward,
   Person,
   Shield,
-  Work
+  Work,
+  Assignment
 } from '@mui/icons-material';
+import Welcome from './Welcome'; // Import Welcome component
 
 // MOCK FUNCTIONS (replace with Firebase)
 const mockSignInWithEmailAndPassword = async (email, password) => {
   await new Promise((resolve) => setTimeout(resolve, 1000));
-  if (email === 'admin@test.com' && password === 'password') return { user: { email, uid: '123' } };
-  if (email === 'worker@test.com' && password === 'password') return { user: { email, uid: '456' } };
+  if (email === 'admin@test.com' && password === 'password') return { 
+    user: { 
+      email, 
+      uid: '123',
+      name: 'Администратор Иван',
+      chatId: 'admin_chat_123' // Add chatId for Telegram integration
+    } 
+  };
+  if (email === 'worker@test.com' && password === 'password') return { 
+    user: { 
+      email, 
+      uid: '456',
+      name: 'Сотрудник Петр',
+      chatId: '685385466' // Add chatId for Telegram integration
+    } 
+  };
   throw new Error('Неверные учетные данные');
 };
 
@@ -47,6 +63,7 @@ const AuthPages = () => {
   const [success, setSuccess] = useState('');
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' or 'welcome'
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -95,6 +112,7 @@ const AuthPages = () => {
     setFormData({ email: '', password: '' });
     setSuccess('');
     setError('');
+    setCurrentView('dashboard');
   };
 
   const switchMode = () => {
@@ -104,8 +122,30 @@ const AuthPages = () => {
     setSuccess('');
   };
 
+  // Navigate to Welcome page
+  const handleNavigateToWelcome = () => {
+    setCurrentView('welcome');
+  };
+
+  // Navigate back to dashboard
+  const handleBackToDashboard = () => {
+    setCurrentView('dashboard');
+  };
+
+  // WELCOME PAGE VIEW
+  if (user && userRole && currentView === 'welcome') {
+    return (
+      <Welcome 
+        user={user} 
+        userRole={userRole} 
+        onBackToDashboard={handleBackToDashboard}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   // DASHBOARD
-  if (user && userRole) {
+  if (user && userRole && currentView === 'dashboard') {
     return (
       <Container maxWidth="md" sx={{ mt: 6 }}>
         <Paper elevation={4} sx={{ p: 4, mb: 4 }}>
@@ -125,6 +165,25 @@ const AuthPages = () => {
         </Paper>
 
         <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }} gap={3}>
+          {/* Клиенты и Бумаги Card */}
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Typography variant="h6">Клиенты и Бумаги</Typography>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Управление клиентами и контроль расхода бумаги
+            </Typography>
+            <Button 
+              variant="contained" 
+              sx={{
+                backgroundColor: '#0F9D8C',
+                '&:hover': { backgroundColor: '#0c7a6e' }
+              }}
+              startIcon={<Assignment />}
+              onClick={handleNavigateToWelcome}
+            >
+              Открыть
+            </Button>
+          </Paper>
+
           <Paper elevation={2} sx={{ p: 3 }}>
             <Typography variant="h6">Мои документы</Typography>
             <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -165,8 +224,6 @@ const AuthPages = () => {
             <Paper elevation={2} sx={{ p: 3 }}>
               <Typography variant="h6">Мои задачи</Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
-
-                
                 Просмотрите назначенные вам задачи
               </Typography>
               <Button variant="contained" color="primary">Задачи</Button>
@@ -233,7 +290,6 @@ const AuthPages = () => {
           </Stack>
         </form>
         
-
         <Typography align="center" variant="body2" sx={{ mt: 3 }}>
           {isLogin ? 'Нет аккаунта?' : 'Уже есть аккаунт?'}{' '}
           <Button onClick={switchMode} size="small">
