@@ -169,7 +169,7 @@ const AuthPages = () => {
   };
 
   // WELCOME PAGE VIEW
-  if (user && userRole && currentView === 'dashboard') {
+  if (user && userRole && currentView === 'welcome') {
     return (
       <Welcome 
         user={user} 
