@@ -110,63 +110,63 @@ export default function ClientDetailsModal({
   };
 
   // Telegram integration function
-  const handleSendViaTelegram = async () => {
-    if (!client || !currentUser?.chatId) {
+ const handleSendViaTelegram = async () => {
+  if (!client?.addressLong?.latitude || !client?.addressLong?.longitude) {
+    setSnackbar({
+      open: true,
+      message: 'Ошибка: отсутствуют координаты ресторана',
+      severity: 'error',
+    });
+    return;
+  }
+
+  // currentUser.chatId is already the right value (supplied by Welcome.js)
+  const { chatId } = currentUser || {};
+  if (!chatId) {
+    setSnackbar({
+      open: true,
+      message: 'Ошибка: отсутствует chatId пользователя',
+      severity: 'error',
+    });
+    return;
+  }
+
+  setSendingTelegram(true);
+
+  try {
+    const response = await fetch('http://localhost:3001/send-location', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chatId, // ← comes from Firestore users/{doc}.chatId
+        restaurantName: client.restaurant || client.name,
+        latitude: client.addressLong.latitude,
+        longitude: client.addressLong.longitude,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
       setSnackbar({
         open: true,
-        message: 'Ошибка: отсутствует chatId пользователя',
-        severity: 'error'
+        message: 'Локация успешно отправлена в Telegram!',
+        severity: 'success',
       });
-      return;
+    } else {
+      throw new Error(result.error || 'Неизвестная ошибка');
     }
-
-    if (!client.addressLong?.latitude || !client.addressLong?.longitude) {
-      setSnackbar({
-        open: true,
-        message: 'Ошибка: отсутствуют координаты ресторана',
-        severity: 'error'
-      });
-      return;
-    }
-
-    setSendingTelegram(true);
-    
-    try {
-      const response = await fetch('http://localhost:3001/send-location', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chatId: currentUser.chatId,
-          restaurantName: client.restaurant || client.name,
-          latitude: client.addressLong.latitude,
-          longitude: client.addressLong.longitude
-        })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setSnackbar({
-          open: true,
-          message: 'Локация успешно отправлена в Telegram!',
-          severity: 'success'
-        });
-      } else {
-        throw new Error(result.error || 'Неизвестная ошибка');
-      }
-    } catch (error) {
-      console.error('Error sending via Telegram:', error);
-      setSnackbar({
-        open: true,
-        message: `Ошибка отправки: ${error.message}`,
-        severity: 'error'
-      });
-    } finally {
-      setSendingTelegram(false);
-    }
-  };
+  } catch (error) {
+    console.error('Error sending via Telegram:', error);
+    setSnackbar({
+      open: true,
+      message: `Ошибка отправки: ${error.message}`,
+      severity: 'error',
+    });
+  } finally {
+    setSendingTelegram(false);
+  }
+};
 
   const handleCloseModal = () => {
     setPaperRemaining("");
@@ -310,6 +310,7 @@ export default function ClientDetailsModal({
   };
 
   if (!client) return null;
+console.log('currentUser from Welcome →', currentUser);
 
   return (
     <>

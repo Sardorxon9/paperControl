@@ -35,7 +35,7 @@ app.post('/send-location', async (req, res) => {
     // Send restaurant name as a follow-up message
     const textResponse = await axios.post(`${TELEGRAM_API_URL}/sendMessage`, {
       chat_id: chatId,
-      text: `📍 Ресторан: ${restaurantName}`,
+      text: `📍 Ресторан: ${restaurantName} ⬆️`,
       parse_mode: 'HTML'
     });
 

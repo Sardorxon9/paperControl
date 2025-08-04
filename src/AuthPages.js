@@ -23,36 +23,10 @@ import {
   Work,
   Assignment
 } from '@mui/icons-material';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { auth, db } from './firebase';
 import Welcome from './Welcome'; // Import Welcome component
-
-// MOCK FUNCTIONS (replace with Firebase)
-const mockSignInWithEmailAndPassword = async (email, password) => {
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  if (email === 'admin@test.com' && password === 'password') return { 
-    user: { 
-      email, 
-      uid: '123',
-      name: 'Администратор Иван',
-      chatId: 'admin_chat_123' // Add chatId for Telegram integration
-    } 
-  };
-  if (email === 'worker@test.com' && password === 'password') return { 
-    user: { 
-      email, 
-      uid: '456',
-      name: 'Сотрудник Петр',
-      chatId: '685385466' // Add chatId for Telegram integration
-    } 
-  };
-  throw new Error('Неверные учетные данные');
-};
-
-const mockGetUserRole = async (uid) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  if (uid === '123') return 'admin';
-  if (uid === '456') return 'worker';
-  return null;
-};
 
 const AuthPages = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -87,32 +61,94 @@ const AuthPages = () => {
     return true;
   };
 
+  const getUserDataByUID = async (uid) => {
+    try {
+      // Query the users collection to find user by uID field
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("uID", "==", uid));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        // Get the first matching document
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
+        
+        return {
+          id: userDoc.id,
+          uID: userData.uID,
+          name: userData.name,
+          chatId: userData.chatId,
+          role: userData.role,
+          email: userData.email || formData.email // fallback to login email if not stored
+        };
+      } else {
+        throw new Error('Пользователь не найден в базе данных');
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      throw new Error('Ошибка при получении данных пользователя: ' + error.message);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setLoading(true);
     try {
-      const result = await mockSignInWithEmailAndPassword(formData.email, formData.password);
-      const role = await mockGetUserRole(result.user.uid);
-      setUser(result.user);
-      setUserRole(role);
-      setSuccess(`Добро пожаловать! Вы вошли как ${role === 'admin' ? 'Администратор' : 'Сотрудник'}`);
+      // Sign in with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      const firebaseUser = userCredential.user;
+      
+      // Get user data from Firestore users collection
+      const userData = await getUserDataByUID(firebaseUser.uid);
+      
+      setUser(userData);
+      setUserRole(userData.role);
+      setCurrentView('dashboard'); 
+      setSuccess(`Добро пожаловать, ${userData.name}! Вы вошли как ${userData.role === 'admin' ? 'Администратор' : 'Сотрудник'}`);
       setFormData({ email: '', password: '' });
+      
+      console.log("User logged in successfully:", userData);
     } catch (err) {
-      setError(err.message);
+      console.error("Login error:", err);
+      
+      // Handle specific Firebase Auth errors
+      let errorMessage = 'Ошибка входа';
+      if (err.code === 'auth/user-not-found') {
+        errorMessage = 'Пользователь не найден';
+      } else if (err.code === 'auth/wrong-password') {
+        errorMessage = 'Неверный пароль';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMessage = 'Неверный формат email';
+      } else if (err.code === 'auth/user-disabled') {
+        errorMessage = 'Аккаунт заблокирован';
+      } else if (err.code === 'auth/too-many-requests') {
+        errorMessage = 'Слишком много попыток входа. Попробуйте позже';
+      } else {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    setUserRole(null);
-    setFormData({ email: '', password: '' });
-    setSuccess('');
-    setError('');
-    setCurrentView('dashboard');
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      setUser(null);
+      setUserRole(null);
+      setFormData({ email: '', password: '' });
+      setSuccess('');
+      setError('');
+      setCurrentView('dashboard');
+      console.log("User logged out successfully");
+    } catch (error) {
+      console.error("Logout error:", error);
+      setError('Ошибка при выходе из системы');
+    }
   };
 
   const switchMode = () => {
@@ -133,7 +169,7 @@ const AuthPages = () => {
   };
 
   // WELCOME PAGE VIEW
-  if (user && userRole && currentView === 'welcome') {
+  if (user && userRole && currentView === 'dashboard') {
     return (
       <Welcome 
         user={user} 
@@ -157,7 +193,14 @@ const AuthPages = () => {
             <Stack direction="row" spacing={2} alignItems="center">
               <Box display="flex" alignItems="center" gap={1} px={2} py={1} bgcolor="#f5f5f5" borderRadius={2}>
                 {userRole === 'admin' ? <Shield color="primary" /> : <Work color="success" />}
-                <Typography variant="body2">{userRole === 'admin' ? 'Администратор' : 'Сотрудник'}</Typography>
+                <Box>
+                  <Typography variant="body2" fontWeight={600}>
+                    {user.name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {userRole === 'admin' ? 'Администратор' : 'Сотрудник'}
+                  </Typography>
+                </Box>
               </Box>
               <Button color="error" onClick={handleLogout}>Выйти</Button>
             </Stack>

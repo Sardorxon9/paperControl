@@ -656,6 +656,9 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
     }
   };
 
+
+
+
   const fetchClientData = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "clients"));
@@ -1092,23 +1095,9 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                 </Box>
               </Box>
               
-              <Button 
-                variant="outlined" 
-                size="small"
-                onClick={onBackToDashboard}
-                sx={{ minWidth: 'auto' }}
-              >
-                Назад
-              </Button>
+             
               
-              <Button 
-                color="error" 
-                variant="outlined"
-                size="small"
-                onClick={onLogout}
-              >
-                Выйти
-              </Button>
+            
             </Stack>
           </Stack>
         </Container>
