@@ -518,6 +518,8 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
   const [searchQuery, setSearchQuery] = useState("");
   const [addClientModalOpen, setAddClientModalOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
+const [hasTracking, setHasTracking] = useState(false); // ✅ Add this
+
 
   const hiddenColumns = getHiddenColumns(userRole);
 
@@ -546,6 +548,7 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
           console.error("Error fetching paperInfo for standard design:", error);
         }
       }
+     
       
       return { packaging, shellNum: '', paperRemaining: '' };
     } catch (error) {
@@ -558,6 +561,7 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
 
 
   const fetchClientData = async () => {
+    
     try {
       const querySnapshot = await getDocs(collection(db, "clients"));
 
@@ -648,9 +652,12 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
   const [selectedClientProduct, setSelectedClientProduct] = useState(null);
 
   const handleOpenModal = (client) => {
-    setSelectedClient(client);
+  const hasTracking = client?.designType === "unique";
+  setHasTracking(hasTracking);
+  setSelectedClient(client);
+
   setModalOpen(true);
-  };
+};
 
   const handleOpenProductModal = (product) => {
     setSelectedProduct(product);
@@ -1074,6 +1081,7 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
           client={selectedClient}
           onClientUpdate={handleClientUpdate}
           currentUser={user} // Pass user for Telegram integration
+           hasTracking={hasTracking} 
         />
       </Container>
     </>
