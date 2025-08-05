@@ -310,8 +310,10 @@ export default function ClientDetailsModal({
   };
 
   if (!client) return null;
-console.log('currentUser from Welcome →', currentUser);
-
+const hasPaperTracking =
+  client?.shellNum != null &&
+  client?.paperRemaining != null;
+  
   return (
     <>
       <Modal
@@ -414,8 +416,10 @@ console.log('currentUser from Welcome →', currentUser);
                 </Stack>
               </Paper>
             </Grid>
+            
 
             {/* Box 2: Paper remaining with edit */}
+             {hasPaperTracking && (
             <Grid item xs={12} sm={3}>
               <Paper elevation={2} sx={{ p: 2.5, height: '100%', display: 'flex', width:'245px', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: '#fafafa' }}>
                
@@ -530,8 +534,10 @@ console.log('currentUser from Welcome →', currentUser);
                 )}
               </Paper>
             </Grid>
+              )}
 
             {/* Box 3: Paper management */}
+              {hasPaperTracking && (
             <Grid item xs={12} sm={3}>
               <Paper elevation={2} sx={{ p: 2.5, height: '100%', width:'250px', display: 'flex', flexDirection: 'column', bgcolor: '#fafafa' }}>
                 {showAddPaperInput ? (
@@ -610,6 +616,7 @@ console.log('currentUser from Welcome →', currentUser);
                 )}
               </Paper>
             </Grid>
+                  )}
 
             {/* Box 4: Donut chart - you can add this back if needed */}
            

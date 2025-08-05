@@ -138,22 +138,66 @@ export default function AddClientForm({ onClientAdded, onClose }) {
       return;
     }
 
-    // Find matching product
+    // Enhanced product matching with debugging
+    console.log("Looking for product with:", {
+      type: productInputs.type,
+      packaging: productInputs.packaging,
+      gramm: productInputs.gramm,
+      grammAsNumber: Number(productInputs.gramm)
+    });
+
+    console.log("Available products:", products.map(p => ({
+      id: p.id,
+      type: p.type,
+      packaging: p.packaging,
+      gramm: p.gramm,
+      grammType: typeof p.gramm
+    })));
+
     const matchedProduct = products.find(p => {
       const typeMatch = p.type === productInputs.type;
       const packagingMatch = p.packaging === productInputs.packaging;
-      const grammMatch = Number(p.gramm) === Number(productInputs.gramm);
+      
+      // More robust gramm comparison - handle both string and number cases
+      let grammMatch = false;
+      const inputGramm = productInputs.gramm;
+      const productGramm = p.gramm;
+      
+      // Try multiple comparison approaches
+      if (String(productGramm) === String(inputGramm)) {
+        grammMatch = true;
+      } else if (Number(productGramm) === Number(inputGramm)) {
+        grammMatch = true;
+      } else if (parseFloat(productGramm) === parseFloat(inputGramm)) {
+        grammMatch = true;
+      }
+      
+      console.log(`Checking product ${p.id}:`, {
+        typeMatch,
+        packagingMatch,
+        grammMatch,
+        productGramm,
+        inputGramm,
+        productGrammType: typeof productGramm,
+        inputGrammType: typeof inputGramm
+      });
       
       return typeMatch && packagingMatch && grammMatch;
     });
 
     if (!matchedProduct) {
+      console.error("No product found. Available products:", products);
+      console.error("Search criteria:", productInputs);
+      
       setMessage({ 
         type: "error", 
-        text: `Продукт не найден: ${productInputs.type}, ${productInputs.packaging}, ${productInputs.gramm}г. Проверьте данные в базе.` 
+        text: `Продукт не найден: ${productInputs.type}, ${productInputs.packaging}, ${productInputs.gramm}г. 
+               Доступные продукты: ${products.map(p => `${p.type}-${p.packaging}-${p.gramm}г`).join(', ')}` 
       });
       return;
     }
+
+    console.log("Found matching product:", matchedProduct);
 
     setLoading(true);
     try {
