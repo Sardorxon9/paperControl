@@ -207,6 +207,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
       // Build client data based on design type
       const baseClientData = {
         name: formData.name.trim(),
+         orgName: formData.orgName.trim(),
         restaurant: formData.name.trim(), // Add restaurant field for compatibility
         addressShort: formData.addressShort.trim(),
         addressLong: new GeoPoint(latitude, longitude),
@@ -249,6 +250,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
       // Reset form
       setFormData({
         name: "",
+         orgName: "",    
         addressShort: "",
         geoPoint: "",
         designType: "unique",
@@ -387,22 +389,17 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                     <FormControlLabel 
                       value="unique" 
                       control={<Radio />} 
-                      label="Уникальный (индивидуальный учет бумаги)" 
+                      label="Дизайн с лого" 
                     />
                     <FormControlLabel 
                       value="standart" 
                       control={<Radio />} 
-                      label="Стандартный (общий учет по типу продукта)" 
+                      label="Стандарт дизайн" 
                     />
                   </RadioGroup>
                 </FormControl>
                 
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  {isStandardDesign 
-                    ? "Для стандартного дизайна данные о бумаге берутся из общего склада по типу продукта"
-                    : "Для уникального дизайна ведется индивидуальный учет бумаги для каждого клиента"
-                  }
-                </Typography>
+               
               </Paper>
             </Grid>
 
@@ -443,6 +440,18 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                     />
                   </Grid>
 
+                  <Grid item xs={12} sm={6}>
+  <TextField
+    fullWidth
+    label="Наименование организации (Фирма)"
+    variant="outlined"
+    value={formData.orgName}
+    onChange={handleInputChange('orgName')}
+    size="small"
+    sx={{ fontSize: '1.15em' }}
+  />
+</Grid>
+
                   {/* Show shellNum only for unique design */}
                   {!isStandardDesign && (
                     <Grid item xs={12} sm={6}>
@@ -466,7 +475,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                       variant="outlined"
                       value={formData.addressShort}
                       onChange={handleInputChange('addressShort')}
-                      required
+                     
                       size="small"
                       sx={{ fontSize: '1.15em' }}
                     />
@@ -475,7 +484,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
-                      label="Координаты (широта, долгота)"
+                      label="Локация ( координаты )"
                       variant="outlined"
                       value={formData.geoPoint}
                       onChange={handleInputChange('geoPoint')}

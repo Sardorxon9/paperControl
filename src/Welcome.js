@@ -37,7 +37,6 @@ import {
   Select,
   MenuItem,
   Divider,
-  IconButton // <-- Import IconButton
 } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
 import Shield from '@mui/icons-material/Shield';
@@ -127,7 +126,7 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
     if (!usedAmount || !selectedClient || !paperInfo) return;
     
     try {
-      console.log("Saving usage:", { usedAmount, selectedClient, paperInfo });
+     
       
       // Add log entry to productTypes/{id}/logs
       const logRef = await addDoc(collection(db, "productTypes", product.id, "logs"), {
@@ -135,14 +134,14 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
         date: serverTimestamp(),
         clientId: selectedClient
       });
-      console.log("Log added with ID:", logRef.id);
+    
       
       // Update paperRemaining in paperInfo subcollection
       const newPaperRemaining = Math.max(0, (paperInfo.paperRemaining || 0) - parseFloat(usedAmount));
       await updateDoc(doc(db, "productTypes", product.id, "paperInfo", paperInfo.id), {
         paperRemaining: newPaperRemaining
       });
-      console.log("Paper remaining updated to:", newPaperRemaining);
+   
       
       // Reset form
       setUsedAmount('');
@@ -161,14 +160,14 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
     if (!paperIn || !paperInfo) return;
     
     try {
-      console.log("Saving priyemka:", { paperIn, paperInfo });
+   
       
       // Add priyemka entry to productTypes/{id}/priyemka
       const priyemkaRef = await addDoc(collection(db, "productTypes", product.id, "priyemka"), {
         paperIn: parseFloat(paperIn),
         date: serverTimestamp()
       });
-      console.log("Priyemka added with ID:", priyemkaRef.id);
+
       
       // Update paperRemaining and totalKg in paperInfo subcollection
       const newPaperRemaining = (paperInfo.paperRemaining || 0) + parseFloat(paperIn);
@@ -178,7 +177,7 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
         paperRemaining: newPaperRemaining,
         totalKg: newTotalKg
       });
-      console.log("Paper remaining updated to:", newPaperRemaining, "totalKg:", newTotalKg);
+    
       
       // Reset form
       setPaperIn('');
@@ -219,9 +218,12 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
           overflow: 'auto'
         }}
       >
-        <Typography variant="h5" component="h2" sx={{ mb: 3, fontWeight: 600 }}>
-          Подробная информация: {product.type}
-        </Typography>
+    <Typography variant="h5" component="h2" sx={{ mb: 3, fontWeight: 600 }}>
+  <Box component="span" sx={{ fontWeight: 400, color: '#3d5966ff' }}>
+    Стандарт дизайн рулон:
+  </Box>{' '}
+  {product.type} → {product.packaging}
+</Typography>
         
         {loading ? (
           <Box display="flex" justifyContent="center" p={4}>
@@ -586,7 +588,7 @@ const [hasTracking, setHasTracking] = useState(false); // ✅ Add this
         })
       );
 
-      console.log("Parsed clients array:", clientsArray);
+
       setClientData(clientsArray);
 
       if (clientsArray.length > 0) {
@@ -634,7 +636,7 @@ const [hasTracking, setHasTracking] = useState(false); // ✅ Add this
         })
       );
 
-      console.log("Parsed product types array:", productTypesArray);
+   
       setProductTypesData(productTypesArray);
     } catch (error) {
       console.error("Error fetching product types data:", error);

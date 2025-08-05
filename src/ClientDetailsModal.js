@@ -24,7 +24,7 @@ import {
   Snackbar,
   Alert
 } from "@mui/material";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+
 import CloseIcon from '@mui/icons-material/Close';
 
 const modalStyle = {
