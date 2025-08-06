@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { collection, addDoc, updateDoc, doc, Timestamp, query, orderBy, getDocs, getDoc } from "firebase/firestore";
 import EditIcon from '@mui/icons-material/Edit';
 import TelegramIcon from '@mui/icons-material/Telegram';
-
 import { db } from "./firebase";
 import {
   Box,
@@ -24,8 +23,8 @@ import {
   Snackbar,
   Alert
 } from "@mui/material";
-
 import CloseIcon from '@mui/icons-material/Close';
+import { checkAndNotifyLowPaper } from "./notificationService";
 
 const modalStyle = {
   position: 'absolute',
@@ -190,7 +189,7 @@ export default function ClientDetailsModal({
     try {
       const totalKg = parseFloat(client.totalKg) || 0;
       const newPaperRemaining = parseFloat(paperRemaining) || 0;
-      
+      const thresholdValue = parseFloat(client.notifyWhen) || parseFloat(notifyWhen) || 3;
       const newPaperUsed = totalKg - newPaperRemaining;
       
       if (newPaperRemaining > totalKg) {
@@ -223,6 +222,44 @@ export default function ClientDetailsModal({
         paperUsed: newPaperUsed,
         paperRemaining: newPaperRemaining
       });
+
+       // 🆕 NEW: Check and send low paper notification
+    try {
+      const notificationResult = await checkAndNotifyLowPaper(
+        updatedClient,
+        newPaperRemaining,
+        thresholdValue,
+        db
+      );
+
+      if (notificationResult.notificationSent) {
+        setSnackbar({
+          open: true,
+          message: `Уведомление отправлено ${notificationResult.successfulNotifications} администраторам о низком уровне бумаги!`,
+          severity: 'info'
+        });
+      }
+
+      if (!notificationResult.success && notificationResult.error) {
+        console.error("Notification error:", notificationResult.error);
+        // Optionally show error to user, but don't block the main save operation
+        setSnackbar({
+          open: true,
+          message: `Данные сохранены, но ошибка отправки уведомления: ${notificationResult.error}`,
+          severity: 'warning'
+        });
+      }
+    } catch (notificationError) {
+      console.error("Error sending notification:", notificationError);
+      // Don't block the save operation due to notification errors
+      setSnackbar({
+        open: true,
+        message: 'Данные сохранены, но возникла ошибка при отправке уведомления',
+        severity: 'warning'
+      });
+    }
+
+
       
       setShowEditPaperInput(false);
     } catch (error) {
