@@ -1,0 +1,268 @@
+/* AddClientForm.css */
+
+/* Main overlay container */
+.add-client-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+/* Main form container */
+.add-client-form {
+  padding: 2rem;
+  position: relative;
+  width: 90%;
+  max-width: 900px;
+  min-height: auto;
+  font-size: 1.15em;
+  background-color: white;
+  margin: 0 auto;
+  box-shadow: 0px 11px 15px -7px rgba(0,0,0,0.2), 
+              0px 24px 38px 3px rgba(0,0,0,0.14), 
+              0px 9px 46px 8px rgba(0,0,0,0.12);
+  border-radius: 4px;
+}
+
+/* Close button */
+.close-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.close-button:hover {
+  color: rgba(0, 0, 0, 0.8);
+}
+
+/* Title */
+.form-title {
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-weight: 600;
+  color: #1565c0;
+  font-size: 1.15em;
+}
+
+/* Divider */
+.form-divider {
+  margin-bottom: 1.5rem;
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* Alert message */
+.form-alert {
+  margin-bottom: 1.5rem;
+}
+
+/* Grid containers */
+.form-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.form-section {
+  width: 100%;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.form-col-12 {
+  width: 100%;
+}
+
+.form-col-6 {
+  width: calc(50% - 0.75rem);
+  min-width: 250px;
+}
+
+.form-col-4 {
+  width: calc(33.333% - 1rem);
+  min-width: 200px;
+}
+
+@media (max-width: 768px) {
+  .form-col-6,
+  .form-col-4 {
+    width: 100%;
+  }
+}
+
+/* Paper sections */
+.design-type-section {
+  padding: 1.5rem;
+  background-color: #e3f2fd;
+  border: 2px solid #90caf9;
+  border-radius: 4px;
+}
+
+.info-section {
+  padding: 1.5rem;
+  background-color: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+/* Section titles */
+.section-title {
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: rgba(0, 0, 0, 0.87);
+  font-size: 1.15em;
+}
+
+/* Form controls */
+.form-control {
+  width: 100%;
+  font-size: 1.15em;
+}
+
+.form-control .MuiInputBase-root {
+  font-size: inherit;
+}
+
+.form-control .MuiInputLabel-root {
+  font-size: inherit;
+}
+
+/* Radio group */
+.radio-group-legend {
+  font-weight: 600;
+  font-size: 1.15em;
+  margin-bottom: 1rem;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+}
+
+/* Text fields */
+.text-field {
+  width: 100%;
+  font-size: 1.15em;
+}
+
+.text-field .MuiInputBase-input {
+  font-size: inherit;
+}
+
+.text-field .MuiInputLabel-root {
+  font-size: inherit;
+}
+
+/* Select fields */
+.select-field {
+  width: 100%;
+  font-size: 1.15em;
+}
+
+.select-field .MuiSelect-select {
+  font-size: inherit;
+}
+
+.select-field .MuiInputLabel-root {
+  font-size: inherit;
+}
+
+/* Multiline text field */
+.multiline-field {
+  width: 100%;
+  font-size: 1.15em;
+}
+
+.multiline-field .MuiInputBase-input {
+  font-size: inherit;
+}
+
+/* Action buttons */
+.action-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+.cancel-button,
+.submit-button {
+  font-size: 1.15em;
+  padding: 8px 22px;
+}
+
+.submit-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loading-spinner {
+  margin-right: 0.5rem;
+}
+
+/* Helper text */
+.helper-text {
+  font-size: 0.875em;
+  color: rgba(0, 0, 0, 0.6);
+  margin-top: 0.25rem;
+}
+
+/* Form validation */
+.error-text {
+  color: #d32f2f;
+}
+
+.success-text {
+  color: #2e7d32;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .add-client-overlay {
+    padding: 1rem;
+  }
+  
+  .add-client-form {
+    width: 95%;
+    padding: 1.5rem;
+  }
+  
+  .form-grid {
+    gap: 1.5rem;
+  }
+  
+  .form-row {
+    gap: 1rem;
+  }
+  
+  .action-buttons {
+    flex-direction: column-reverse;
+  }
+  
+  .cancel-button,
+  .submit-button {
+    width: 100%;
+  }
+}
+
+
+
+

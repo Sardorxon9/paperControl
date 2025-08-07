@@ -37,6 +37,7 @@ import {
   Select,
   MenuItem,
   Divider,
+  IconButton // <-- Import IconButton
 } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
 import Shield from '@mui/icons-material/Shield';
@@ -126,7 +127,7 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
     if (!usedAmount || !selectedClient || !paperInfo) return;
     
     try {
-     
+      console.log("Saving usage:", { usedAmount, selectedClient, paperInfo });
       
       // Add log entry to productTypes/{id}/logs
       const logRef = await addDoc(collection(db, "productTypes", product.id, "logs"), {
@@ -134,14 +135,14 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
         date: serverTimestamp(),
         clientId: selectedClient
       });
-    
+      console.log("Log added with ID:", logRef.id);
       
       // Update paperRemaining in paperInfo subcollection
       const newPaperRemaining = Math.max(0, (paperInfo.paperRemaining || 0) - parseFloat(usedAmount));
       await updateDoc(doc(db, "productTypes", product.id, "paperInfo", paperInfo.id), {
         paperRemaining: newPaperRemaining
       });
-   
+      console.log("Paper remaining updated to:", newPaperRemaining);
       
       // Reset form
       setUsedAmount('');
@@ -160,14 +161,14 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
     if (!paperIn || !paperInfo) return;
     
     try {
-   
+      console.log("Saving priyemka:", { paperIn, paperInfo });
       
       // Add priyemka entry to productTypes/{id}/priyemka
       const priyemkaRef = await addDoc(collection(db, "productTypes", product.id, "priyemka"), {
         paperIn: parseFloat(paperIn),
         date: serverTimestamp()
       });
-
+      console.log("Priyemka added with ID:", priyemkaRef.id);
       
       // Update paperRemaining and totalKg in paperInfo subcollection
       const newPaperRemaining = (paperInfo.paperRemaining || 0) + parseFloat(paperIn);
@@ -177,7 +178,7 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
         paperRemaining: newPaperRemaining,
         totalKg: newTotalKg
       });
-    
+      console.log("Paper remaining updated to:", newPaperRemaining, "totalKg:", newTotalKg);
       
       // Reset form
       setPaperIn('');
@@ -218,12 +219,9 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
           overflow: 'auto'
         }}
       >
-    <Typography variant="h5" component="h2" sx={{ mb: 3, fontWeight: 600 }}>
-  <Box component="span" sx={{ fontWeight: 400, color: '#3d5966ff' }}>
-    Стандарт дизайн рулон:
-  </Box>{' '}
-  {product.type} → {product.packaging}
-</Typography>
+        <Typography variant="h5" component="h2" sx={{ mb: 3, fontWeight: 600 }}>
+          Подробная информация: {product.type}
+        </Typography>
         
         {loading ? (
           <Box display="flex" justifyContent="center" p={4}>
@@ -467,7 +465,113 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
   );
 }
 
+// Simple Modal Component for Standard Design Type
+function SimpleClientModal({ open, onClose, client, product }) {
+  if (!client) return null;
 
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      aria-labelledby="simple-client-modal"
+      sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    >
+      <Box
+        sx={{
+          bgcolor: 'background.paper',
+          borderRadius: 2,
+          boxShadow: 24,
+          p: 4,
+          minWidth: 400,
+          maxWidth: 600,
+          maxHeight: '90vh',
+          overflow: 'auto'
+        }}
+      >
+        <Typography variant="h5" component="h2" sx={{ mb: 3, fontWeight: 600 }}>
+          Информация о клиенте
+        </Typography>
+
+        <Stack spacing={2}>
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary">
+              Название клиента
+            </Typography>
+            <Typography variant="body1">
+              {client.restaurant || client.name || '-'}
+            </Typography>
+          </Box>
+
+          {product ? (
+            <>
+              <Box>
+                <Typography variant="subtitle2" color="#bfc9c9">
+                  Тип продукта
+                </Typography>
+                <Typography variant="body1" fontWeight={700}>
+                  {product.type || '-'}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Упаковка
+                </Typography>
+                <Typography variant="body1">
+                  {product.packaging || '-'}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Граммовка
+                </Typography>
+                <Typography variant="body1">
+                  {product.gramm || '-'}
+                </Typography>
+              </Box>
+            </>
+          ) : (
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                Продукт не найден.
+              </Typography>
+            </Box>
+          )}
+
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary">
+              Полный адрес
+            </Typography>
+            <Typography variant="body1">
+              {client.addressLong ? `${client.addressLong.latitude}, ${client.addressLong.longitude}` : '-'}
+            </Typography>
+          </Box>
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary">
+              Короткий адрес
+            </Typography>
+            <Typography variant="body1">
+              {client.addressShort || '-'}
+            </Typography>
+          </Box>
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary">
+              Комментарий
+            </Typography>
+            <Typography variant="body1">
+              {client.comment || '-'}
+            </Typography>
+          </Box>
+        </Stack>
+
+        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button onClick={onClose} variant="contained">
+            Закрыть
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+}
 
 const getHiddenColumns = (userRole) => {
   if (userRole === 'admin') {
@@ -475,7 +579,7 @@ const getHiddenColumns = (userRole) => {
     return [];
   } else {
     // Workers can't see these columns
-    return ["totalKg", "paperUsed", "orgName"];
+    return ["totalKg", "orgName"];
   }
 };
 
@@ -493,7 +597,6 @@ const getColumnHeaders = (userRole) => {
       ...baseHeaders,
       "orgName",
       "totalKg", 
-      "paperUsed",
       "paperRemaining",
       "Actions"
     ];
@@ -520,8 +623,6 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
   const [searchQuery, setSearchQuery] = useState("");
   const [addClientModalOpen, setAddClientModalOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
-const [hasTracking, setHasTracking] = useState(false); // ✅ Add this
-
 
   const hiddenColumns = getHiddenColumns(userRole);
 
@@ -550,7 +651,6 @@ const [hasTracking, setHasTracking] = useState(false); // ✅ Add this
           console.error("Error fetching paperInfo for standard design:", error);
         }
       }
-     
       
       return { packaging, shellNum: '', paperRemaining: '' };
     } catch (error) {
@@ -563,7 +663,6 @@ const [hasTracking, setHasTracking] = useState(false); // ✅ Add this
 
 
   const fetchClientData = async () => {
-    
     try {
       const querySnapshot = await getDocs(collection(db, "clients"));
 
@@ -588,7 +687,7 @@ const [hasTracking, setHasTracking] = useState(false); // ✅ Add this
         })
       );
 
-
+      console.log("Parsed clients array:", clientsArray);
       setClientData(clientsArray);
 
       if (clientsArray.length > 0) {
@@ -636,7 +735,7 @@ const [hasTracking, setHasTracking] = useState(false); // ✅ Add this
         })
       );
 
-   
+      console.log("Parsed product types array:", productTypesArray);
       setProductTypesData(productTypesArray);
     } catch (error) {
       console.error("Error fetching product types data:", error);
@@ -654,12 +753,35 @@ const [hasTracking, setHasTracking] = useState(false); // ✅ Add this
   const [selectedClientProduct, setSelectedClientProduct] = useState(null);
 
   const handleOpenModal = (client) => {
-  const hasTracking = client?.designType === "unique";
-  setHasTracking(hasTracking);
-  setSelectedClient(client);
+    setSelectedClient(client);
 
-  setModalOpen(true);
-};
+    if (client.designType === "standart") {
+      const fetchProductData = async () => {
+        if (client.productId) {
+          try {
+            const productRef = doc(db, "productTypes", client.productId);
+            const productSnap = await getDoc(productRef);
+            if (productSnap.exists()) {
+              setSelectedClientProduct(productSnap.data());
+            } else {
+              console.warn("Product not found for client:", client.id);
+              setSelectedClientProduct(null);
+            }
+          } catch (error) {
+            console.error("Error fetching product data:", error);
+            setSelectedClientProduct(null);
+          }
+        } else {
+          setSelectedClientProduct(null);
+        }
+        setSimpleModalOpen(true);
+      };
+      fetchProductData();
+    } else {
+      // For "unique" or any other designType, use the full modal
+      setModalOpen(true);
+    }
+  };
 
   const handleOpenProductModal = (product) => {
     setSelectedProduct(product);
@@ -737,7 +859,6 @@ const [hasTracking, setHasTracking] = useState(false); // ✅ Add this
                     header === 'packaging' ? 'Упаковка' :
                     header === 'orgName' ? 'Организация' :
                     header === 'totalKg' ? 'Всего кг' :
-                    header === 'paperUsed' ? 'Использовано' :
                     header === 'paperRemaining' ? 'Остаток бумаги' :
                     header === 'Actions' ? 'Действия' :
                     header}
@@ -807,10 +928,6 @@ const [hasTracking, setHasTracking] = useState(false); // ✅ Add this
                         ) : field === 'totalKg' ? (
                           <Typography variant="body2" fontWeight={600} color="primary">
                             {client.totalKg || '0'} кг
-                          </Typography>
-                        ) : field === 'paperUsed' ? (
-                          <Typography variant="body2" color="text.secondary">
-                            {client.paperUsed || '0'} кг
                           </Typography>
                         ) : (
                           client[field] ?? '-'
@@ -900,7 +1017,6 @@ const [hasTracking, setHasTracking] = useState(false); // ✅ Add this
     </TableContainer>
   );
 
-  
   return (
     <>
       {/* Header */}
@@ -1074,7 +1190,13 @@ const [hasTracking, setHasTracking] = useState(false); // ✅ Add this
           clients={clientData}
         />
 
-       
+        {/* Simple Client Details Modal (for designType: "standart") */}
+        <SimpleClientModal
+          open={simpleModalOpen}
+          onClose={handleCloseSimpleModal}
+          client={selectedClient}
+          product={selectedClientProduct}
+        />
 
         {/* Full Client Details Modal (for designType: "unique") */}
         <ClientDetailsModal
@@ -1083,7 +1205,6 @@ const [hasTracking, setHasTracking] = useState(false); // ✅ Add this
           client={selectedClient}
           onClientUpdate={handleClientUpdate}
           currentUser={user} // Pass user for Telegram integration
-           hasTracking={hasTracking} 
         />
       </Container>
     </>

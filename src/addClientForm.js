@@ -16,10 +16,20 @@ import {
   FormLabel,
   RadioGroup,
   FormControlLabel,
-  Radio
+  Radio,
+  Card,
+  CardContent
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
-import { collection, getDocs, addDoc, GeoPoint } from "firebase/firestore";
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import { 
+  collection, 
+  getDocs, 
+  addDoc, 
+  GeoPoint, 
+  Timestamp 
+} from "firebase/firestore";
 import { db } from "./firebase";
 
 export default function AddClientForm({ onClientAdded, onClose }) {
@@ -31,15 +41,19 @@ export default function AddClientForm({ onClientAdded, onClose }) {
   });
   const [formData, setFormData] = useState({
     name: "",
+    orgName: "",
     addressShort: "",
     geoPoint: "",
     designType: "unique", // Default to unique
     shellNum: "",
-    totalKg: "",
-    paperRemaining: "",
     notifyWhen: "",
     comment: ""
   });
+
+  // State for multiple paper rolls
+  const [paperRolls, setPaperRolls] = useState([
+    { id: 1, paperRemaining: "" }
+  ]);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -63,10 +77,40 @@ export default function AddClientForm({ onClientAdded, onClose }) {
       // Clear fields that are not needed for standard design
       ...(newDesignType === "standart" && {
         shellNum: "",
-        paperRemaining: "",
         notifyWhen: ""
       })
     }));
+
+    // Reset paper rolls when switching design types
+    if (newDesignType === "standart") {
+      setPaperRolls([]);
+    } else {
+      setPaperRolls([{ id: 1, paperRemaining: "" }]);
+    }
+  };
+
+  // Handle paper roll changes
+  const handlePaperRollChange = (rollId, value) => {
+    setPaperRolls(prev => 
+      prev.map(roll => 
+        roll.id === rollId 
+          ? { ...roll, paperRemaining: value }
+          : roll
+      )
+    );
+  };
+
+  // Add new paper roll
+  const handleAddPaperRoll = () => {
+    const newId = Math.max(...paperRolls.map(r => r.id), 0) + 1;
+    setPaperRolls(prev => [...prev, { id: newId, paperRemaining: "" }]);
+  };
+
+  // Remove paper roll
+  const handleRemovePaperRoll = (rollId) => {
+    if (paperRolls.length > 1) {
+      setPaperRolls(prev => prev.filter(roll => roll.id !== rollId));
+    }
   };
 
   useEffect(() => {
@@ -75,7 +119,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
         const snapshot = await getDocs(collection(db, "productTypes"));
         const productList = snapshot.docs.map(doc => ({
           id: doc.id,
-          productId: doc.data().productId || doc.id, // Fallback to doc.id if productId doesn't exist
+          productId: doc.data().productId || doc.id,
           ...doc.data()
         }));
         setProducts(productList);
@@ -106,10 +150,20 @@ export default function AddClientForm({ onClientAdded, onClose }) {
     // Design type specific validation
     if (formData.designType === "unique") {
       if (!formData.shellNum.trim()) errors.push("Номер полки обязателен для уникального дизайна");
-      if (!formData.paperRemaining || parseFloat(formData.paperRemaining) < 0) 
-        errors.push("Остаток бумаги не может быть отрицательным");
       if (!formData.notifyWhen || parseFloat(formData.notifyWhen) <= 0) 
         errors.push("Уведомление при остатке должно быть больше 0");
+
+      // Validate paper rolls
+      if (paperRolls.length === 0) {
+        errors.push("Добавьте хотя бы один рулон бумаги");
+      } else {
+        const invalidRolls = paperRolls.filter(roll => 
+          !roll.paperRemaining || parseFloat(roll.paperRemaining) < 0
+        );
+        if (invalidRolls.length > 0) {
+          errors.push("Все рулоны должны иметь корректное количество бумаги");
+        }
+      }
     }
 
     // Validate coordinates format
@@ -146,24 +200,15 @@ export default function AddClientForm({ onClientAdded, onClose }) {
       grammAsNumber: Number(productInputs.gramm)
     });
 
-    console.log("Available products:", products.map(p => ({
-      id: p.id,
-      type: p.type,
-      packaging: p.packaging,
-      gramm: p.gramm,
-      grammType: typeof p.gramm
-    })));
-
     const matchedProduct = products.find(p => {
       const typeMatch = p.type === productInputs.type;
       const packagingMatch = p.packaging === productInputs.packaging;
       
-      // More robust gramm comparison - handle both string and number cases
+      // More robust gramm comparison
       let grammMatch = false;
       const inputGramm = productInputs.gramm;
       const productGramm = p.gramm;
       
-      // Try multiple comparison approaches
       if (String(productGramm) === String(inputGramm)) {
         grammMatch = true;
       } else if (Number(productGramm) === Number(inputGramm)) {
@@ -172,23 +217,10 @@ export default function AddClientForm({ onClientAdded, onClose }) {
         grammMatch = true;
       }
       
-      console.log(`Checking product ${p.id}:`, {
-        typeMatch,
-        packagingMatch,
-        grammMatch,
-        productGramm,
-        inputGramm,
-        productGrammType: typeof productGramm,
-        inputGrammType: typeof inputGramm
-      });
-      
       return typeMatch && packagingMatch && grammMatch;
     });
 
     if (!matchedProduct) {
-      console.error("No product found. Available products:", products);
-      console.error("Search criteria:", productInputs);
-      
       setMessage({ 
         type: "error", 
         text: `Продукт не найден: ${productInputs.type}, ${productInputs.packaging}, ${productInputs.gramm}г. 
@@ -207,7 +239,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
       // Build client data based on design type
       const baseClientData = {
         name: formData.name.trim(),
-         orgName: formData.orgName.trim(),
+        orgName: formData.orgName.trim(),
         restaurant: formData.name.trim(), // Add restaurant field for compatibility
         addressShort: formData.addressShort.trim(),
         addressLong: new GeoPoint(latitude, longitude),
@@ -220,43 +252,53 @@ export default function AddClientForm({ onClientAdded, onClose }) {
 
       if (formData.designType === "standart") {
         // For standard design type, don't store individual paper data
-        // Paper data will be fetched from productTypes -> paperInfo
         clientData = {
           ...baseClientData
-          // No shellNum, paperRemaining, totalKg, paperUsed, notifyWhen
         };
       } else {
-        // For unique design type, store individual paper tracking data
-        const paperRemaining = parseFloat(formData.paperRemaining);
-        const totalKg = paperRemaining; // Set totalKg to paperRemaining
-        const paperUsed = 0; // Since totalKg equals paperRemaining, paperUsed is 0
+        // For unique design type, calculate totals from all rolls
+        const totalAvailable = paperRolls.reduce((sum, roll) => 
+          sum + parseFloat(roll.paperRemaining || 0), 0
+        );
 
         clientData = {
           ...baseClientData,
           shellNum: formData.shellNum.trim(),
-          totalKg: totalKg,
-          paperRemaining: paperRemaining,
-          paperUsed: paperUsed,
+          totalKg: totalAvailable, // Sum of all paper added initially
+          paperRemaining: totalAvailable, // Sum of paperRemaining of all rolls
           notifyWhen: parseFloat(formData.notifyWhen)
         };
       }
 
       console.log("Saving client data:", clientData);
 
-      await addDoc(collection(db, "clients"), clientData);
+      // Add the main client document
+      const clientDocRef = await addDoc(collection(db, "clients"), clientData);
+      const clientId = clientDocRef.id;
+
+      // If unique design, create paper rolls subcollection
+      if (formData.designType === "unique") {
+        const paperRollsPromises = paperRolls.map(roll => 
+          addDoc(collection(db, `clients/${clientId}/paperRolls`), {
+            dateCreated: Timestamp.now(),
+            paperRemaining: parseFloat(roll.paperRemaining)
+          })
+        );
+
+        await Promise.all(paperRollsPromises);
+        console.log(`Created ${paperRolls.length} paper rolls for client ${clientId}`);
+      }
       
       setMessage({ type: "success", text: "Клиент успешно добавлен!" });
       
       // Reset form
       setFormData({
         name: "",
-         orgName: "",    
+        orgName: "",    
         addressShort: "",
         geoPoint: "",
         designType: "unique",
         shellNum: "",
-        totalKg: "",
-        paperRemaining: "",
         notifyWhen: "",
         comment: ""
       });
@@ -266,6 +308,8 @@ export default function AddClientForm({ onClientAdded, onClose }) {
         packaging: "",
         gramm: ""
       });
+
+      setPaperRolls([{ id: 1, paperRemaining: "" }]);
 
       if (onClientAdded) {
         setTimeout(() => {
@@ -398,8 +442,6 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                     />
                   </RadioGroup>
                 </FormControl>
-                
-               
               </Paper>
             </Grid>
 
@@ -441,16 +483,16 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                   </Grid>
 
                   <Grid item xs={12} sm={6}>
-  <TextField
-    fullWidth
-    label="Наименование организации (Фирма)"
-    variant="outlined"
-    value={formData.orgName}
-    onChange={handleInputChange('orgName')}
-    size="small"
-    sx={{ fontSize: '1.15em' }}
-  />
-</Grid>
+                    <TextField
+                      fullWidth
+                      label="Наименование организации (Фирма)"
+                      variant="outlined"
+                      value={formData.orgName}
+                      onChange={handleInputChange('orgName')}
+                      size="small"
+                      sx={{ fontSize: '1.15em' }}
+                    />
+                  </Grid>
 
                   {/* Show shellNum only for unique design */}
                   {!isStandardDesign && (
@@ -475,7 +517,6 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                       variant="outlined"
                       value={formData.addressShort}
                       onChange={handleInputChange('addressShort')}
-                     
                       size="small"
                       sx={{ fontSize: '1.15em' }}
                     />
@@ -494,54 +535,9 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                       sx={{ fontSize: '1.15em' }}
                     />
                   </Grid>
-                </Grid>
-              </Paper>
-            </Grid>
 
-            {/* --- Paper Info Section (Only for Unique Design) --- */}
-            {!isStandardDesign && (
-              <Grid item xs={12}>
-                <Paper 
-                  variant="outlined" 
-                  sx={{ 
-                    p: 3, 
-                    backgroundColor: 'grey.50',
-                    border: '1px solid',
-                    borderColor: 'grey.200'
-                  }}
-                >
-                  <Typography
-                    variant="subtitle1"
-                    sx={{
-                      fontWeight: 600,
-                      mb: 3,
-                      color: 'text.primary',
-                      fontSize: '1.15em'
-                    }}
-                  >
-                    Информация о бумаге (Индивидуальный учет)
-                  </Typography>
-
-                  <Grid container spacing={3}>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        label="Остаток (кг)"
-                        variant="outlined"
-                        type="number"
-                        value={formData.paperRemaining}
-                        onChange={handleInputChange('paperRemaining')}
-                        required
-                        size="small"
-                        inputProps={{
-                          step: '0.01',
-                          min: '0'
-                        }}
-                        placeholder="55"
-                        sx={{ fontSize: '1.15em' }}
-                      />
-                    </Grid>
-
+                  {/* Show notifyWhen only for unique design */}
+                  {!isStandardDesign && (
                     <Grid item xs={12} sm={6}>
                       <TextField
                         fullWidth
@@ -558,6 +554,90 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                         sx={{ fontSize: '1.15em' }}
                       />
                     </Grid>
+                  )}
+                </Grid>
+              </Paper>
+            </Grid>
+
+            {/* --- Paper Rolls Section (Only for Unique Design) --- */}
+            {!isStandardDesign && (
+              <Grid item xs={12}>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 3, 
+                    backgroundColor: 'grey.50',
+                    border: '1px solid',
+                    borderColor: 'grey.200'
+                  }}
+                >
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{
+                        fontWeight: 600,
+                        color: 'text.primary',
+                        fontSize: '1.15em'
+                      }}
+                    >
+                      Рулоны бумаги
+                    </Typography>
+                    <IconButton
+                      onClick={handleAddPaperRoll}
+                      color="primary"
+                      sx={{
+                        bgcolor: 'primary.main',
+                        color: 'white',
+                        '&:hover': { bgcolor: 'primary.dark' }
+                      }}
+                    >
+                      <AddIcon />
+                    </IconButton>
+                  </Box>
+
+                  <Grid container spacing={2}>
+                    {paperRolls.map((roll, index) => (
+                      <Grid item xs={12} sm={6} key={roll.id}>
+                        <Card variant="outlined" sx={{ position: 'relative' }}>
+                          {paperRolls.length > 1 && (
+                            <IconButton
+                              onClick={() => handleRemovePaperRoll(roll.id)}
+                              sx={{
+                                position: 'absolute',
+                                top: 8,
+                                right: 8,
+                                color: 'error.main',
+                                zIndex: 1
+                              }}
+                              size="small"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          )}
+                          <CardContent sx={{ p: 2 }}>
+                            <Typography variant="subtitle2" gutterBottom>
+                              Рулон {index + 1}
+                            </Typography>
+                            <TextField
+                              fullWidth
+                              label="Остаток (кг)"
+                              variant="outlined"
+                              type="number"
+                              value={roll.paperRemaining}
+                              onChange={(e) => handlePaperRollChange(roll.id, e.target.value)}
+                              required
+                              size="small"
+                              inputProps={{
+                                step: '0.01',
+                                min: '0'
+                              }}
+                              placeholder="55.00"
+                              sx={{ fontSize: '1.15em' }}
+                            />
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
                   </Grid>
                 </Paper>
               </Grid>
@@ -584,7 +664,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                     <TextField
                       select
                       fullWidth
-                      label="Тип продукта"
+                      label="Тип упаковки"
                       value={productInputs.type}
                       onChange={(e) =>
                         setProductInputs((prev) => ({ ...prev, type: e.target.value }))
@@ -602,12 +682,12 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                     </TextField>
                   </Grid>
 
-                  {/* Тип упаковки */}
+                  {/* Продукт */}
                   <Grid item xs={12} sm={4}>
                     <TextField
                       select
                       fullWidth
-                      label="Тип упаковки"
+                      label="Продукт"
                       value={productInputs.packaging}
                       onChange={(e) =>
                         setProductInputs((prev) => ({ ...prev, packaging: e.target.value }))
@@ -630,7 +710,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                     <TextField
                       select
                       fullWidth
-                      label="Грамм"
+                      label="Граммаж"
                       value={productInputs.gramm}
                       onChange={(e) =>
                         setProductInputs((prev) => ({ ...prev, gramm: e.target.value }))
@@ -654,7 +734,7 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
-                      label="Комментарий"
+                      label="Комментарии"
                       variant="outlined"
                       multiline
                       minRows={4}
