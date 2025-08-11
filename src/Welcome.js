@@ -588,23 +588,30 @@ const getColumnHeaders = (userRole) => {
   const baseHeaders = [
     "№",
     "name",
+    "packaging",
     "shellNum",
-    "packaging"
+    "totalRolls",
+    "paperRemaining",
+    "Actions"
+  
   ];
   
   if (userRole === 'admin') {
     return [
-      ...baseHeaders,
-      "orgName",
-      "totalKg", 
-      "paperRemaining",
-      "Actions"
+      "№",
+    "name",
+    "orgName",
+    "packaging",
+    "shellNum",
+    "totalRolls",
+    "paperRemaining",
+    "Actions"
+  
     ];
   } else {
     return [
       ...baseHeaders,
-      "paperRemaining",
-      "Actions"
+      
     ];
   }
 };
@@ -673,17 +680,30 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
           // Fetch product type data (packaging, shellNum, paperRemaining based on designType)
           const productTypeData = await fetchProductTypeData(data.productId, data.designType);
           
-          return { 
-            id: docSnap.id, 
-            ...data, 
-            packaging: productTypeData.packaging,
-            // For standard design type, use shellNum and paperRemaining from productTypes
-            // For unique design type, use the client's own shellNum and paperRemaining
-            shellNum: data.designType === "standart" ? productTypeData.shellNum : (data.shellNum || ''),
-            paperRemaining: data.designType === "standart" ? productTypeData.paperRemaining : (data.paperRemaining || ''),
-            // Add orgName from client data
-            orgName: data.orgName || data.organization || '-'
-          };
+         // Count paper rolls in clients/{id}/paperRolls
+let rollCount = 0;
+try {
+  const paperRollsQuery = await getDocs(collection(db, "clients", docSnap.id, "paperRolls"));
+  rollCount = paperRollsQuery.size || paperRollsQuery.docs.length;
+} catch (error) {
+  console.error("Error fetching paper rolls count for client", docSnap.id, error);
+  rollCount = 0;
+}
+
+return { 
+  id: docSnap.id, 
+  ...data, 
+  packaging: productTypeData.packaging,
+  // For standard design type, use shellNum and paperRemaining from productTypes
+  // For unique design type, use the client's own shellNum and paperRemaining
+  shellNum: data.designType === "standart" ? productTypeData.shellNum : (data.shellNum || ''),
+  paperRemaining: data.designType === "standart" ? productTypeData.paperRemaining : (data.paperRemaining || ''),
+  // Add orgName from client data
+  orgName: data.orgName || data.organization || '-',
+  // NEW: total number of small rolls
+  totalRolls: rollCount
+};
+
         })
       );
 
@@ -858,7 +878,7 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                     header === 'shellNum' ? 'Номер полки' :
                     header === 'packaging' ? 'Упаковка' :
                     header === 'orgName' ? 'Организация' :
-                    header === 'totalKg' ? 'Всего кг' :
+                  header === 'totalRolls' ? 'Всего рулонов' :
                     header === 'paperRemaining' ? 'Остаток бумаги' :
                     header === 'Actions' ? 'Действия' :
                     header}
@@ -925,9 +945,9 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                           <Typography variant="body2" fontWeight={500}>
                             {client.orgName || '-'}
                           </Typography>
-                        ) : field === 'totalKg' ? (
+                        ) : field === 'totalRolls' ? (
                           <Typography variant="body2" fontWeight={600} color="primary">
-                            {client.totalKg || '0'} кг
+                            {client.totalRolls ?? 0}
                           </Typography>
                         ) : (
                           client[field] ?? '-'

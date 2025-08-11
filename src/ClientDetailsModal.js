@@ -168,6 +168,12 @@ export default function ClientDetailsModal({
     }
   };
 
+  
+
+const calculateTotalPaper = () => {
+  return paperRolls.reduce((total, roll) => total + (roll.paperRemaining || 0), 0);
+};
+
   // Handle adding new paper (Priyemka functionality)
   const handleAddPaper = async () => {
     if (!client || !paperToAdd) return;
@@ -175,11 +181,11 @@ export default function ClientDetailsModal({
     setAddingPaper(true);
     const amount = parseFloat(paperToAdd);
 
-    if (amount <= 0) {
-      alert("Количество должно быть больше 0.");
-      setAddingPaper(false);
-      return;
-    }
+    if (isNaN(amount) || amount <= 0) {
+  alert("Пожалуйста, введите корректное количество больше 0.");
+  setAddingPaper(false);
+  return;
+}
 
     try {
       // Create new document in paperRolls subcollection
@@ -189,12 +195,7 @@ export default function ClientDetailsModal({
         paperRemaining: amount
       });
 
-      // Update main client document
-      const clientRef = doc(db, 'clients', client.id);
-      await updateDoc(clientRef, {
-        totalKg: increment(amount),
-        paperRemaining: increment(amount)
-      });
+
 
       // Update client data in parent component
       const updatedClient = {
@@ -209,6 +210,8 @@ export default function ClientDetailsModal({
       setPaperToAdd("");
       setShowAddPaperInput(false);
       await fetchPaperRolls();
+await updateClientTotalPaper(client.id);
+
       
       console.log(`Added ${amount}kg of paper for client ${client.id}`);
     } catch (error) {
@@ -219,6 +222,27 @@ export default function ClientDetailsModal({
     }
   };
 
+  // Recalculate the total paperRemaining from all rolls and update main client doc
+const updateClientTotalPaper = async (clientId) => {
+  const rollsRef = collection(db, `clients/${clientId}/paperRolls`);
+  const rollsSnapshot = await getDocs(rollsRef);
+
+  const totalRemaining = rollsSnapshot.docs.reduce(
+    (sum, doc) => sum + (doc.data().paperRemaining || 0),
+    0
+  );
+
+  const clientRef = doc(db, 'clients', clientId);
+  await updateDoc(clientRef, {
+    paperRemaining: totalRemaining
+  });
+
+  return totalRemaining;
+};
+
+
+
+
   // Handle updating a specific roll
   const handleUpdateRoll = async (rollId, newAmount) => {
     if (isNaN(newAmount) || parseFloat(newAmount) < 0) {
@@ -226,6 +250,7 @@ export default function ClientDetailsModal({
       return;
     }
 
+     
     setUpdatingRoll(true);
     const newAmountValue = parseFloat(newAmount);
 
@@ -238,19 +263,19 @@ export default function ClientDetailsModal({
         throw new Error('Roll not found');
       }
 
-      const currentAmount = rollSnap.data().paperRemaining;
-      const amountUsed = currentAmount - newAmountValue;
+    const currentAmount = rollSnap.data().paperRemaining;
+    const amountUsed = currentAmount - newAmountValue;
 
+
+    
       // Update the specific roll document
       await updateDoc(rollRef, {
         paperRemaining: newAmountValue
       });
+      
 
-      // Update the main client document
-      const clientRef = doc(db, 'clients', client.id);
-      await updateDoc(clientRef, {
-        paperRemaining: increment(-amountUsed)
-      });
+    
+      
 
       // Add log entry if paper was used (amountUsed > 0)
       if (amountUsed > 0) {
@@ -268,6 +293,14 @@ export default function ClientDetailsModal({
         paperRemaining: (client.paperRemaining || 0) - amountUsed
       };
       onClientUpdate(updatedClient);
+
+// Update the main client document (both paperRemaining and totalKg)
+const clientRef = doc(db, 'clients', client.id);
+await updateDoc(clientRef, {
+  totalKg: increment(-amountUsed)
+});
+await updateClientTotalPaper(client.id);
+
 
       // Check for low paper notification
       try {
@@ -294,6 +327,8 @@ export default function ClientDetailsModal({
       setEditingRollId(null);
       setRollEditValue('');
       await fetchPaperRolls();
+      await updateClientTotalPaper(client.id);
+
       await fetchLogs();
 
       console.log(`Updated roll ${rollId}: used ${amountUsed}kg`);
@@ -582,9 +617,10 @@ export default function ClientDetailsModal({
                           justifyContent: 'center',
                         }}
                       >
-                        <Typography sx={{ color: '#065345', fontSize: 34, fontWeight: 800 }}>
-                          {client.paperRemaining || '0'}
-                        </Typography>
+                      <Typography sx={{ color: '#065345', fontSize: 34, fontWeight: 800 }}>
+  {calculateTotalPaper().toFixed(2)} кг
+
+</Typography>
                       </Box>
                     </Box>
                   </Box>
@@ -595,63 +631,69 @@ export default function ClientDetailsModal({
                     {paperRolls.map((roll, index) => (
                       <Card key={roll.id} sx={{ mb: 2, bgcolor: '#E2F0EE', border: '1px solid #BDDCD8' }}>
                         <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                          <Box display="flex" justifyContent="space-between" alignItems="center">
-                            <Typography variant="body2" color="#727d7b">
-                              Рулон {index + 1}
-                            </Typography>
-                            
-                            <Box display="flex" alignItems="center" gap={1}>
-                              {editingRollId === roll.id ? (
-                                <>
-                                  <TextField
-                                    size="small"
-                                    type="number"
-                                    value={rollEditValue}
-                                    onChange={(e) => setRollEditValue(e.target.value)}
-                                    inputProps={{ step: '0.01', min: '0' }}
-                                    sx={{ width: 80 }}
-                                  />
-                                  <Button
-                                    size="small"
-                                    variant="contained"
-                                    color="success"
-                                    onClick={handleSaveEdit}
-                                    disabled={updatingRoll}
-                                    sx={{ minWidth: 'auto', px: 1 }}
-                                  >
-                                    ✓
-                                  </Button>
-                                  <Button
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={handleCancelEdit}
-                                    disabled={updatingRoll}
-                                    sx={{ minWidth: 'auto', px: 1 }}
-                                  >
-                                    ✗
-                                  </Button>
-                                </>
-                              ) : (
-                                <>
-                                  <Typography variant="h6" fontWeight="bold" sx={{ color: '#065345' }}>
-                                    {roll.paperRemaining.toFixed(2)}
-                                  </Typography>
-                                  <Button
-                                    size="small"
-                                    variant="contained"
-                                    sx={{
-                                      backgroundColor: '#0F9D8C',
-                                      '&:hover': { backgroundColor: '#0b7f73' }
-                                    }}
-                                    onClick={() => handleStartEditRoll(roll.id, roll.paperRemaining)}
-                                    disabled={updatingRoll || editingRollId !== null}
-                                  >
-                                    Редактировать
-                                  </Button>
-                                </>
-                              )}
-                            </Box>
-                          </Box>
+                    <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+  {/* Left side - Рулон name and weight stacked vertically */}
+  <Box display="flex" flexDirection="column" alignItems="flex-start">
+    <Typography variant="body2" color="#727d7b" sx={{ mb: 0.5 }}>
+      Рулон {index + 1}
+    </Typography>
+    
+    {editingRollId === roll.id ? (
+      <TextField
+        size="small"
+        type="number"
+        value={rollEditValue}
+        onChange={(e) => setRollEditValue(e.target.value)}
+        inputProps={{ step: '0.01', min: '0' }}
+        sx={{ width: 100 }}
+      />
+    ) : (
+      <Typography variant="h6" fontWeight="bold" sx={{ color: '#065345' }}>
+        {roll.paperRemaining.toFixed(2)} кг
+      </Typography>
+    )}
+  </Box>
+  
+  {/* Right side - Edit buttons */}
+  <Box display="flex" alignItems="center" gap={1}>
+    {editingRollId === roll.id ? (
+      <>
+        <Button
+          size="small"
+          variant="contained"
+          color="success"
+          onClick={handleSaveEdit}
+          disabled={updatingRoll}
+          sx={{ minWidth: 'auto', px: 1 }}
+        >
+          ✓
+        </Button>
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={handleCancelEdit}
+          disabled={updatingRoll}
+          sx={{ minWidth: 'auto', px: 1 }}
+        >
+          ✗
+        </Button>
+      </>
+    ) : (
+      <Button
+        size="small"
+        variant="contained"
+        sx={{
+          backgroundColor: '#0F9D8C',
+          '&:hover': { backgroundColor: '#0b7f73' }
+        }}
+        onClick={() => handleStartEditRoll(roll.id, roll.paperRemaining)}
+        disabled={updatingRoll || editingRollId !== null}
+      >
+        Редактировать
+      </Button>
+    )}
+  </Box>
+</Box>
                         </CardContent>
                       </Card>
                     ))}
@@ -681,14 +723,15 @@ export default function ClientDetailsModal({
                   <Box mb={3}>
                     {showAddPaperInput ? (
                       <Stack spacing={2}>
-                        <TextField
-                          label="Количество (кг)"
-                          type="number"
-                          value={paperToAdd}
-                          onChange={(e) => setPaperToAdd(e.target.value)}
-                          inputProps={{ step: '0.01', min: 0 }}
-                          fullWidth
-                        />
+                      <TextField
+  label="Количество (кг)"
+  type="number"
+  value={paperToAdd}
+  onChange={(e) => setPaperToAdd(e.target.value)}
+  inputProps={{ step: '0.01', min: '0.01' }}
+  fullWidth
+  placeholder="Например: 3.2"
+/>
                         <Box display="flex" gap={1.5}>
                           <Button
                             variant="contained"
