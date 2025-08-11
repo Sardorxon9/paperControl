@@ -625,12 +625,12 @@ const handleUpdateRoll = async (rollId, newAmount) => {
                     </Box>
 
                     <Box display="flex" flexDirection="column" alignItems="center">
-                      <Typography variant="body1" color="#9fb1af" sx={{ fontSize: '1.125rem', mb: 1 }}>
-                        Итого Остаток
+                      <Typography variant="body1" color="#9fb1af" sx={{  fontSize: '1.125rem', mb: 1 }}>
+                      В наличии имеется
                       </Typography>
                       <Box
                         sx={{
-                          width: 120,
+                          width: 125,
                           height: 80,
                           border: '2px solid #BDDCD8',
                           borderRadius: 3,
