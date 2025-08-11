@@ -9,6 +9,7 @@ import {
   orderBy, 
   getDocs, 
   getDoc,
+  deleteDoc,
   increment 
 } from "firebase/firestore";
 import EditIcon from '@mui/icons-material/Edit';
@@ -175,170 +176,192 @@ const calculateTotalPaper = () => {
 };
 
   // Handle adding new paper (Priyemka functionality)
-  const handleAddPaper = async () => {
-    if (!client || !paperToAdd) return;
+// Handle adding new paper (Priyemka functionality)
+const handleAddPaper = async () => {
+  if (!client || !paperToAdd) return;
 
-    setAddingPaper(true);
-    const amount = parseFloat(paperToAdd);
+  setAddingPaper(true);
+  const amount = parseFloat(paperToAdd);
 
-    if (isNaN(amount) || amount <= 0) {
-  alert("Пожалуйста, введите корректное количество больше 0.");
-  setAddingPaper(false);
-  return;
-}
+  if (isNaN(amount) || amount <= 0) {
+    alert("Пожалуйста, введите корректное количество больше 0.");
+    setAddingPaper(false);
+    return;
+  }
 
-    try {
-      // Create new document in paperRolls subcollection
-      const rollsRef = collection(db, `clients/${client.id}/paperRolls`);
-      await addDoc(rollsRef, {
-        dateCreated: Timestamp.now(),
-        paperRemaining: amount
-      });
+  try {
+    // Create new document in paperRolls subcollection
+    const rollsRef = collection(db, `clients/${client.id}/paperRolls`);
+    await addDoc(rollsRef, {
+      dateCreated: Timestamp.now(),
+      paperRemaining: amount
+    });
 
+    // Update totalKg in clients/{id} (all-time cumulative)
+    const clientRef = doc(db, 'clients', client.id);
+    await updateDoc(clientRef, {
+      totalKg: increment(amount) // <- important: increment totalKg in firestore
+    });
 
+    // Recalculate current total remaining from all rolls and update clients/{id}.paperRemaining
+    const newRemaining = await updateClientTotalPaper(client.id);
 
-      // Update client data in parent component
-      const updatedClient = {
-        ...client,
-        totalKg: (client.totalKg || 0) + amount,
-        paperRemaining: (client.paperRemaining || 0) + amount
-      };
-      
-      onClientUpdate(updatedClient);
+    // Update client data in parent component (reflect new totals immediately in UI)
+    const updatedClient = {
+      ...client,
+      totalKg: (client.totalKg || 0) + amount,
+      paperRemaining: newRemaining
+    };
+    onClientUpdate(updatedClient);
 
-      // Reset input and refresh data
-      setPaperToAdd("");
-      setShowAddPaperInput(false);
-      await fetchPaperRolls();
-await updateClientTotalPaper(client.id);
+    // Reset input and refresh data
+    setPaperToAdd("");
+    setShowAddPaperInput(false);
+    await fetchPaperRolls();
 
-      
-      console.log(`Added ${amount}kg of paper for client ${client.id}`);
-    } catch (error) {
-      console.error('Error adding paper:', error);
-      alert('Ошибка при добавлении бумаги');
-    } finally {
-      setAddingPaper(false);
-    }
-  };
+    console.log(`Added ${amount}kg of paper for client ${client.id}`);
+  } catch (error) {
+    console.error('Error adding paper:', error);
+    alert('Ошибка при добавлении бумаги');
+  } finally {
+    setAddingPaper(false);
+  }
+};
 
-  // Recalculate the total paperRemaining from all rolls and update main client doc
+// Recalculate the total paperRemaining from all rolls and update main client doc
 const updateClientTotalPaper = async (clientId) => {
+  // read all rolls
   const rollsRef = collection(db, `clients/${clientId}/paperRolls`);
   const rollsSnapshot = await getDocs(rollsRef);
 
+  // sum remaining
   const totalRemaining = rollsSnapshot.docs.reduce(
-    (sum, doc) => sum + (doc.data().paperRemaining || 0),
+    (sum, d) => sum + (d.data().paperRemaining || 0),
     0
   );
 
+  // optional: count of rolls
+  const totalRolls = rollsSnapshot.size || rollsSnapshot.docs.length || 0;
+
+  // update parent client doc atomically (no change to totalKg here)
   const clientRef = doc(db, 'clients', clientId);
   await updateDoc(clientRef, {
-    paperRemaining: totalRemaining
+    paperRemaining: totalRemaining,
+    totalRolls: totalRolls
   });
 
+  // return the number for immediate UI updates
   return totalRemaining;
 };
 
 
 
 
+
   // Handle updating a specific roll
-  const handleUpdateRoll = async (rollId, newAmount) => {
-    if (isNaN(newAmount) || parseFloat(newAmount) < 0) {
-      alert('Пожалуйста, введите корректное количество бумаги');
-      return;
+// Handle updating a specific roll
+// Handle updating a specific roll
+const handleUpdateRoll = async (rollId, newAmount) => {
+  if (isNaN(newAmount) || parseFloat(newAmount) < 0) {
+    alert('Пожалуйста, введите корректное количество бумаги');
+    return;
+  }
+
+  setUpdatingRoll(true);
+  const newAmountValue = parseFloat(newAmount);
+
+  try {
+    // Get current roll data to calculate amount used
+    const rollRef = doc(db, `clients/${client.id}/paperRolls`, rollId);
+    const rollSnap = await getDoc(rollRef);
+
+    if (!rollSnap.exists()) {
+      throw new Error('Roll not found');
     }
 
-     
-    setUpdatingRoll(true);
-    const newAmountValue = parseFloat(newAmount);
-
-    try {
-      // Get current roll data to calculate amount used
-      const rollRef = doc(db, `clients/${client.id}/paperRolls`, rollId);
-      const rollSnap = await getDoc(rollRef);
-      
-      if (!rollSnap.exists()) {
-        throw new Error('Roll not found');
-      }
-
-    const currentAmount = rollSnap.data().paperRemaining;
+    const currentAmount = rollSnap.data().paperRemaining || 0;
     const amountUsed = currentAmount - newAmountValue;
 
-
-    
-      // Update the specific roll document
-      await updateDoc(rollRef, {
-        paperRemaining: newAmountValue
-      });
-      
-
-    
-      
-
-      // Add log entry if paper was used (amountUsed > 0)
+    // If newAmountValue is zero (or <= 0), consider the roll fully used and DELETE it
+    if (newAmountValue <= 0) {
+      // If any amount was used, record a log
       if (amountUsed > 0) {
         const logsRef = collection(db, `clients/${client.id}/logs`);
         await addDoc(logsRef, {
           dateRecorded: Timestamp.now(),
           amountUsed: amountUsed,
-          rollId: rollId
+          rollId: rollId,
+          action: 'used_up' // optional flag
         });
       }
 
-      // Update client data in parent component
-      const updatedClient = {
-        ...client,
-        paperRemaining: (client.paperRemaining || 0) - amountUsed
-      };
-      onClientUpdate(updatedClient);
+      // Delete the roll document
+      await deleteDoc(rollRef);
+    } else {
+      // Otherwise, just update the remaining amount on the roll
+      await updateDoc(rollRef, {
+        paperRemaining: newAmountValue
+      });
 
-// Update the main client document (both paperRemaining and totalKg)
-const clientRef = doc(db, 'clients', client.id);
-await updateDoc(clientRef, {
-  totalKg: increment(-amountUsed)
-});
-await updateClientTotalPaper(client.id);
-
-
-      // Check for low paper notification
-      try {
-        const thresholdValue = parseFloat(client.notifyWhen) || 3;
-        const notificationResult = await checkAndNotifyLowPaper(
-          updatedClient,
-          updatedClient.paperRemaining,
-          thresholdValue,
-          db
-        );
-
-        if (notificationResult.notificationSent) {
-          setSnackbar({
-            open: true,
-            message: `Уведомление отправлено ${notificationResult.successfulNotifications} администраторам о низком уровне бумаги!`,
-            severity: 'info'
-          });
-        }
-      } catch (notificationError) {
-        console.error("Error sending notification:", notificationError);
+      // If paper decreased, add a usage log
+      if (amountUsed > 0) {
+        const logsRef = collection(db, `clients/${client.id}/logs`);
+        await addDoc(logsRef, {
+          dateRecorded: Timestamp.now(),
+          amountUsed: amountUsed,
+          rollId: rollId,
+          action: 'used_partial' // optional flag
+        });
       }
-
-      // Reset editing state and refresh data
-      setEditingRollId(null);
-      setRollEditValue('');
-      await fetchPaperRolls();
-      await updateClientTotalPaper(client.id);
-
-      await fetchLogs();
-
-      console.log(`Updated roll ${rollId}: used ${amountUsed}kg`);
-    } catch (error) {
-      console.error('Error updating roll:', error);
-      alert('Ошибка при обновлении рулона');
-    } finally {
-      setUpdatingRoll(false);
     }
-  };
+
+    // Recalculate and update clients/{id}.paperRemaining (and totalRolls)
+    const newRemaining = await updateClientTotalPaper(client.id);
+
+    // Update parent UI client object (do not change totalKg here)
+    const updatedClient = {
+      ...client,
+      paperRemaining: newRemaining
+    };
+    onClientUpdate(updatedClient);
+
+    // Check for low paper notification (same as your existing logic)
+    try {
+      const thresholdValue = parseFloat(client.notifyWhen) || 3;
+      const notificationResult = await checkAndNotifyLowPaper(
+        updatedClient,
+        updatedClient.paperRemaining,
+        thresholdValue,
+        db
+      );
+
+      if (notificationResult.notificationSent) {
+        setSnackbar({
+          open: true,
+          message: `Уведомление отправлено ${notificationResult.successfulNotifications} администраторам о низком уровне бумаги!`,
+          severity: 'info'
+        });
+      }
+    } catch (notificationError) {
+      console.error("Error sending notification:", notificationError);
+    }
+
+    // Reset editing state and refresh data
+    setEditingRollId(null);
+    setRollEditValue('');
+    await fetchPaperRolls();
+    await fetchLogs();
+
+    console.log(`Updated roll ${rollId}: used ${amountUsed}kg`);
+  } catch (error) {
+    console.error('Error updating roll:', error);
+    alert('Ошибка при обновлении рулона');
+  } finally {
+    setUpdatingRoll(false);
+  }
+};
+
+
 
   // Handle starting edit mode for a roll
   const handleStartEditRoll = (rollId, currentAmount) => {
