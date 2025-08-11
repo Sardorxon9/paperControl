@@ -46,8 +46,7 @@ import AddClientForm from './addClientForm';
 import ClientDetailsModal from './ClientDetailsModal';
 import ReportGmailerrorredIcon from '@mui/icons-material/ReportGmailerrorred';
 import LogoutIcon from '@mui/icons-material/Logout'; // <-- Import LogoutIcon
-
-// Product Details Modal Component
+import resetFirestoreDefaults from "./resetFirestoreDefaults";// Product Details Modal Component
 function ProductDetailsModal({ open, onClose, product, clients }) {
   const [paperInfo, setPaperInfo] = useState(null);
   const [logs, setLogs] = useState([]);
@@ -58,26 +57,42 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
   const [editingUsage, setEditingUsage] = useState(false);
   const [editingPriyemka, setEditingPriyemka] = useState(false);
   const [usedAmount, setUsedAmount] = useState('');
-  const [selectedClient, setSelectedClient] = useState('');
-  const [paperIn, setPaperIn] = useState('');
+
+const [paperIn, setPaperIn] = useState('');
+
+const [individualRolls, setIndividualRolls] = useState([]);
+const [addingRoll, setAddingRoll] = useState(false);
+const [rollToAdd, setRollToAdd] = useState("");
+const [showAddRollInput, setShowAddRollInput] = useState(false);
+const [editingRollId, setEditingRollId] = useState(null);
+const [rollEditAmount, setRollEditAmount] = useState("");
+const [selectedClient, setSelectedClient] = useState("");
 
   const fetchProductDetails = async () => {
     if (!product) return;
     
     setLoading(true);
-    try {
-      // Fetch paperInfo from subcollection
-      const paperInfoQuery = await getDocs(collection(db, "productTypes", product.id, "paperInfo"));
-      let paperInfoData = null;
+  try {
+    // Fetch paperInfo from subcollection
+    const paperInfoQuery = await getDocs(collection(db, "productTypes", product.id, "paperInfo"));
+    let paperInfoData = null;
+    
+    if (!paperInfoQuery.empty) {
+      const paperInfoDoc = paperInfoQuery.docs[0];
+      paperInfoData = { id: paperInfoDoc.id, ...paperInfoDoc.data() };
+      setPaperInfo(paperInfoData);
       
-      if (!paperInfoQuery.empty) {
-        const paperInfoDoc = paperInfoQuery.docs[0];
-        paperInfoData = { id: paperInfoDoc.id, ...paperInfoDoc.data() };
-        setPaperInfo(paperInfoData);
-      } else {
-        setPaperInfo(null);
-      }
-      
+      // NEW: Fetch individual rolls from paperInfo -> individualRolls
+      const rollsQuery = await getDocs(
+        collection(db, "productTypes", product.id, "paperInfo", paperInfoDoc.id, "individualRolls")
+      );
+      const rollsData = rollsQuery.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })).sort((a, b) => a.dateCreated?.seconds - b.dateCreated?.seconds);
+      setIndividualRolls(rollsData);
+    }
+    
       // Fetch logs directly from productTypes/{id}/logs
       const logsQuery = await getDocs(collection(db, "productTypes", product.id, "logs"));
       const logsData = await Promise.all(
@@ -123,6 +138,48 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
     }
   };
 
+
+const handleUpdateRoll = async (rollId, newAmount, clientId) => {
+  if (!paperInfo || !clientId) return;
+  
+  try {
+    // Get current roll data
+    const rollRef = doc(db, "productTypes", product.id, "paperInfo", paperInfo.id, "individualRolls", rollId);
+    const rollSnap = await getDoc(rollRef);
+    const currentAmount = rollSnap.data().paperRemaining;
+    const amountUsed = currentAmount - parseFloat(newAmount);
+    
+    // Update individual roll
+    await updateDoc(rollRef, {
+      paperRemaining: parseFloat(newAmount)
+    });
+    
+    // Update paperInfo total
+    await updateDoc(doc(db, "productTypes", product.id, "paperInfo", paperInfo.id), {
+      paperRemaining: (paperInfo.paperRemaining || 0) - amountUsed
+    });
+    
+    // Add log entry
+    if (amountUsed > 0) {
+      await addDoc(collection(db, "productTypes", product.id, "logs"), {
+        usedAmount: amountUsed,
+        dateRecorded: serverTimestamp(),
+        clientId: clientId,
+        rollId: rollId
+      });
+    }
+    
+    setEditingRollId(null);
+    setRollEditAmount("");
+    setSelectedClient("");
+    await fetchProductDetails();
+  } catch (error) {
+    console.error("Error updating roll:", error);
+    alert("Ошибка при обновлении рулона");
+  }
+};
+
+
   const handleSaveUsage = async () => {
     if (!usedAmount || !selectedClient || !paperInfo) return;
     
@@ -157,40 +214,50 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
     }
   };
 
-  const handleSavePriyemka = async () => {
-    if (!paperIn || !paperInfo) return;
+ const handleSavePriyemka = async () => {
+  if (!paperIn || !paperInfo) return;
+  
+  try {
+    console.log("Saving priyemka:", { paperIn, paperInfo });
     
-    try {
-      console.log("Saving priyemka:", { paperIn, paperInfo });
-      
-      // Add priyemka entry to productTypes/{id}/priyemka
-      const priyemkaRef = await addDoc(collection(db, "productTypes", product.id, "priyemka"), {
-        paperIn: parseFloat(paperIn),
-        date: serverTimestamp()
-      });
-      console.log("Priyemka added with ID:", priyemkaRef.id);
-      
-      // Update paperRemaining and totalKg in paperInfo subcollection
-      const newPaperRemaining = (paperInfo.paperRemaining || 0) + parseFloat(paperIn);
-      const newTotalKg = (paperInfo.totalKg || 0) + parseFloat(paperIn);
-      
-      await updateDoc(doc(db, "productTypes", product.id, "paperInfo", paperInfo.id), {
-        paperRemaining: newPaperRemaining,
-        totalKg: newTotalKg
-      });
-      console.log("Paper remaining updated to:", newPaperRemaining, "totalKg:", newTotalKg);
-      
-      // Reset form
-      setPaperIn('');
-      setEditingPriyemka(false);
-      
-      // Refresh data
-      await fetchProductDetails();
-    } catch (error) {
-      console.error("Error saving priyemka:", error);
-      alert("Ошибка при сохранении: " + error.message);
-    }
-  };
+    // Add priyemka entry to productTypes/{id}/priyemka
+    const priyemkaRef = await addDoc(collection(db, "productTypes", product.id, "priyemka"), {
+      paperIn: parseFloat(paperIn),
+      date: serverTimestamp()
+    });
+    console.log("Priyemka added with ID:", priyemkaRef.id);
+    
+    // Create new roll in individualRolls subcollection
+    await addDoc(
+      collection(db, "productTypes", product.id, "paperInfo", paperInfo.id, "individualRolls"),
+      {
+        paperRemaining: parseFloat(paperIn),
+        dateCreated: serverTimestamp()
+      }
+    );
+    console.log("New roll created with amount:", parseFloat(paperIn));
+    
+    // Update paperRemaining and totalKg in paperInfo subcollection
+    const newPaperRemaining = (paperInfo.paperRemaining || 0) + parseFloat(paperIn);
+    const newTotalKg = (paperInfo.totalKg || 0) + parseFloat(paperIn);
+    
+    await updateDoc(doc(db, "productTypes", product.id, "paperInfo", paperInfo.id), {
+      paperRemaining: newPaperRemaining,
+      totalKg: newTotalKg
+    });
+    console.log("Paper remaining updated to:", newPaperRemaining, "totalKg:", newTotalKg);
+    
+    // Reset form
+    setPaperIn('');
+    setEditingPriyemka(false);
+    
+    // Refresh data
+    await fetchProductDetails();
+  } catch (error) {
+    console.error("Error saving priyemka:", error);
+    alert("Ошибка при сохранении: " + error.message);
+  }
+};
 
   useEffect(() => {
     if (open && product) {
@@ -202,266 +269,259 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
 
   return (
     <Modal
-      open={open}
-      onClose={onClose}
-      aria-labelledby="product-details-modal"
-      sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-    >
-      <Box
-        sx={{
-          bgcolor: 'background.paper',
-          borderRadius: 2,
-          boxShadow: 24,
-          p: 4,
-          minWidth: 800,
-          maxWidth: '90vw',
-          maxHeight: '90vh',
-          overflow: 'auto'
-        }}
-      >
-        <Typography variant="h5" component="h2" sx={{ mb: 3, fontWeight: 600 }}>
-          Подробная информация: {product.type}
-        </Typography>
-        
-        {loading ? (
-          <Box display="flex" justifyContent="center" p={4}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <Grid container spacing={3}>
-            {/* Box 1: Основная информация */}
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" paddingBottom={2} fontWeight={700} gutterBottom color="primary">
-                    Основная информация
-                  </Typography>
-                  <Stack spacing={2}>
-                  <Box>
-  <Typography variant="body2" color="text.secondary">
-    Тип продукта
-  </Typography>
-  <Typography variant="body1" fontWeight={700} >
-    {product.type}
-  </Typography>
-</Box>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
-                        Номер полки
-                      </Typography>
-                      <Typography variant="body1" fontWeight={700} fontSize={18} >
-                        {paperInfo?.shellNum || '-'}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
-                        Остаток в наличии
-                      </Typography>
-                      <Typography variant="body1" fontWeight={700} fontSize={18}>
-                        {paperInfo?.paperRemaining || 0} кг
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Grid>
+  open={open}
+  onClose={onClose}
+  aria-labelledby="product-details-modal"
+  sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+>
+  <Box
+    sx={{
+      bgcolor: 'background.paper',
+      borderRadius: 2,
+      boxShadow: 24,
+      p: 4,
+      minWidth: 800,
+      maxWidth: '90vw',
+      maxHeight: '90vh',
+      overflow: 'auto'
+    }}
+  >
+    <Typography variant="h5" component="h2" sx={{ mb: 3, fontWeight: 600 }}>
+      Подробная информация: {product.type}
+    </Typography>
 
-            {/* Box 2: Использование бумаги */}
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" fontWeight={700} gutterBottom color="primary">
-                    Использование бумаги
-                  </Typography>
-                  
-                  {!editingUsage ? (
-                    <Button
-                      variant="outlined"
-                      onClick={() => setEditingUsage(true)}
-                      sx={{ mb: 2 }}
-                    >
-                      Редактировать
-                    </Button>
-                  ) : (
-                    <Stack spacing={2} sx={{ mb: 2 }}>
-                      <TextField
-                        size="small"
-                        label="Сколько использовано (кг)?"
-                        type="number"
-                        value={usedAmount}
-                        onChange={(e) => setUsedAmount(e.target.value)}
-                      />
-                      <FormControl size="small">
-                        <InputLabel>Выберите клиента</InputLabel>
-                        <Select
-                          value={selectedClient}
-                          onChange={(e) => setSelectedClient(e.target.value)}
-                          label="Выберите клиента"
-                        >
-                          {clients.map((client) => (
-                            <MenuItem key={client.id} value={client.id}>
-                              {client.restaurant || client.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                      <Stack direction="row" spacing={1}>
-                        <Button
-                          variant="contained"
-                          size="small"
-                          onClick={handleSaveUsage}
-                          disabled={!usedAmount || !selectedClient}
-                        >
-                          Сохранить
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => {
-                            setEditingUsage(false);
-                            setUsedAmount('');
-                            setSelectedClient('');
-                          }}
-                        >
-                          Отмена
-                        </Button>
-                      </Stack>
-                    </Stack>
-                  )}
-
-                  <Divider sx={{ my: 2 }} />
-                  
-                  <Typography variant="subtitle2" gutterBottom>
-                    История использования
-                  </Typography>
-                  
-                  {logs.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">
-                      Нет записей
-                    </Typography>
-                  ) : (
-                    <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 200 }}>
-                      <Table size="small">
-                        <TableHead sx={{ backgroundColor: '#e1e9f2' }}>
-                         <TableRow>
-        <TableCell sx={{ color: '#3d5066', fontWeight: 600 }}>Дата</TableCell>
-        <TableCell sx={{ color: '#3d5066', fontWeight: 600 }}>Клиент</TableCell>
-        <TableCell sx={{ color: '#3d5066', fontWeight: 600 }}>
-          Использовано (кг)
-        </TableCell>
-      </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {logs.map((log) => (
-                            <TableRow key={log.id}>
-                              <TableCell>
-                                {log.date ? new Date(log.date.seconds * 1000).toLocaleDateString() : '-'}
-                              </TableCell>
-                              <TableCell>{log.clientName}</TableCell>
-                              <TableCell>{log.usedAmount}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Box 3: Приемка */}
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" fontWeight={700} gutterBottom color="primary">
-                    Приемка
-                  </Typography>
-                  
-                  {!editingPriyemka ? (
-                    <Button
-                      variant="outlined"
-                      onClick={() => setEditingPriyemka(true)}
-                      sx={{ mb: 2 }}
-                    >
-                      Приемка
-                    </Button>
-                  ) : (
-                    <Stack spacing={2} sx={{ mb: 2 }}>
-                      <TextField
-                        size="small"
-                        label="Сколько кг поступило?"
-                        type="number"
-                        value={paperIn}
-                        onChange={(e) => setPaperIn(e.target.value)}
-                      />
-                      <Stack direction="row" spacing={1}>
-                        <Button
-                          variant="contained"
-                          size="small"
-                          onClick={handleSavePriyemka}
-                          disabled={!paperIn}
-                        >
-                          Сохранить
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={() => {
-                            setEditingPriyemka(false);
-                            setPaperIn('');
-                          }}
-                        >
-                          Отмена
-                        </Button>
-                      </Stack>
-                    </Stack>
-                  )}
-
-                  <Divider sx={{ my: 2 }} />
-                  
-                  <Typography variant="subtitle2" gutterBottom>
-                    История поступлений
-                  </Typography>
-                  
-                  {priyemka.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">
-                      Нет записей
-                    </Typography>
-                  ) : (
-                    <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 200 }}>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Дата</TableCell>
-                            <TableCell>Поступило (кг)</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {priyemka.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell>
-                                {item.date ? new Date(item.date.seconds * 1000).toLocaleDateString() : '-'}
-                              </TableCell>
-                              <TableCell>{item.paperIn}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        )}
-        
-        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-          <Button onClick={onClose} variant="contained">
-            Закрыть
-          </Button>
-        </Box>
+    {loading ? (
+      <Box display="flex" justifyContent="center" p={4}>
+        <CircularProgress />
       </Box>
-    </Modal>
+    ) : (
+      <Grid container spacing={3}>
+        {/* Box 1: Basic Information */}
+        <Grid item xs={12} md={4}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" paddingBottom={2} fontWeight={700} gutterBottom color="primary">
+                Основная информация
+              </Typography>
+              <Stack spacing={2}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">Тип продукта</Typography>
+                  <Typography variant="body1" fontWeight={700}>{product.type}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">Номер полки</Typography>
+                  <Typography variant="body1" fontWeight={700} fontSize={18}>
+                    {paperInfo?.shellNum || '-'}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">Общий остаток</Typography>
+                  <Typography variant="body1" fontWeight={700} fontSize={18}>
+                    {paperInfo?.paperRemaining || 0} кг
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">Всего рулонов</Typography>
+                  <Typography variant="body1" fontWeight={700} fontSize={18}>
+                    {individualRolls.length}
+                  </Typography>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Box 2: Individual Rolls Management */}
+        <Grid item xs={12} md={4}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" fontWeight={700} gutterBottom color="primary">
+                Управление рулонами
+              </Typography>
+
+           
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Individual Rolls List */}
+              <Typography variant="subtitle2" gutterBottom>Рулоны</Typography>
+              <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
+                {individualRolls.map((roll, index) => (
+                  <Card key={roll.id} sx={{ mb: 2, bgcolor: '#E2F0EE', border: '1px solid #BDDCD8' }}>
+                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                     <Box display="flex" flexDirection="column" alignItems="flex-start" gap={1}>
+                        <Typography variant="body2">Рулон {index + 1}</Typography>
+                        {editingRollId === roll.id ? (
+                          <Stack spacing={1} alignItems="flex-start" sx={{ width: '100%' }}>
+                            <TextField
+                              size="small"
+                              type="number"
+                              label="Сколько кг осталось?"
+                              value={rollEditAmount}
+                              onChange={(e) => setRollEditAmount(e.target.value)}
+                              sx={{ width: '100%' }}
+                            />
+                            <FormControl size="small" sx={{ width: '100%' }}>
+                              <InputLabel>Выберите клиента</InputLabel>
+                              <Select
+                                value={selectedClient}
+                                onChange={(e) => setSelectedClient(e.target.value)}
+                                label="Выберите клиента"
+                              >
+                                {clients.map(client => (
+                                  <MenuItem key={client.id} value={client.id}>
+                                    {client.restaurant || client.name}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                            <Stack direction="row" spacing={1}>
+                              <Button
+                                size="small"
+                                variant="contained"
+                                onClick={() => handleUpdateRoll(roll.id, rollEditAmount, selectedClient)}
+                                disabled={!selectedClient || !rollEditAmount}
+                              >
+                                ✓
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => {
+                                  setEditingRollId(null);
+                                  setRollEditAmount("");
+                                  setSelectedClient("");
+                                }}
+                              >
+                                ✗
+                              </Button>
+                            </Stack>
+                          </Stack>
+                        ) : (
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Typography variant="h6" fontWeight="bold">
+                              {roll.paperRemaining} кг
+                            </Typography>
+                            <Button
+                              size="small"
+                              variant="сontained"
+                              sx={{
+                                      backgroundColor: '#0F9D8C',
+                                      color : "white",
+                                      '&:hover': { backgroundColor: '#0b7f73' }
+                                    }}
+                              onClick={() => {
+                                setEditingRollId(roll.id);
+                                setRollEditAmount(roll.paperRemaining.toString());
+                              }}
+                            >
+                              Редактировать
+                            </Button>
+                          </Stack>
+                        )}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Box 3: Приемка */}
+        <Grid item xs={12} md={4}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" fontWeight={700} gutterBottom color="primary">
+                Приемка
+              </Typography>
+              
+              {!editingPriyemka ? (
+                <Button
+                  variant="outlined"
+                  onClick={() => setEditingPriyemka(true)}
+                  sx={{ mb: 2 }}
+                >
+                  Приемка
+                </Button>
+              ) : (
+                <Stack spacing={2} sx={{ mb: 2 }}>
+                  <TextField
+                    size="small"
+                    label="Сколько кг поступило?"
+                    type="number"
+                    value={paperIn}
+                    onChange={(e) => setPaperIn(e.target.value)}
+                  />
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={handleSavePriyemka}
+                      disabled={!paperIn}
+                    >
+                      Сохранить
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => {
+                        setEditingPriyemka(false);
+                        setPaperIn('');
+                      }}
+                    >
+                      Отмена
+                    </Button>
+                  </Stack>
+                </Stack>
+              )}
+
+              <Divider sx={{ my: 2 }} />
+              
+              <Typography variant="subtitle2" gutterBottom>
+                История поступлений
+              </Typography>
+              
+              {priyemka.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  Нет записей
+                </Typography>
+              ) : (
+                <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 200 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Дата</TableCell>
+                        <TableCell>Поступило (кг)</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {priyemka.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            {item.date ? new Date(item.date.seconds * 1000).toLocaleDateString() : '-'}
+                          </TableCell>
+                          <TableCell>{item.paperIn}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    )}
+
+    <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+      <Button onClick={onClose} variant="contained">
+        Закрыть
+      </Button>
+    </Box>
+  </Box>
+</Modal>
+
   );
 }
 
@@ -724,47 +784,56 @@ return {
     }
   };
 
-  const fetchProductTypesData = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "productTypes"));
-      
-      const productTypesArray = await Promise.all(
-        querySnapshot.docs.map(async (docSnap) => {
-          const data = docSnap.data();
-          
-          // Get shellNum from paperInfo subcollection
-          let shellNum = '-';
-          try {
-            const paperInfoQuery = await getDocs(collection(db, "productTypes", docSnap.id, "paperInfo"));
-            if (!paperInfoQuery.empty) {
-              const paperInfoDoc = paperInfoQuery.docs[0];
-              const paperInfoData = paperInfoDoc.data();
-              shellNum = paperInfoData.shellNum || '-';
-            }
-          } catch (error) {
-            console.error("Error fetching shellNum:", error);
+ const fetchProductTypesData = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, "productTypes"));
+    
+    const productTypesArray = await Promise.all(
+      querySnapshot.docs.map(async (docSnap) => {
+        const data = docSnap.data();
+        
+        // Get shellNum and paperRemaining from paperInfo subcollection
+        let shellNum = '-';
+        let paperRemaining = 0;
+        let totalRolls = 0;
+        
+        try {
+          const paperInfoQuery = await getDocs(collection(db, "productTypes", docSnap.id, "paperInfo"));
+          if (!paperInfoQuery.empty) {
+            const paperInfoDoc = paperInfoQuery.docs[0];
+            const paperInfoData = paperInfoDoc.data();
+            shellNum = paperInfoData.shellNum || '-';
+            paperRemaining = paperInfoData.paperRemaining || 0;
+            
+            // Count individual rolls
+            const rollsQuery = await getDocs(
+              collection(db, "productTypes", docSnap.id, "paperInfo", paperInfoDoc.id, "individualRolls")
+            );
+            totalRolls = rollsQuery.docs.length;
           }
-          
-          return {
-            id: docSnap.id,
-            type: data.type || '-',
-            packaging: data.packaging || '-',
-            gramm: data.gramm || '-',
-            shellNum
-          };
-        })
-      );
+        } catch (error) {
+          console.error("Error fetching paperInfo:", error);
+        }
+        
+        return {
+          id: docSnap.id,
+          type: data.type || '-',
+          packaging: data.packaging || '-',
+          gramm: data.gramm || '-',
+          shellNum,
+          paperRemaining,
+          totalRolls
+        };
+      })
+    );
 
-      console.log("Parsed product types array:", productTypesArray);
-      setProductTypesData(productTypesArray);
-    } catch (error) {
-      console.error("Error fetching product types data:", error);
-      setProductTypesData([]);
-    } finally {
-      setProductTypesLoading(false);
-    }
-  };
-
+    setProductTypesData(productTypesArray);
+  } catch (error) {
+    console.error("Error fetching product types data:", error);
+  } finally {
+    setProductTypesLoading(false);
+  }
+};
   useEffect(() => {
     fetchClientData();
     fetchProductTypesData();
@@ -963,78 +1032,105 @@ return {
   );
 
   const ProductTypesTable = () => (
-    <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
-      <Table sx={{ minWidth: 650 }}>
-        <TableHead>
-          <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
-            <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
-              №
+   <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
+    <Table sx={{ minWidth: 650 }}>
+      <TableHead>
+        <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
+          <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
+            №
+          </TableCell>
+          <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
+            Тип продукта
+          </TableCell>
+          <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
+            Упаковка
+          </TableCell>
+          <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
+            Граммовка
+          </TableCell>
+          <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
+            Количество рулонов
+          </TableCell>
+          <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
+            Остаток (кг)
+          </TableCell>
+          <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
+            Номер полки
+          </TableCell>
+          <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
+            Подробно
+          </TableCell>
+        </TableRow>
+      </TableHead>
+
+      <TableBody>
+        {productTypesData.map((product, index) => (
+          <TableRow
+            key={product.id}
+            sx={{
+              '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
+              '&:hover': { backgroundColor: '#e3f2fd' }
+            }}
+          >
+            {/* 1. № */}
+            <TableCell sx={{ padding: '16px' }}>
+              {index + 1}
             </TableCell>
-            <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
-              Тип продукта
+            
+            {/* 2. Тип продукта */}
+            <TableCell sx={{ padding: '16px' }}>
+              {product.type}
             </TableCell>
-            <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
-              Упаковка
+            
+            {/* 3. Упаковка */}
+            <TableCell sx={{ padding: '16px' }}>
+              {product.packaging}
             </TableCell>
-            <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
-              Граммовка
+            
+            {/* 4. Граммовка */}
+            <TableCell sx={{ padding: '16px' }}>
+              {product.gramm}
             </TableCell>
-            <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
-              Номер полки
+            
+            {/* 5. Количество рулонов */}
+            <TableCell sx={{ padding: '16px' }}>
+              {product.totalRolls || 0}
             </TableCell>
-            <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
-              Подробно
+            
+            {/* 6. Остаток (кг) */}
+            <TableCell sx={{ padding: '16px' }}>
+              {product.paperRemaining || 0} кг
+            </TableCell>
+            
+            {/* 7. Номер полки */}
+            <TableCell sx={{ padding: '16px' }}>
+              {product.shellNum}
+            </TableCell>
+            
+            {/* 8. Подробно */}
+            <TableCell sx={{ padding: '16px' }}>
+              <Button
+                variant="outlined"
+                color="primary"
+                size="small"
+                sx={{
+                  color: '#0F9D8C',
+                  borderColor: '#0F9D8C',
+                  '&:hover': {
+                    borderColor: '#0c7a6e',
+                    color: '#0c7a6e'
+                  }
+                }}
+                onClick={() => handleOpenProductModal(product)}
+              >
+                Подробно
+              </Button>
             </TableCell>
           </TableRow>
-        </TableHead>
-
-        <TableBody>
-          {productTypesData.map((product, index) => (
-            <TableRow
-              key={product.id}
-              sx={{
-                '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
-                '&:hover': { backgroundColor: '#e3f2fd' }
-              }}
-            >
-              <TableCell sx={{ padding: '16px' }}>
-                {index + 1}
-              </TableCell>
-              <TableCell sx={{ padding: '16px' }}>
-                {product.type}
-              </TableCell>
-              <TableCell sx={{ padding: '16px' }}>
-                {product.packaging}
-              </TableCell>
-              <TableCell sx={{ padding: '16px' }}>
-                {product.gramm}
-              </TableCell>
-              <TableCell sx={{ padding: '16px' }}>
-                {product.shellNum}
-              </TableCell>
-              <TableCell sx={{ padding: '16px' }}>
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  size="small"
-                  sx={{
-                    color: '#0F9D8C',
-                    borderColor: '#0F9D8C',
-                    '&:hover': {
-                      borderColor: '#0c7a6e',
-                      color: '#0c7a6e'
-                    }
-                  }}
-                  onClick={() => handleOpenProductModal(product)}
-                >
-                  Подробно
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+        ))}
+      </TableBody>
+    </Table>
+  </TableContainer>
   );
 
   return (
@@ -1129,6 +1225,25 @@ return {
               >
                 Выйти
               </Button>
+              {userRole === "admin" && (
+    <Button
+      variant="contained"
+      color="error"
+      onClick={async () => {
+        if (
+          window.confirm(
+            "⚠️  This will DELETE all existing clients & products and recreate the default set. Continue?"
+          )
+        ) {
+          await resetFirestoreDefaults();
+          // refresh UI
+          window.location.reload();
+        }
+      }}
+    >
+      Сбросить к дефолту
+    </Button>
+  )}
             </Stack>
           </Stack>
         </Container>
