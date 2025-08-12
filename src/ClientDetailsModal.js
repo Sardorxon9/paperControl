@@ -587,147 +587,152 @@ const handleUpdateRoll = async (rollId, newAmount) => {
               </Paper>
             </Grid>
 
-            {/* Middle Section - Paper Rolls (only for tracked clients) */}
-            {client?.designType === 'unique' ? (
-              <Grid item xs={12} md={4}> {/* <-- Changed sm to md */}
-                <Paper
-                  elevation={2}
-                  sx={{
-                    p: 2.5,
-                    bgcolor: '#fafafa',
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column'
-                  }}
-                >
-                  {/* Shelf Number */}
-                <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, justifyContent: 'center', mb: 3 }}>
-  {/* Номер полки бокс */}
-  <Box display="flex" flexDirection="column" alignItems="center">
-    <Typography variant="body1" color="#9fb1af" sx={{ fontSize: '1.125rem', mb: 1 }}>
-      Номер полки
-    </Typography>
-    <Box
+         {/* Middle Section - Paper Rolls (only for tracked clients) */}
+{client?.designType === 'unique' ? (
+  <Grid item xs={12} md={4}> {/* <-- Changed sm to md */}
+    <Paper
+      elevation={2}
       sx={{
-        width: 120,
-        height: 80, // Updated height to match the other box
-        border: '2px solid #BDDCD8',
-        borderRadius: 3,
-        backgroundColor: '#E2F0EE',
+        p: 2.5,
+        bgcolor: '#fafafa',
+        height: '100%',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        p: 1 // Added padding for consistency
+        flexDirection: 'column'
       }}
     >
-      <Typography sx={{ color: '#065345', fontSize: 34, fontWeight: 800 }}>
-        {client.shellNum || '2-A'}
-      </Typography>
-    </Box>
-  </Box>
+      {/* Shelf Number */}
+      <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, justifyContent: 'center', mb: 3 }}>
+        {/* Номер полки бокс */}
+        <Box display="flex" flexDirection="column" alignItems="center">
+          <Typography variant="body1" color="#9fb1af" sx={{ fontSize: '1.125rem', mb: 1 }}>
+            Номер полки
+          </Typography>
+          <Box
+            sx={{
+              minWidth: 120, // Use minWidth instead of width
+              height: 80,
+              border: '2px solid #BDDCD8',
+              borderRadius: 3,
+              backgroundColor: '#E2F0EE',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              p: 1
+            }}
+          >
+            <Typography sx={{ color: '#065345', fontSize: 34, fontWeight: 800 }}>
+              {client.shellNum || '2-A'}
+            </Typography>
+          </Box>
+        </Box>
 
-  {/* В наличии бокс */}
-  <Box display="flex" flexDirection="column" alignItems="center">
-    <Typography variant="body1" color="#9fb1af" sx={{ fontSize: '1.125rem', mb: 1 }}>
-      В наличии имеется
-    </Typography>
-    <Box
-      sx={{
-        width: 125,
-        height: 80,
-        border: '2px solid #BDDCD8',
-        borderRadius: 3,
-        backgroundColor: '#E2F0EE',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        p: 1 // Add some padding
-      }}
-    >
-      <Typography sx={{ color: '#065345', fontSize: 34, fontWeight: 800 }}>
-        {calculateTotalPaper().toFixed(2)} кг
-      </Typography>
-    </Box>
-  </Box>
-</Box>
+        {/* В наличии бокс */}
+        <Box display="flex" flexDirection="column" alignItems="center">
+          <Typography variant="body1" color="#9fb1af" sx={{ fontSize: '1.125rem', mb: 1 }}>
+            В наличии имеется
+          </Typography>
+          <Box
+            sx={{
+              minWidth: 125, // Use minWidth to allow it to grow
+              height: 80,
+              border: '2px solid #BDDCD8',
+              borderRadius: 3,
+              backgroundColor: '#E2F0EE',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              p: 1
+            }}
+          >
+            <Typography 
+              sx={{ 
+                color: '#065345', 
+                fontSize: 34, 
+                fontWeight: 800,
+                whiteSpace: 'nowrap' // Crucial: Prevents the text from wrapping
+              }}
+            >
+              {calculateTotalPaper().toFixed(2)} кг
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
 
-                  
-                  {/* Paper Rolls List */}
-                  <Box flex={1} sx={{ overflow: 'auto' }}>
-                    {paperRolls.map((roll, index) => (
-                      <Card key={roll.id} sx={{ mb: 2, bgcolor: '#E2F0EE', border: '1px solid #BDDCD8' }}>
-                        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-  {/* Left side - Рулон name and weight stacked vertically */}
-  <Box display="flex" flexDirection="column" alignItems="flex-start">
-    <Typography variant="body2" color="#727d7b" sx={{ mb: 0.5 }}>
-      Рулон {index + 1}
-    </Typography>
-    
-    {editingRollId === roll.id ? (
-      <TextField
-        size="small"
-        type="number"
-        value={rollEditValue}
-        onChange={(e) => setRollEditValue(e.target.value)}
-        inputProps={{ step: '0.01', min: '0' }}
-        sx={{ width: 100 }}
-      />
-    ) : (
-      <Typography variant="h6" fontWeight="bold" sx={{ color: '#065345' }}>
-        {roll.paperRemaining.toFixed(2)} кг
-      </Typography>
-    )}
-  </Box>
-  
-  {/* Right side - Edit buttons */}
-  <Box display="flex" alignItems="center" gap={1}>
-    {editingRollId === roll.id ? (
-      <>
-        <Button
-          size="small"
-          variant="contained"
-          color="success"
-          onClick={handleSaveEdit}
-          disabled={updatingRoll}
-          sx={{ minWidth: 'auto', px: 1 }}
-        >
-          ✓
-        </Button>
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={handleCancelEdit}
-          disabled={updatingRoll}
-          sx={{ minWidth: 'auto', px: 1 }}
-        >
-          ✗
-        </Button>
-      </>
-    ) : (
-      <Button
-        size="small"
-        variant="contained"
-        sx={{
-          backgroundColor: '#0F9D8C',
-          '&:hover': { backgroundColor: '#0b7f73' }
-        }}
-        onClick={() => handleStartEditRoll(roll.id, roll.paperRemaining)}
-        disabled={updatingRoll || editingRollId !== null}
-      >
-        Редактировать
-      </Button>
-    )}
-  </Box>
-</Box>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </Box>
-                </Paper>
-              </Grid>
-            ) : null}
+      {/* Paper Rolls List */}
+      <Box flex={1} sx={{ overflow: 'auto' }}>
+        {paperRolls.map((roll, index) => (
+          <Card key={roll.id} sx={{ mb: 2, bgcolor: '#E2F0EE', border: '1px solid #BDDCD8' }}>
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                {/* Left side - Рулон name and weight stacked vertically */}
+                <Box display="flex" flexDirection="column" alignItems="flex-start">
+                  <Typography variant="body2" color="#727d7b" sx={{ mb: 0.5 }}>
+                    Рулон {index + 1}
+                  </Typography>
 
+                  {editingRollId === roll.id ? (
+                    <TextField
+                      size="small"
+                      type="number"
+                      value={rollEditValue}
+                      onChange={(e) => setRollEditValue(e.target.value)}
+                      inputProps={{ step: '0.01', min: '0' }}
+                      sx={{ width: 100 }}
+                    />
+                  ) : (
+                    <Typography variant="h6" fontWeight="bold" sx={{ color: '#065345' }}>
+                      {roll.paperRemaining.toFixed(2)} кг
+                    </Typography>
+                  )}
+                </Box>
+
+                {/* Right side - Edit buttons */}
+                <Box display="flex" alignItems="center" gap={1}>
+                  {editingRollId === roll.id ? (
+                    <>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="success"
+                        onClick={handleSaveEdit}
+                        disabled={updatingRoll}
+                        sx={{ minWidth: 'auto', px: 1 }}
+                      >
+                        ✓
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={handleCancelEdit}
+                        disabled={updatingRoll}
+                        sx={{ minWidth: 'auto', px: 1 }}
+                      >
+                        ✗
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="small"
+                      variant="contained"
+                      sx={{
+                        backgroundColor: '#0F9D8C',
+                        '&:hover': { backgroundColor: '#0b7f73' }
+                      }}
+                      onClick={() => handleStartEditRoll(roll.id, roll.paperRemaining)}
+                      disabled={updatingRoll || editingRollId !== null}
+                    >
+                      Редактировать
+                    </Button>
+                  )}
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        ))}
+      </Box>
+    </Paper>
+  </Grid>
+) : null}
             {/* Right Section - Add Paper and History (only for tracked clients) */}
             {client?.designType === 'unique' ? (
               <Grid item xs={12} md={4}> {/* <-- Changed sm to md */}
