@@ -601,52 +601,55 @@ const handleUpdateRoll = async (rollId, newAmount) => {
                   }}
                 >
                   {/* Shelf Number */}
-                  <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, justifyContent: 'center', mb: 3 }}>
-                    <Box display="flex" flexDirection="column" alignItems="center">
-                      <Typography variant="body1" color="#9fb1af" sx={{ fontSize: '1.125rem', mb: 1 }}>
-                        Номер полки
-                      </Typography>
-                      <Box
-                        sx={{
-                          width: 120,
-                          height: 80,
-                          border: '2px solid #BDDCD8',
-                          borderRadius: 3,
-                          backgroundColor: '#E2F0EE',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Typography sx={{ color: '#065345', fontSize: 34, fontWeight: 800 }}>
-                          {client.shellNum || '2-A'}
-                        </Typography>
-                      </Box>
-                    </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, justifyContent: 'center', mb: 3 }}>
+  {/* Номер полки бокс */}
+  <Box display="flex" flexDirection="column" alignItems="center">
+    <Typography variant="body1" color="#9fb1af" sx={{ fontSize: '1.125rem', mb: 1 }}>
+      Номер полки
+    </Typography>
+    <Box
+      sx={{
+        width: 120,
+        height: 80, // Updated height to match the other box
+        border: '2px solid #BDDCD8',
+        borderRadius: 3,
+        backgroundColor: '#E2F0EE',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        p: 1 // Added padding for consistency
+      }}
+    >
+      <Typography sx={{ color: '#065345', fontSize: 34, fontWeight: 800 }}>
+        {client.shellNum || '2-A'}
+      </Typography>
+    </Box>
+  </Box>
 
-                    <Box display="flex" flexDirection="column" alignItems="center">
-                      <Typography variant="body1" color="#9fb1af" sx={{  fontSize: '1.125rem', mb: 1 }}>
-                      В наличии имеется
-                      </Typography>
-                      <Box
-                        sx={{
-                          width: 125,
-                          height: 80,
-                          border: '2px solid #BDDCD8',
-                          borderRadius: 3,
-                          backgroundColor: '#E2F0EE',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                      <Typography sx={{ color: '#065345', fontSize: 34, fontWeight: 800 }}>
-  {calculateTotalPaper().toFixed(2)} кг
-
-</Typography>
-                      </Box>
-                    </Box>
-                  </Box>
+  {/* В наличии бокс */}
+  <Box display="flex" flexDirection="column" alignItems="center">
+    <Typography variant="body1" color="#9fb1af" sx={{ fontSize: '1.125rem', mb: 1 }}>
+      В наличии имеется
+    </Typography>
+    <Box
+      sx={{
+        width: 125,
+        height: 80,
+        border: '2px solid #BDDCD8',
+        borderRadius: 3,
+        backgroundColor: '#E2F0EE',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        p: 1 // Add some padding
+      }}
+    >
+      <Typography sx={{ color: '#065345', fontSize: 34, fontWeight: 800 }}>
+        {calculateTotalPaper().toFixed(2)} кг
+      </Typography>
+    </Box>
+  </Box>
+</Box>
 
                   
                   {/* Paper Rolls List */}
