@@ -583,6 +583,19 @@ const handleUpdateRoll = async (rollId, newAmount) => {
                       {client.comment || 'Нет комментария'}
                     </Typography>
                   </Box>
+                    <Box>
+                   <Typography variant="body1" color="#727d7b" sx={{ fontSize: '1.125rem' }}>
+  Куплено за все время:
+</Typography>
+<Typography
+  variant="h6"
+  color="#3b403fff"
+  sx={{ fontSize: '1.25rem', fontWeight: '600' }}
+>
+  {client.totalKg != null ? client.totalKg.toFixed(2) : 'Нет комментария'}
+</Typography>
+
+                  </Box>
                 </Stack>
               </Paper>
             </Grid>
