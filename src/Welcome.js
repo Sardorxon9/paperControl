@@ -659,6 +659,9 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
   const [addClientModalOpen, setAddClientModalOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
 
+const [sortBy, setSortBy] = useState('name');   
+const [sortDirection, setSortDirection] = useState('asc'); 
+
   const hiddenColumns = getHiddenColumns(userRole);
 
   const fetchProductTypeData = async (productId, designType) => {
@@ -893,114 +896,175 @@ return {
       .includes(searchQuery.toLowerCase())
   );
 
+const visibleClients = clientData.filter((client) =>
+  (client.restaurant || client.name || '')
+    .toLowerCase()
+    .includes(searchQuery.toLowerCase())
+);
+
+// 2) default alphabetical sort by restaurant
+visibleClients.sort((a, b) => {
+  const nameA = (a.restaurant || a.name || "").toLowerCase();
+  const nameB = (b.restaurant || b.name || "").toLowerCase();
+  return nameA.localeCompare(nameB);
+});
+
+// 3) apply paperRemaining sort if arrows are clicked
+const sortedClients = [...visibleClients].sort((a, b) => {
+  if (sortBy === 'name') {
+    const nameA = (a.restaurant || a.name || '').toLowerCase();
+    const nameB = (b.restaurant || b.name || '').toLowerCase();
+    return sortDirection === 'asc'
+      ? nameA.localeCompare(nameB)
+      : nameB.localeCompare(nameA);
+  } else if (sortBy === 'paperRemaining') {
+    return sortDirection === 'asc'
+      ? (a.paperRemaining || 0) - (b.paperRemaining || 0)
+      : (b.paperRemaining || 0) - (a.paperRemaining || 0);
+  }
+  return 0;
+});
+
   const ClientsTable = () => (
-    <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
-      <Table sx={{ minWidth: 650 }}>
-        <TableHead>
-          <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
-            {columnHeaders
-              .filter(header => !hiddenColumns.includes(header))
-              .map((header) => (
-                <TableCell
-                  key={header}
-                  sx={{
-                    color: '#fff',
-                    fontWeight: 'bold',
-                    fontSize: '1.1rem',
-                    padding: '16px'
-                  }}
-                >
-                  {header === '№' ? '№' :
-                    header === 'name' ? 'Название ресторана' :
-                    header === 'shellNum' ? 'Номер полки' :
-                    header === 'packaging' ? 'Упаковка' :
-                    header === 'orgName' ? 'Организация' :
-                  header === 'totalRolls' ? 'Всего рулонов' :
-                    header === 'paperRemaining' ? 'Остаток бумаги' :
-                    header === 'Actions' ? 'Действия' :
-                    header}
-                </TableCell>
-              ))}
-          </TableRow>
-        </TableHead>
-
-<TableBody>
-  {filteredClients.map((client, index) => {
-    const lowPaper =
-      client.paperRemaining !== undefined &&
-      client.notifyWhen !== undefined &&
-      client.paperRemaining <= client.notifyWhen;
-
-    return (
-      <TableRow
-        key={client.id}
-        sx={{
-          borderBottom: lowPaper ? '3px solid #f44336' : '1px solid #e0e0e0',
-          '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
-          '&:hover': { backgroundColor: '#e3f2fd' }
-        }}
-      >
+   <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
+  <Table sx={{ minWidth: 650 }}>
+    <TableHead>
+      <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
         {columnHeaders
-          .filter(field => !hiddenColumns.includes(field))
-          .map((field) => (
-            <TableCell key={field} sx={{ padding: '16px' }}>
-              {field === '№' ? index + 1 :
-               field === 'name' ? (
-                 <Box display="flex" alignItems="center" gap={1}>
-                   {lowPaper && <ReportGmailerrorredIcon color="error" />}
-                   <Box>
-                     <Typography fontWeight={600}>
-                       {client.restaurant || client.name || '-'}
-                     </Typography>
-                     <Typography variant="body2" color="#0F9D8C">
-                       {client.productType || ''}
-                     </Typography>
-                   </Box>
-                 </Box>
-               ) : field === 'Actions' ? (
-                 <Button
-                   variant="outlined"
-                   color="primary"
-                   size="small"
-                   sx={{
-                     color: '#0F9D8C',
-                     borderColor: '#0F9D8C',
-                     '&:hover': {
-                       borderColor: '#0c7a6e',
-                       color: '#0c7a6e'
-                     }
-                   }}
-                   onClick={() => handleOpenModal(client)}
-                 >
-                   Подробно
-                 </Button>
-               ) : field === 'shellNum' ? (
-                 client.shellNum || '-'
-               ) : field === 'packaging' ? (
-                 client.packaging || '-'
-               ) : field === 'orgName' ? (
-                 <Typography variant="body2" fontWeight={500}>
-                   {client.orgName || '-'}
-                 </Typography>
-               ) : field === 'totalRolls' ? (
-                 <Typography variant="body2" fontWeight={600} color="primary">
-                   {client.totalRolls ?? 0}
-                 </Typography>
-               ) : field === 'paperRemaining' ? (
-                  client.paperRemaining != null
-                    ? `${client.paperRemaining.toFixed(2)} кг`
-                    : '-'
-               ) : (
-                 client[field] ?? '-'
-               )}
+          .filter((h) => !hiddenColumns.includes(h))
+          .map((h) => (
+            <TableCell
+              key={h}
+              sx={{
+                color: '#fff',
+                fontWeight: 'bold',
+                fontSize: '1.1rem',
+                padding: '16px',
+                ...((h === 'paperRemaining' || h === 'name') && {
+                  cursor: 'pointer',
+                  userSelect: 'none'
+                })
+              }}
+              onClick={() => {
+                if (h === 'name') {
+                  setSortBy('name');
+                  setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                } else if (h === 'paperRemaining') {
+                  setSortBy('paperRemaining');
+                  setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                }
+              }}
+            >
+              {h === '№' ? (
+                '№'
+              ) : h === 'name' ? (
+                <>
+                  Название ресторана{' '}
+                  {sortBy === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                </>
+              ) : h === 'shellNum' ? (
+                'Номер полки'
+              ) : h === 'packaging' ? (
+                'Упаковка'
+              ) : h === 'orgName' ? (
+                'Организация'
+              ) : h === 'totalRolls' ? (
+                'Всего рулонов'
+              ) : h === 'paperRemaining' ? (
+                <>
+                  Остаток бумаги{' '}
+                  {sortBy === 'paperRemaining' && (sortDirection === 'asc' ? '↑' : '↓')}
+                </>
+              ) : h === 'Actions' ? (
+                'Действия'
+              ) : (
+                h
+              )}
             </TableCell>
           ))}
       </TableRow>
-    );
-  })}
-</TableBody>
-      </Table>
-    </TableContainer>
+    </TableHead>
+
+    <TableBody>
+      {sortedClients.map((client, index) => {
+        const lowPaper =
+          client.paperRemaining !== undefined &&
+          client.notifyWhen !== undefined &&
+          client.paperRemaining <= client.notifyWhen;
+
+        return (
+          <TableRow
+            key={client.id}
+            sx={{
+              borderBottom: lowPaper
+                ? '3px solid #f44336'
+                : '1px solid #e0e0e0',
+              '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
+              '&:hover': { backgroundColor: '#e3f2fd' }
+            }}
+          >
+            {columnHeaders
+              .filter((f) => !hiddenColumns.includes(f))
+              .map((f) => (
+                <TableCell key={f} sx={{ padding: '16px' }}>
+                  {f === '№' ? (
+                    index + 1
+                  ) : f === 'name' ? (
+                    <Box display="flex" alignItems="center" gap={1}>
+                      {lowPaper && <ReportGmailerrorredIcon color="error" />}
+                      <Box>
+                        <Typography fontWeight={600}>
+                          {client.restaurant || client.name || '-'}
+                        </Typography>
+                        <Typography variant="body2" color="#0F9D8C">
+                          {client.productType || ''}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ) : f === 'Actions' ? (
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      size="small"
+                      sx={{
+                        color: '#0F9D8C',
+                        borderColor: '#0F9D8C',
+                        '&:hover': {
+                          borderColor: '#0c7a6e',
+                          color: '#0c7a6e'
+                        }
+                      }}
+                      onClick={() => handleOpenModal(client)}
+                    >
+                      Подробно
+                    </Button>
+                  ) : f === 'shellNum' ? (
+                    client.shellNum || '-'
+                  ) : f === 'packaging' ? (
+                    client.packaging || '-'
+                  ) : f === 'orgName' ? (
+                    <Typography variant="body2" fontWeight={500}>
+                      {client.orgName || '-'}
+                    </Typography>
+                  ) : f === 'totalRolls' ? (
+                    <Typography variant="body2" fontWeight={600} color="primary">
+                      {client.totalRolls ?? 0}
+                    </Typography>
+                  ) : f === 'paperRemaining' ? (
+                    client.paperRemaining != null
+                      ? `${client.paperRemaining.toFixed(2)} кг`
+                      : '-'
+                  ) : (
+                    client[f] ?? '-'
+                  )}
+                </TableCell>
+              ))}
+          </TableRow>
+        );
+      })}
+    </TableBody>
+  </Table>
+</TableContainer>
   );
 
   const ProductTypesTable = () => (
