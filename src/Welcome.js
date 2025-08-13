@@ -47,6 +47,7 @@ import ClientDetailsModal from './ClientDetailsModal';
 import ReportGmailerrorredIcon from '@mui/icons-material/ReportGmailerrorred';
 import LogoutIcon from '@mui/icons-material/Logout'; // <-- Import LogoutIcon
 import resetFirestoreDefaults from "./resetFirestoreDefaults";// Product Details Modal Component
+import ExportClientsToCSV from "./ExportClientsCSV";
 function ProductDetailsModal({ open, onClose, product, clients }) {
   const [paperInfo, setPaperInfo] = useState(null);
   const [logs, setLogs] = useState([]);
@@ -1262,23 +1263,9 @@ const sortedClients = [...visibleClients].sort((a, b) => {
                 Выйти
               </Button>
               {userRole === "admin" && (
-    <Button
-      variant="contained"
-      color="error"
-      onClick={async () => {
-        if (
-          window.confirm(
-            "⚠️  This will DELETE all existing clients & products and recreate the default set. Continue?"
-          )
-        ) {
-          await resetFirestoreDefaults();
-          // refresh UI
-          window.location.reload();
-        }
-      }}
-    >
-      Сбросить к дефолту
-    </Button>
+ <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+        <ExportClientsToCSV />
+      </div>
   )}
             </Stack>
           </Stack>

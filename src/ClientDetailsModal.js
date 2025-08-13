@@ -45,6 +45,10 @@ import {
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import { checkAndNotifyLowPaper } from "./notificationService";
+import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
+import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
+import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
+import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
 
 const modalStyle = {
   position: 'absolute',
@@ -105,21 +109,20 @@ const [rollToDelete, setRollToDelete] = useState(null);
 
   // Initialize state when client changes
   useEffect(() => {
-    if (client && hasTracking) {
+  if (client) {
+    // Always fetch logs for all clients
+    fetchLogs();
+    
+    if (hasTracking) {
       fetchPaperRolls();
-      fetchLogs();
-      
-      // Fetch product type data
-      if (client.productId) {
-        fetchProductType(client.productId).then(setProductType);
-      }
-    } else if (client) {
-      // For non-tracking clients, still fetch product type
-      if (client.productId) {
-        fetchProductType(client.productId).then(setProductType);
-      }
     }
-  }, [client, hasTracking]);
+    
+    // Fetch product type data
+    if (client.productId) {
+      fetchProductType(client.productId).then(setProductType);
+    }
+  }
+}, [client, hasTracking]);
 
   
 
@@ -158,7 +161,7 @@ const [rollToDelete, setRollToDelete] = useState(null);
 
     try {
       const logsRef = collection(db, `clients/${client.id}/logs`);
-      const logsQuery = query(logsRef, orderBy('dateRecorded', 'desc'));
+    const logsQuery = query(logsRef, orderBy('date', 'desc'));
       const logsSnapshot = await getDocs(logsQuery);
       
       const logsData = logsSnapshot.docs.map(doc => ({
@@ -220,16 +223,35 @@ const handleAddPaper = async () => {
     await updateDoc(clientRef, {
       totalKg: increment(amount) // <- important: increment totalKg in firestore
     });
+    // Update the client object in parent component immediately
+const updatedClientForTotalKg = {
+  ...client,
+  totalKg: (client.totalKg || 0) + amount
+};
+onClientUpdate(updatedClientForTotalKg);
 
-    // Recalculate current total remaining from all rolls and update clients/{id}.paperRemaining
-    const newRemaining = await updateClientTotalPaper(client.id);
+// Add log entry for paper addition
+const logsRef = collection(db, `clients/${client.id}/logs`);
+await addDoc(logsRef, {
+  date: Timestamp.now(),
+  userID: currentUser?.uid || 'unknown', 
+  actionType: 'paperIn',
+  amount: amount,
+  details: `Added ${amount}kg of paper`,
+});
 
-    // Update client data in parent component (reflect new totals immediately in UI)
-    const updatedClient = {
-      ...client,
-      totalKg: (client.totalKg || 0) + amount,
-      paperRemaining: newRemaining
-    };
+// Recalculate current total remaining from all rolls
+const newRemaining = await updateClientTotalPaper(client.id);
+
+// Update client data in parent component
+const updatedClient = {
+  ...client, 
+  totalKg: (client.totalKg || 0) + amount,
+  paperRemaining: newRemaining
+};
+
+// Fetch updated logs
+await fetchLogs();
     onClientUpdate(updatedClient);
 
     // Reset input and refresh data
@@ -766,7 +788,7 @@ const handleDeleteRollWithFtulka = async () => {
   color="#3b403fff"
   sx={{ fontSize: '1.25rem', fontWeight: '600' }}
 >
-  {client.totalKg != null ? client.totalKg.toFixed(2) : 'Нет комментария'}
+ {client.totalKg ? `${client.totalKg.toFixed(2)} кг` : '0.00 кг'}
 </Typography>
 
                   </Box>
@@ -1038,7 +1060,7 @@ const handleDeleteRollWithFtulka = async () => {
                       sx={{ maxHeight: 250, border: '1px solid #e0e0e0' }}
                     >
                       <Table size="small" stickyHeader>
-                        <TableHead>
+              <TableHead>
   <TableRow>
     <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
       Дата
@@ -1049,49 +1071,42 @@ const handleDeleteRollWithFtulka = async () => {
     <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
       Количество (кг)
     </TableCell>
-    <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
-      Детали
-    </TableCell>
   </TableRow>
 </TableHead>
-                        <TableBody>
+                       <TableBody>
   {logs.length === 0 ? (
     <TableRow>
-      <TableCell colSpan={4} align="center">
+      <TableCell colSpan={3} align="center">
         Нет записей
       </TableCell>
     </TableRow>
   ) : (
     logs.map((log) => {
-      // Determine color and prefix based on action type
-      const getActionDisplay = (actionType, amount) => {
-        switch (actionType) {
-          case 'paperIn':
-            return { 
-              color: '#2e7d32', 
-              text: '+' + amount.toFixed(2), 
-              label: 'Приемка' 
-            };
-          case 'paperOut':
-            return { 
-              color: '#d32f2f', 
-              text: '-' + amount.toFixed(2), 
-              label: 'Расход' 
-            };
-          case 'fixing':
-            return { 
-              color: '#ed6c02', 
-              text: '±' + amount.toFixed(2), 
-              label: 'Исправление' 
-            };
-          default:
-            return { 
-              color: '#757575', 
-              text: amount.toFixed(2), 
-              label: 'Неизвестно' 
-            };
-        }
+      // Determine icon and color based on action type
+    const getActionDisplay = (actionType, amount) => {
+  switch (actionType) {
+    case 'paperIn':
+      return { 
+        icon: <ArrowUpwardRoundedIcon sx={{ color: '#2e7d32' }} fontSize="small" />,
+        text: '+' + amount.toFixed(2)
       };
+    case 'paperOut':
+      return { 
+        icon: <ArrowDownwardRoundedIcon sx={{ color: '#d32f2f' }} fontSize="small" />,
+        text: '-' + amount.toFixed(2)
+      };
+    case 'fixing':
+      return { 
+        icon: <AutorenewRoundedIcon sx={{ color: '#ed6c02' }} fontSize="small" />,
+        text: '±' + amount.toFixed(2)
+      };
+    default:
+      return { 
+        icon: <HelpOutlineRoundedIcon sx={{ color: '#757575' }} fontSize="small" />,
+        text: amount.toFixed(2)
+      };
+  }
+};
 
       const actionDisplay = getActionDisplay(
         log.actionType, 
@@ -1104,17 +1119,14 @@ const handleDeleteRollWithFtulka = async () => {
             {(log.date?.toDate?.() || log.dateRecorded?.toDate?.())?.toLocaleDateString('ru-RU') || 'N/A'}
           </TableCell>
           <TableCell>
-            <Typography variant="body2" sx={{ color: actionDisplay.color, fontWeight: 'bold' }}>
-              {actionDisplay.label}
-            </Typography>
+            <Box display="flex" alignItems="center" gap={1}>
+              <Typography sx={{ fontSize: '1.2rem' }}>
+                {actionDisplay.icon}
+              </Typography>
+            </Box>
           </TableCell>
           <TableCell sx={{ color: actionDisplay.color, fontWeight: 'bold' }}>
             {actionDisplay.text}
-          </TableCell>
-          <TableCell>
-            <Typography variant="body2" color="text.secondary">
-              {log.details || 'Нет деталей'}
-            </Typography>
           </TableCell>
         </TableRow>
       );
