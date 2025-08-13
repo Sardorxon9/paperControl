@@ -608,7 +608,6 @@ const handleDeleteRollWithFtulka = async () => {
   };
 
   const handleCloseModal = () => {
-  const handleCloseModal = () => {
   setPaperRolls([]);
   setLogs([]);
   setProductType(null);
@@ -629,7 +628,7 @@ const handleDeleteRollWithFtulka = async () => {
   
   onClose();
 };
-  };
+
 
   if (!client) return null;
 
