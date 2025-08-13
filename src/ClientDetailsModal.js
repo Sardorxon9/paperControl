@@ -35,7 +35,13 @@ import {
   Snackbar,
   Alert,
   Card,
-  CardContent
+  CardContent,
+  Checkbox,
+  FormControlLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import { checkAndNotifyLowPaper } from "./notificationService";
@@ -75,9 +81,19 @@ export default function ClientDetailsModal({
   const [showAddPaperInput, setShowAddPaperInput] = useState(false);
   
   // Paper roll editing state
-  const [editingRollId, setEditingRollId] = useState(null);
-  const [rollEditValue, setRollEditValue] = useState("");
-  const [updatingRoll, setUpdatingRoll] = useState(false);
+const [editingRollId, setEditingRollId] = useState(null);
+const [rollEditValue, setRollEditValue] = useState("");
+const [updatingRoll, setUpdatingRoll] = useState(false);
+
+// New state for correction mode
+const [isCorrection, setIsCorrection] = useState(false);
+const [correctWeight, setCorrectWeight] = useState("");
+
+// State for ftulka deletion modal
+const [showFtulkaModal, setShowFtulkaModal] = useState(false);
+const [ftulkaWeight, setFtulkaWeight] = useState("");
+const [rollToDelete, setRollToDelete] = useState(null);
+
   
   // Telegram integration states
   const [sendingTelegram, setSendingTelegram] = useState(false);
@@ -116,10 +132,12 @@ export default function ClientDetailsModal({
       const rollsQuery = query(rollsRef, orderBy('dateCreated', 'asc'));
       const rollsSnapshot = await getDocs(rollsQuery);
       
-      const rollsData = rollsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+  const rollsData = rollsSnapshot.docs
+  .map(doc => ({
+    id: doc.id,
+    ...doc.data()
+      }))
+      .filter(roll => roll.status !== 'deleted');// Filter out deleted rolls
       
       setPaperRolls(rollsData);
     } catch (error) {
@@ -261,17 +279,26 @@ const updateClientTotalPaper = async (clientId) => {
   // Handle updating a specific roll
 // Handle updating a specific roll
 // Handle updating a specific roll
+// New intelligent handleUpdateRoll function
 const handleUpdateRoll = async (rollId, newAmount) => {
   if (isNaN(newAmount) || parseFloat(newAmount) < 0) {
     alert('Пожалуйста, введите корректное количество бумаги');
     return;
   }
 
-  setUpdatingRoll(true);
   const newAmountValue = parseFloat(newAmount);
 
+  // Check if user is trying to "delete" the roll (entered 0)
+  if (newAmountValue === 0) {
+    setRollToDelete(rollId);
+    setShowFtulkaModal(true);
+    return;
+  }
+
+  setUpdatingRoll(true);
+
   try {
-    // Get current roll data to calculate amount used
+    // Get current roll data
     const rollRef = doc(db, `clients/${client.id}/paperRolls`, rollId);
     const rollSnap = await getDoc(rollRef);
 
@@ -280,52 +307,26 @@ const handleUpdateRoll = async (rollId, newAmount) => {
     }
 
     const currentAmount = rollSnap.data().paperRemaining || 0;
-    const amountUsed = currentAmount - newAmountValue;
 
-    // If newAmountValue is zero (or <= 0), consider the roll fully used and DELETE it
-    if (newAmountValue <= 0) {
-      // If any amount was used, record a log
-      if (amountUsed > 0) {
-        const logsRef = collection(db, `clients/${client.id}/logs`);
-        await addDoc(logsRef, {
-          dateRecorded: Timestamp.now(),
-          amountUsed: amountUsed,
-          rollId: rollId,
-          action: 'used_up' // optional flag
-        });
-      }
-
-      // Delete the roll document
-      await deleteDoc(rollRef);
+    if (isCorrection) {
+      // CORRECTION MODE: User is fixing a data entry error
+      await handleCorrectionMode(rollId, rollRef, currentAmount, newAmountValue);
     } else {
-      // Otherwise, just update the remaining amount on the roll
-      await updateDoc(rollRef, {
-        paperRemaining: newAmountValue
-      });
-
-      // If paper decreased, add a usage log
-      if (amountUsed > 0) {
-        const logsRef = collection(db, `clients/${client.id}/logs`);
-        await addDoc(logsRef, {
-          dateRecorded: Timestamp.now(),
-          amountUsed: amountUsed,
-          rollId: rollId,
-          action: 'used_partial' // optional flag
-        });
-      }
+      // USAGE MODE: User is recording paper consumption
+      await handleUsageMode(rollId, rollRef, currentAmount, newAmountValue);
     }
 
     // Recalculate and update clients/{id}.paperRemaining (and totalRolls)
     const newRemaining = await updateClientTotalPaper(client.id);
 
-    // Update parent UI client object (do not change totalKg here)
+    // Update parent UI client object
     const updatedClient = {
       ...client,
       paperRemaining: newRemaining
     };
     onClientUpdate(updatedClient);
 
-    // Check for low paper notification (same as your existing logic)
+    // Check for low paper notification
     try {
       const thresholdValue = parseFloat(client.notifyWhen) || 3;
       const notificationResult = await checkAndNotifyLowPaper(
@@ -349,13 +350,175 @@ const handleUpdateRoll = async (rollId, newAmount) => {
     // Reset editing state and refresh data
     setEditingRollId(null);
     setRollEditValue('');
+    setIsCorrection(false);
+    setCorrectWeight('');
     await fetchPaperRolls();
     await fetchLogs();
 
-    console.log(`Updated roll ${rollId}: used ${amountUsed}kg`);
   } catch (error) {
     console.error('Error updating roll:', error);
     alert('Ошибка при обновлении рулона');
+  } finally {
+    setUpdatingRoll(false);
+  }
+};
+
+// Helper function for handling correction mode
+const handleCorrectionMode = async (rollId, rollRef, oldAmount, newCorrectAmount) => {
+  const difference = newCorrectAmount - oldAmount;
+
+  // Update the roll document
+  await updateDoc(rollRef, {
+    paperRemaining: newCorrectAmount
+  });
+
+  // Update client's totalKg (this corrects the lifetime purchase record)
+  const clientRef = doc(db, 'clients', client.id);
+  await updateDoc(clientRef, {
+    totalKg: increment(difference) // Can be positive or negative
+  });
+
+  // Create correction log entry
+  const logsRef = collection(db, `clients/${client.id}/logs`);
+  await addDoc(logsRef, {
+    date: Timestamp.now(),
+    userID: currentUser?.uid || 'unknown',
+    actionType: 'fixing',
+    amount: Math.abs(difference),
+    details: `Roll corrected from ${oldAmount}kg to ${newCorrectAmount}kg (${difference > 0 ? '+' : ''}${difference.toFixed(2)}kg adjustment)`,
+    rollId: rollId
+  });
+
+  console.log(`Correction: Roll ${rollId} corrected by ${difference.toFixed(2)}kg`);
+};
+
+// Helper function for handling usage mode
+const handleUsageMode = async (rollId, rollRef, oldAmount, newAmount) => {
+  const amountUsed = oldAmount - newAmount;
+
+  if (amountUsed <= 0) {
+    // If no paper was used, just update the roll (user might be adding paper back)
+    await updateDoc(rollRef, {
+      paperRemaining: newAmount
+    });
+    return;
+  }
+
+  // Update the roll document
+  await updateDoc(rollRef, {
+    paperRemaining: newAmount
+  });
+
+  // Create usage log entry (totalKg remains unchanged for usage)
+  const logsRef = collection(db, `clients/${client.id}/logs`);
+  await addDoc(logsRef, {
+    date: Timestamp.now(),
+    userID: currentUser?.uid || 'unknown',
+    actionType: 'paperOut',
+    amount: amountUsed,
+    details: `Paper used from roll`,
+    rollId: rollId
+  });
+
+  console.log(`Usage: ${amountUsed.toFixed(2)}kg used from roll ${rollId}`);
+};
+
+// Handle roll deletion with ftulka weight
+const handleDeleteRollWithFtulka = async () => {
+  if (!rollToDelete || !ftulkaWeight) {
+    alert('Пожалуйста, введите вес футулки');
+    return;
+  }
+
+  const ftulkaWeightGrams = parseFloat(ftulkaWeight);
+  if (isNaN(ftulkaWeightGrams) || ftulkaWeightGrams < 0) {
+    alert('Пожалуйста, введите корректный вес футулки в граммах');
+    return;
+  }
+
+  setUpdatingRoll(true);
+
+  try {
+    // Get current roll data
+    const rollRef = doc(db, `clients/${client.id}/paperRolls`, rollToDelete);
+    const rollSnap = await getDoc(rollRef);
+
+    if (!rollSnap.exists()) {
+      throw new Error('Roll not found');
+    }
+
+    const currentAmount = rollSnap.data().paperRemaining || 0;
+    const ftulkaWeightKg = ftulkaWeightGrams / 1000; // Convert grams to kg
+
+    // Mark roll as deleted (don't actually delete the document)
+    await updateDoc(rollRef, {
+      status: 'deleted',
+      paperRemaining: 0,
+      ftulkaWeight: ftulkaWeightGrams,
+      deletedAt: Timestamp.now()
+    });
+
+    // Subtract ftulka weight from client's totalKg
+    const clientRef = doc(db, 'clients', client.id);
+    await updateDoc(clientRef, {
+      totalKg: increment(-ftulkaWeightKg) // Subtract ftulka weight
+    });
+
+    // Create deletion log entries
+    const logsRef = collection(db, `clients/${client.id}/logs`);
+    
+    // Log the paper usage (if any paper was remaining)
+    if (currentAmount > 0) {
+      await addDoc(logsRef, {
+        date: Timestamp.now(),
+        userID: currentUser?.uid || 'unknown',
+        actionType: 'paperOut',
+        amount: currentAmount,
+        details: `Paper used when roll was finished`,
+        rollId: rollToDelete
+      });
+    }
+
+    // Log the deletion with ftulka
+    await addDoc(logsRef, {
+      date: Timestamp.now(),
+      userID: currentUser?.uid || 'unknown',
+      actionType: 'paperOut',
+      amount: ftulkaWeightKg,
+      details: `Roll deleted with ftulka: ${ftulkaWeightGrams}g`,
+      rollId: rollToDelete
+    });
+
+    // Recalculate totals
+    const newRemaining = await updateClientTotalPaper(client.id);
+
+    // Update parent UI
+    const updatedClient = {
+      ...client,
+      paperRemaining: newRemaining,
+      totalKg: (client.totalKg || 0) - ftulkaWeightKg
+    };
+    onClientUpdate(updatedClient);
+
+    // Close modal and reset states
+    setShowFtulkaModal(false);
+    setFtulkaWeight('');
+    setRollToDelete(null);
+    setEditingRollId(null);
+    setRollEditValue('');
+
+    await fetchPaperRolls();
+    await fetchLogs();
+
+    setSnackbar({
+      open: true,
+      message: `Рулон удален. Футулка (${ftulkaWeightGrams}г) вычтена из общего веса.`,
+      severity: 'success'
+    });
+
+  } catch (error) {
+    console.error('Error deleting roll with ftulka:', error);
+    alert('Ошибка при удалении рулона');
   } finally {
     setUpdatingRoll(false);
   }
@@ -370,10 +533,12 @@ const handleUpdateRoll = async (rollId, newAmount) => {
   };
 
   // Handle canceling edit mode
-  const handleCancelEdit = () => {
-    setEditingRollId(null);
-    setRollEditValue('');
-  };
+ const handleCancelEdit = () => {
+  setEditingRollId(null);
+  setRollEditValue('');
+  setIsCorrection(false);
+  setCorrectWeight('');
+};
 
   // Handle saving edit
   const handleSaveEdit = () => {
@@ -443,17 +608,27 @@ const handleUpdateRoll = async (rollId, newAmount) => {
   };
 
   const handleCloseModal = () => {
-    setPaperRolls([]);
-    setLogs([]);
-    setProductType(null);
-    setPaperToAdd("");
-    setShowAddPaperInput(false);
-    setEditingRollId(null);
-    setRollEditValue('');
-    setAddingPaper(false);
-    setUpdatingRoll(false);
-    setSendingTelegram(false);
-    onClose();
+  const handleCloseModal = () => {
+  setPaperRolls([]);
+  setLogs([]);
+  setProductType(null);
+  setPaperToAdd("");
+  setShowAddPaperInput(false);
+  setEditingRollId(null);
+  setRollEditValue('');
+  setAddingPaper(false);
+  setUpdatingRoll(false);
+  setSendingTelegram(false);
+  
+  // Add these new lines:
+  setIsCorrection(false);
+  setCorrectWeight('');
+  setShowFtulkaModal(false);
+  setFtulkaWeight('');
+  setRollToDelete(null);
+  
+  onClose();
+};
   };
 
   if (!client) return null;
@@ -670,36 +845,75 @@ const handleUpdateRoll = async (rollId, newAmount) => {
                     Рулон {index + 1}
                   </Typography>
 
-                  {editingRollId === roll.id ? (
-                    <TextField
-                      size="small"
-                      type="number"
-                      value={rollEditValue}
-                      onChange={(e) => setRollEditValue(e.target.value)}
-                      inputProps={{ step: '0.01', min: '0' }}
-                      sx={{ width: 100 }}
-                    />
-                  ) : (
-                    <Typography variant="h6" fontWeight="bold" sx={{ color: '#065345' }}>
-                      {roll.paperRemaining.toFixed(2)} кг
-                    </Typography>
-                  )}
+              {editingRollId === roll.id ? (
+  <Box display="flex" flexDirection="column" gap={1}>
+    {/* Main input for remaining weight */}
+    <TextField
+      size="small"
+      type="number"
+      label="Сколько КГ осталось"
+      value={rollEditValue}
+      onChange={(e) => setRollEditValue(e.target.value)}
+      inputProps={{ step: '0.01', min: '0' }}
+      sx={{ width: 150 }}
+    />
+    
+    {/* Correction checkbox */}
+    <FormControlLabel
+      control={
+        <Checkbox
+          checked={isCorrection}
+          onChange={(e) => setIsCorrection(e.target.checked)}
+          size="small"
+        />
+      }
+      label="Исправить ошибку"
+      sx={{ 
+        fontSize: '0.8rem',
+        '& .MuiFormControlLabel-label': { fontSize: '0.8rem' }
+      }}
+    />
+    
+    {/* Correction input field (only shows when checkbox is checked) */}
+    {isCorrection && (
+      <TextField
+        size="small"
+        type="number"
+        label="Введите корректное КГ бумаги"
+        value={correctWeight}
+        onChange={(e) => setCorrectWeight(e.target.value)}
+        inputProps={{ step: '0.01', min: '0' }}
+        sx={{ width: 150 }}
+        helperText="Это исправит общий вес клиента"
+      />
+    )}
+  </Box>
+) : (
+  <Typography variant="h6" fontWeight="bold" sx={{ color: '#065345' }}>
+    {roll.paperRemaining.toFixed(2)} кг
+  </Typography>
+)}
                 </Box>
 
                 {/* Right side - Edit buttons */}
                 <Box display="flex" alignItems="center" gap={1}>
                   {editingRollId === roll.id ? (
                     <>
-                      <Button
-                        size="small"
-                        variant="contained"
-                        color="success"
-                        onClick={handleSaveEdit}
-                        disabled={updatingRoll}
-                        sx={{ minWidth: 'auto', px: 1 }}
-                      >
-                        ✓
-                      </Button>
+                     <Button
+  size="small"
+  variant="contained"
+  color="success"
+  onClick={() => {
+    const valueToUse = isCorrection ? correctWeight : rollEditValue;
+    if (valueToUse !== '') {
+      handleUpdateRoll(editingRollId, valueToUse);
+    }
+  }}
+  disabled={updatingRoll || (isCorrection ? !correctWeight : !rollEditValue)}
+  sx={{ minWidth: 'auto', px: 1 }}
+>
+  ✓
+</Button>
                       <Button
                         size="small"
                         variant="outlined"
@@ -813,35 +1027,88 @@ const handleUpdateRoll = async (rollId, newAmount) => {
                     >
                       <Table size="small" stickyHeader>
                         <TableHead>
-                          <TableRow>
-                            <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
-                              Дата
-                            </TableCell>
-                            <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
-                              Бумага (кг)
-                            </TableCell>
-                          </TableRow>
-                        </TableHead>
+  <TableRow>
+    <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
+      Дата
+    </TableCell>
+    <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
+      Действие
+    </TableCell>
+    <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
+      Количество (кг)
+    </TableCell>
+    <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
+      Детали
+    </TableCell>
+  </TableRow>
+</TableHead>
                         <TableBody>
-                          {logs.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={2} align="center">
-                                Нет записей
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            logs.map((log) => (
-                              <TableRow key={log.id} hover>
-                                <TableCell>
-                                  {log.dateRecorded?.toDate?.()?.toLocaleDateString('ru-RU') || 'N/A'}
-                                </TableCell>
-                                <TableCell sx={{ color: '#d32f2f', fontWeight: 'bold' }}>
-                                  -{log.amountUsed?.toFixed(2) || '0.00'}
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
+  {logs.length === 0 ? (
+    <TableRow>
+      <TableCell colSpan={4} align="center">
+        Нет записей
+      </TableCell>
+    </TableRow>
+  ) : (
+    logs.map((log) => {
+      // Determine color and prefix based on action type
+      const getActionDisplay = (actionType, amount) => {
+        switch (actionType) {
+          case 'paperIn':
+            return { 
+              color: '#2e7d32', 
+              text: '+' + amount.toFixed(2), 
+              label: 'Приемка' 
+            };
+          case 'paperOut':
+            return { 
+              color: '#d32f2f', 
+              text: '-' + amount.toFixed(2), 
+              label: 'Расход' 
+            };
+          case 'fixing':
+            return { 
+              color: '#ed6c02', 
+              text: '±' + amount.toFixed(2), 
+              label: 'Исправление' 
+            };
+          default:
+            return { 
+              color: '#757575', 
+              text: amount.toFixed(2), 
+              label: 'Неизвестно' 
+            };
+        }
+      };
+
+      const actionDisplay = getActionDisplay(
+        log.actionType, 
+        log.amount || log.amountUsed || 0
+      );
+
+      return (
+        <TableRow key={log.id} hover>
+          <TableCell>
+            {(log.date?.toDate?.() || log.dateRecorded?.toDate?.())?.toLocaleDateString('ru-RU') || 'N/A'}
+          </TableCell>
+          <TableCell>
+            <Typography variant="body2" sx={{ color: actionDisplay.color, fontWeight: 'bold' }}>
+              {actionDisplay.label}
+            </Typography>
+          </TableCell>
+          <TableCell sx={{ color: actionDisplay.color, fontWeight: 'bold' }}>
+            {actionDisplay.text}
+          </TableCell>
+          <TableCell>
+            <Typography variant="body2" color="text.secondary">
+              {log.details || 'Нет деталей'}
+            </Typography>
+          </TableCell>
+        </TableRow>
+      );
+    })
+  )}
+</TableBody>
                       </Table>
                     </TableContainer>
                   </Box>
@@ -894,6 +1161,57 @@ const handleUpdateRoll = async (rollId, newAmount) => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      {/* Ftulka Deletion Modal */}
+<Dialog
+  open={showFtulkaModal}
+  onClose={() => {
+    setShowFtulkaModal(false);
+    setFtulkaWeight('');
+    setRollToDelete(null);
+  }}
+  maxWidth="sm"
+  fullWidth
+>
+  <DialogTitle>
+    Удаление рулона
+  </DialogTitle>
+  <DialogContent>
+    <Typography variant="body1" sx={{ mb: 2 }}>
+      Это действие удалит рулон. Пожалуйста, введите вес футулки (картонного стержня) для подтверждения.
+    </Typography>
+    <TextField
+      fullWidth
+      label="Вес футулки (в граммах)"
+      type="number"
+      value={ftulkaWeight}
+      onChange={(e) => setFtulkaWeight(e.target.value)}
+      inputProps={{ step: '1', min: '0' }}
+      placeholder="Например: 400"
+      helperText="Этот вес будет вычтен из общего веса клиента"
+      sx={{ mt: 1 }}
+    />
+  </DialogContent>
+  <DialogActions>
+    <Button
+      onClick={() => {
+        setShowFtulkaModal(false);
+        setFtulkaWeight('');
+        setRollToDelete(null);
+      }}
+      disabled={updatingRoll}
+    >
+      Отмена
+    </Button>
+    <Button
+      onClick={handleDeleteRollWithFtulka}
+      disabled={updatingRoll || !ftulkaWeight}
+      variant="contained"
+      color="error"
+    >
+      {updatingRoll ? 'Удаление...' : 'Подтвердить удаление'}
+    </Button>
+  </DialogActions>
+</Dialog>
     </>
   );
 }
