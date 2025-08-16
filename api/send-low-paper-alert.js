@@ -78,7 +78,7 @@ export default async function handler(req, res) {
     const restaurantName = client.restaurant || client.name;
     const alertMessage = `🚨 <b>ВНИМАНИЕ! Заканчивается бумага</b>
 
-🏪 <b>Ресторан:</b> ${restaurantName}
+<b>Ресторан:</b> ${restaurantName}
 📦 <b>Остаток бумаги:</b> ${paperRemaining} кг
 
 🕐 <b>Дата:</b> ${currentDate}
