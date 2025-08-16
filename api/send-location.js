@@ -1,6 +1,4 @@
 // api/send-location.js
-import axios from 'axios';
-
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 export default async function handler(req, res) {
@@ -62,65 +60,58 @@ export default async function handler(req, res) {
 
     console.log('Sending location to Telegram API...');
 
-    // Send location message
-    const locationResponse = await axios.post(`${TELEGRAM_API_URL}/sendLocation`, {
-      chat_id: chatId,
-      latitude: lat,
-      longitude: lng
+    // Send location message using fetch
+    const locationResponse = await fetch(`${TELEGRAM_API_URL}/sendLocation`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        latitude: lat,
+        longitude: lng
+      })
     });
 
-    console.log('Location sent, response:', locationResponse.data);
+    const locationData = await locationResponse.json();
+    console.log('Location sent, response:', locationData);
+
+    if (!locationResponse.ok || !locationData.ok) {
+      throw new Error(`Location send failed: ${locationData.description || 'Unknown error'}`);
+    }
 
     // Send restaurant name as a follow-up message
-    const textResponse = await axios.post(`${TELEGRAM_API_URL}/sendMessage`, {
-      chat_id: chatId,
-      text: `🍽 Ресторан: ${restaurantName} ⬆️`,
-      parse_mode: 'HTML'
+    const textResponse = await fetch(`${TELEGRAM_API_URL}/sendMessage`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: `🍽 Ресторан: ${restaurantName} ⬆️`,
+        parse_mode: 'HTML'
+      })
     });
 
-    console.log('Text message sent, response:', textResponse.data);
+    const textData = await textResponse.json();
+    console.log('Text message sent, response:', textData);
 
-    if (locationResponse.data.ok && textResponse.data.ok) {
-      res.json({ 
-        success: true, 
-        message: 'Location sent successfully' 
-      });
-    } else {
-      console.error('Telegram API returned error:', {
-        location: locationResponse.data,
-        text: textResponse.data
-      });
-      throw new Error('Telegram API returned error response');
+    if (!textResponse.ok || !textData.ok) {
+      throw new Error(`Text send failed: ${textData.description || 'Unknown error'}`);
     }
+
+    res.json({ 
+      success: true, 
+      message: 'Location sent successfully' 
+    });
 
   } catch (error) {
     console.error('Error in send-location handler:', error);
     
-    // Handle different types of errors
-    if (error.response) {
-      // Axios error with response
-      console.error('Axios error response:', error.response.data);
-      res.status(500).json({ 
-        success: false, 
-        error: 'Telegram API error',
-        details: error.response.data?.description || error.response.data || error.message
-      });
-    } else if (error.request) {
-      // Axios error without response (network error)
-      console.error('Network error:', error.request);
-      res.status(500).json({ 
-        success: false, 
-        error: 'Network error - could not reach Telegram API',
-        details: error.message
-      });
-    } else {
-      // Other errors
-      console.error('General error:', error.message);
-      res.status(500).json({ 
-        success: false, 
-        error: 'Internal server error',
-        details: error.message
-      });
-    }
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to send location via Telegram',
+      details: error.message
+    });
   }
 }

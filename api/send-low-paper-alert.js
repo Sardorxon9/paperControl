@@ -1,8 +1,5 @@
 // api/send-low-paper-alert.js
-import axios from 'axios';
-
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -52,6 +49,8 @@ export default async function handler(req, res) {
       });
     }
 
+    const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
+
     // Prepare the alert message
     const currentDate = new Date().toLocaleString('ru-RU', {
       timeZone: 'Asia/Tashkent',
@@ -71,23 +70,31 @@ export default async function handler(req, res) {
 
 <i>Необходимо пополнить запасы бумаги!</i>`;
 
-    // Send notifications to all admins
+    // Send notifications to all admins using fetch
     const notificationPromises = adminChatIds.map(async (chatId) => {
       try {
-        const response = await axios.post(`${TELEGRAM_API_URL}/sendMessage`, {
-          chat_id: chatId,
-          text: alertMessage,
-          parse_mode: 'HTML'
+        const response = await fetch(`${TELEGRAM_API_URL}/sendMessage`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: alertMessage,
+            parse_mode: 'HTML'
+          })
         });
 
-        if (response.data.ok) {
+        const data = await response.json();
+
+        if (response.ok && data.ok) {
           console.log(`✅ Message sent to chat ID: ${chatId}`);
           return { chatId, success: true };
         } else {
-          return { chatId, success: false, error: response.data };
+          return { chatId, success: false, error: data.description || 'Unknown error' };
         }
       } catch (error) {
-        console.error(`❌ Failed to send to chat ID: ${chatId}`, error.response?.data || error.message);
+        console.error(`❌ Failed to send to chat ID: ${chatId}`, error.message);
         return { chatId, success: false, error: error.message };
       }
     });
