@@ -48,11 +48,12 @@ export const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen,
       };
     }
 
-    // Use your Vercel deployment URL instead of localhost
-    // Replace 'your-vercel-app-name' with your actual Vercel app domain
+    // FIXED: Correct server URL with protocol
     const serverUrl = process.env.NODE_ENV === 'production' 
-      ? 'paper-control.app'
+      ? 'https://paper-control.vercel.app'  // Fixed: added https:// and .vercel
       : 'http://localhost:3001';
+    
+    console.log('Using server URL:', serverUrl);
     
     // First test server health
     try {
@@ -64,6 +65,9 @@ export const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen,
       if (!healthResponse.ok) {
         throw new Error(`Health check failed: ${healthResponse.status}`);
       }
+      
+      const healthData = await healthResponse.json();
+      console.log('Health check passed:', healthData);
     } catch (healthError) {
       console.error('Telegram server health check failed:', healthError);
       return {
@@ -74,6 +78,15 @@ export const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen,
 
     // Send notification request to Vercel API
     console.log('Sending request to telegram server...');
+    console.log('Request payload:', {
+      adminChatIds,
+      client: {
+        restaurant: client.restaurant,
+        name: client.name
+      },
+      paperRemaining: parseFloat(paperRemaining),
+      notifyWhen: parseFloat(notifyWhen)
+    });
     
     const response = await fetch(`${serverUrl}/api/send-low-paper-alert`, {
       method: 'POST',
@@ -92,13 +105,16 @@ export const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen,
       })
     });
 
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
     // Check if response is OK
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`HTTP Error ${response.status}:`, errorText);
       return {
         success: false,
-        error: `Ошибка сервера: ${response.status}`
+        error: `Ошибка сервера: ${response.status} - ${errorText.substring(0, 100)}`
       };
     }
 
@@ -114,6 +130,7 @@ export const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen,
     }
 
     const result = await response.json();
+    console.log('API response:', result);
 
     if (result.success) {
       console.log(`Low paper notifications sent: ${result.successfulNotifications}/${result.totalAdmins} admins notified`);
@@ -124,6 +141,7 @@ export const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen,
         successfulNotifications: result.successfulNotifications
       };
     } else {
+      console.error('API returned error:', result.error, result.details);
       return {
         success: false,
         error: result.error || 'Не удалось отправить уведомления'

@@ -14,38 +14,52 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+    res.status(405).json({ 
+      success: false, 
+      error: `Method ${req.method} Not Allowed` 
+    });
     return;
   }
 
   try {
+    console.log('Low paper alert request body:', req.body);
+    console.log('Bot token exists:', !!TELEGRAM_BOT_TOKEN);
+
     const { adminChatIds, client, paperRemaining, notifyWhen } = req.body;
 
+    // Enhanced validation
     if (!adminChatIds || !Array.isArray(adminChatIds) || adminChatIds.length === 0) {
+      console.error('Invalid adminChatIds:', adminChatIds);
       return res.status(400).json({
         success: false,
-        error: 'Missing or invalid adminChatIds array'
+        error: 'Missing or invalid adminChatIds array',
+        received: { adminChatIds, type: typeof adminChatIds, isArray: Array.isArray(adminChatIds) }
       });
     }
 
     if (!client || (!client.restaurant && !client.name)) {
+      console.error('Invalid client data:', client);
       return res.status(400).json({
         success: false,
-        error: 'Missing or invalid client data'
+        error: 'Missing or invalid client data',
+        received: { client }
       });
     }
 
-    if (paperRemaining === undefined || notifyWhen === undefined) {
+    if (paperRemaining === undefined || paperRemaining === null) {
+      console.error('Invalid paperRemaining:', paperRemaining);
       return res.status(400).json({
         success: false,
-        error: 'Missing paperRemaining or notifyWhen values'
+        error: 'Missing paperRemaining value',
+        received: { paperRemaining, notifyWhen }
       });
     }
 
     if (!TELEGRAM_BOT_TOKEN) {
+      console.error('TELEGRAM_BOT_TOKEN is not set');
       return res.status(500).json({
         success: false,
-        error: 'Telegram bot token not configured'
+        error: 'Server configuration error'
       });
     }
 
@@ -61,18 +75,23 @@ export default async function handler(req, res) {
       minute: '2-digit'
     });
 
+    const restaurantName = client.restaurant || client.name;
     const alertMessage = `🚨 <b>ВНИМАНИЕ! Заканчивается бумага</b>
 
-🏪 <b>Ресторан:</b> ${client.restaurant || client.name}
+🏪 <b>Ресторан:</b> ${restaurantName}
 📦 <b>Остаток бумаги:</b> ${paperRemaining} кг
 
 🕐 <b>Дата:</b> ${currentDate}
 
 <i>Необходимо пополнить запасы бумаги!</i>`;
 
+    console.log(`Sending alert to ${adminChatIds.length} admins for restaurant: ${restaurantName}`);
+
     // Send notifications to all admins using fetch
     const notificationPromises = adminChatIds.map(async (chatId) => {
       try {
+        console.log(`Sending message to chat ID: ${chatId}`);
+        
         const response = await fetch(`${TELEGRAM_API_URL}/sendMessage`, {
           method: 'POST',
           headers: {
@@ -86,21 +105,25 @@ export default async function handler(req, res) {
         });
 
         const data = await response.json();
+        console.log(`Response for chat ID ${chatId}:`, data);
 
         if (response.ok && data.ok) {
-          console.log(`✅ Message sent to chat ID: ${chatId}`);
+          console.log(`✅ Message sent successfully to chat ID: ${chatId}`);
           return { chatId, success: true };
         } else {
-          return { chatId, success: false, error: data.description || 'Unknown error' };
+          console.error(`❌ Failed to send to chat ID ${chatId}:`, data);
+          return { chatId, success: false, error: data.description || 'Unknown Telegram API error' };
         }
       } catch (error) {
-        console.error(`❌ Failed to send to chat ID: ${chatId}`, error.message);
+        console.error(`❌ Exception when sending to chat ID: ${chatId}`, error);
         return { chatId, success: false, error: error.message };
       }
     });
 
     // Wait for all notifications to complete
+    console.log('Waiting for all notifications to complete...');
     const results = await Promise.allSettled(notificationPromises);
+    
     results.forEach((result, index) => {
       const chatId = adminChatIds[index];
       if (result.status === 'fulfilled') {
@@ -117,8 +140,9 @@ export default async function handler(req, res) {
       result.status === 'fulfilled' && result.value.success
     ).length;
 
-    const response = {
+    const responseData = {
       success: true,
+      message: `Alert sent to ${successfulNotifications} out of ${adminChatIds.length} admins`,
       totalAdmins: adminChatIds.length,
       successfulNotifications,
       results: results.map(result =>
@@ -126,11 +150,11 @@ export default async function handler(req, res) {
       )
     };
 
-    console.log(`Low paper alert sent: ${successfulNotifications}/${adminChatIds.length} admins notified`);
-    res.json(response);
+    console.log(`Low paper alert completed: ${successfulNotifications}/${adminChatIds.length} admins notified`);
+    res.json(responseData);
 
   } catch (error) {
-    console.error('Error sending low paper alert:', error);
+    console.error('Error in send-low-paper-alert handler:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to send low paper alert',

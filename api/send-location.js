@@ -88,7 +88,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         chat_id: chatId,
-        text: `🍽 Ресторан: ${restaurantName} ⬆️`,
+        text: ` Ресторан: ${restaurantName} ⬆️`,
         parse_mode: 'HTML'
       })
     });
