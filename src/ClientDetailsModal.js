@@ -571,7 +571,7 @@ const handleDeleteRollWithFtulka = async () => {
   };
 
  
-  const handleSendViaTelegram = async () => {
+ const handleSendViaTelegram = async () => {
   if (!client?.addressLong?.latitude || !client?.addressLong?.longitude) {
     setSnackbar({
       open: true,
@@ -594,15 +594,21 @@ const handleDeleteRollWithFtulka = async () => {
   setSendingTelegram(true);
 
   try {
-    // Use your Vercel deployment URL instead of localhost
-    // Replace 'your-vercel-app-name' with your actual Vercel app domain
+    // Fixed URL construction - make sure to include https:// for production
     const serverUrl = process.env.NODE_ENV === 'production' 
-      ? 'paper-control.vercel.app'
+      ? 'https://paper-control.vercel.app'  // Add https:// protocol
       : 'http://localhost:3001';
 
-    const response = await fetch(`${serverUrl}/api/send-location`, {
+    const url = `${serverUrl}/api/send-location`;
+    
+    console.log('Sending request to:', url); // Debug log
+
+    const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'  // Explicitly request JSON response
+      },
       body: JSON.stringify({
         chatId,
         restaurantName: client.restaurant || client.name,
@@ -611,16 +617,27 @@ const handleDeleteRollWithFtulka = async () => {
       }),
     });
 
+    console.log('Response status:', response.status); // Debug log
+    console.log('Response headers:', response.headers); // Debug log
+
+    // Check if the response is actually JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const textResponse = await response.text();
+      console.error('Non-JSON response received:', textResponse);
+      throw new Error(`Server returned non-JSON response: ${textResponse.substring(0, 100)}`);
+    }
+
     const result = await response.json();
 
-    if (result.success) {
+    if (response.ok && result.success) {
       setSnackbar({
         open: true,
         message: 'Локация успешно отправлена в Telegram!',
         severity: 'success',
       });
     } else {
-      throw new Error(result.error || 'Неизвестная ошибка');
+      throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
     }
   } catch (error) {
     console.error('Error sending via Telegram:', error);
