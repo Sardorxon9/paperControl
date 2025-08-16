@@ -48,12 +48,15 @@ export const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen,
       };
     }
 
-    // Check if server is reachable
-    const serverUrl = 'http://localhost:3001';
+    // Use your Vercel deployment URL instead of localhost
+    // Replace 'your-vercel-app-name' with your actual Vercel app domain
+    const serverUrl = process.env.NODE_ENV === 'production' 
+      ? 'paper-control.app'
+      : 'http://localhost:3001';
     
     // First test server health
     try {
-      const healthResponse = await fetch(`${serverUrl}/health`, {
+      const healthResponse = await fetch(`${serverUrl}/api/health`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -65,14 +68,14 @@ export const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen,
       console.error('Telegram server health check failed:', healthError);
       return {
         success: false,
-        error: "Telegram сервер недоступен. Проверьте, что он запущен на порту 3001."
+        error: "Telegram сервер недоступен. Проверьте подключение к интернету."
       };
     }
 
-    // Send notification request to Telegram server
+    // Send notification request to Vercel API
     console.log('Sending request to telegram server...');
     
-    const response = await fetch(`${serverUrl}/send-low-paper-alert`, {
+    const response = await fetch(`${serverUrl}/api/send-low-paper-alert`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -134,7 +137,7 @@ export const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen,
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
       return {
         success: false,
-        error: "Не удается подключиться к Telegram серверу. Проверьте, что сервер запущен."
+        error: "Не удается подключиться к Telegram серверу. Проверьте подключение к интернету."
       };
     }
     

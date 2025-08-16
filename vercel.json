@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/send-location.js": {
+      "maxDuration": 30
+    },
+    "api/send-low-paper-alert.js": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "TELEGRAM_BOT_TOKEN": "@telegram_bot_token"
+  }
+}

@@ -50,6 +50,7 @@ import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
 import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
 import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
 
+
 const modalStyle = {
   position: 'absolute',
   top: '50%',
@@ -298,8 +299,6 @@ const updateClientTotalPaper = async (clientId) => {
 
 
 
-  // Handle updating a specific roll
-// Handle updating a specific roll
 // Handle updating a specific roll
 // New intelligent handleUpdateRoll function
 const handleUpdateRoll = async (rollId, newAmount) => {
@@ -571,63 +570,69 @@ const handleDeleteRollWithFtulka = async () => {
     
   };
 
-  // Telegram integration function
+ 
   const handleSendViaTelegram = async () => {
-    if (!client?.addressLong?.latitude || !client?.addressLong?.longitude) {
+  if (!client?.addressLong?.latitude || !client?.addressLong?.longitude) {
+    setSnackbar({
+      open: true,
+      message: 'Ошибка: отсутствуют координаты ресторана',
+      severity: 'error',
+    });
+    return;
+  }
+
+  const { chatId } = currentUser || {};
+  if (!chatId) {
+    setSnackbar({
+      open: true,
+      message: 'Ошибка: отсутствует chatId пользователя',
+      severity: 'error',
+    });
+    return;
+  }
+
+  setSendingTelegram(true);
+
+  try {
+    // Use your Vercel deployment URL instead of localhost
+    // Replace 'your-vercel-app-name' with your actual Vercel app domain
+    const serverUrl = process.env.NODE_ENV === 'production' 
+      ? 'paper-control.vercel.app'
+      : 'http://localhost:3001';
+
+    const response = await fetch(`${serverUrl}/api/send-location`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chatId,
+        restaurantName: client.restaurant || client.name,
+        latitude: client.addressLong.latitude,
+        longitude: client.addressLong.longitude,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
       setSnackbar({
         open: true,
-        message: 'Ошибка: отсутствуют координаты ресторана',
-        severity: 'error',
+        message: 'Локация успешно отправлена в Telegram!',
+        severity: 'success',
       });
-      return;
+    } else {
+      throw new Error(result.error || 'Неизвестная ошибка');
     }
-
-    const { chatId } = currentUser || {};
-    if (!chatId) {
-      setSnackbar({
-        open: true,
-        message: 'Ошибка: отсутствует chatId пользователя',
-        severity: 'error',
-      });
-      return;
-    }
-
-    setSendingTelegram(true);
-
-    try {
-      const response = await fetch('http://localhost:3001/send-location', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chatId,
-          restaurantName: client.restaurant || client.name,
-          latitude: client.addressLong.latitude,
-          longitude: client.addressLong.longitude,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setSnackbar({
-          open: true,
-          message: 'Локация успешно отправлена в Telegram!',
-          severity: 'success',
-        });
-      } else {
-        throw new Error(result.error || 'Неизвестная ошибка');
-      }
-    } catch (error) {
-      console.error('Error sending via Telegram:', error);
-      setSnackbar({
-        open: true,
-        message: `Ошибка отправки: ${error.message}`,
-        severity: 'error',
-      });
-    } finally {
-      setSendingTelegram(false);
-    }
-  };
+  } catch (error) {
+    console.error('Error sending via Telegram:', error);
+    setSnackbar({
+      open: true,
+      message: `Ошибка отправки: ${error.message}`,
+      severity: 'error',
+    });
+  } finally {
+    setSendingTelegram(false);
+  }
+};
 
   const handleCloseModal = () => {
   setPaperRolls([]);
