@@ -571,7 +571,7 @@ const handleDeleteRollWithFtulka = async () => {
   };
 
  
- const handleSendViaTelegram = async () => {
+const handleSendViaTelegram = async () => {
   if (!client?.addressLong?.latitude || !client?.addressLong?.longitude) {
     setSnackbar({
       open: true,
@@ -637,13 +637,28 @@ const handleDeleteRollWithFtulka = async () => {
         severity: 'success',
       });
     } else {
-      throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
+      // Better error handling for result.error which might be an object
+      const errorMessage = typeof result.error === 'string' 
+        ? result.error 
+        : (result.details || result.message || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorMessage);
     }
   } catch (error) {
     console.error('Error sending via Telegram:', error);
+    
+    // Better error message handling
+    let errorMessage = 'Неизвестная ошибка';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    } else if (error && typeof error === 'object') {
+      errorMessage = JSON.stringify(error);
+    }
+    
     setSnackbar({
       open: true,
-      message: `Ошибка отправки: ${error.message}`,
+      message: `Ошибка отправки: ${errorMessage}`,
       severity: 'error',
     });
   } finally {
