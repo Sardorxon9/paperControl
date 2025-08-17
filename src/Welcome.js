@@ -155,7 +155,7 @@ const handleUpdateRoll = async (rollId, newAmount, clientId) => {
       paperRemaining: parseFloat(newAmount)
     });
     
-    // Update paperInfo total
+    // Update paperInfo tota
     await updateDoc(doc(db, "productTypes", product.id, "paperInfo", paperInfo.id), {
       paperRemaining: (paperInfo.paperRemaining || 0) - amountUsed
     });
@@ -814,35 +814,34 @@ return {
   const [selectedClientProduct, setSelectedClientProduct] = useState(null);
 
   const handleOpenModal = (client) => {
-    setSelectedClient(client);
+  setSelectedClient(client);
 
-    if (client.designType === "standart") {
-      const fetchProductData = async () => {
-        if (client.productId) {
-          try {
-            const productRef = doc(db, "productTypes", client.productId);
-            const productSnap = await getDoc(productRef);
-            if (productSnap.exists()) {
-              setSelectedClientProduct(productSnap.data());
-            } else {
-              console.warn("Product not found for client:", client.id);
-              setSelectedClientProduct(null);
-            }
-          } catch (error) {
-            console.error("Error fetching product data:", error);
-            setSelectedClientProduct(null);
-          }
+  const fetchProductData = async () => {
+    if (client.productId) {
+      try {
+        const productRef = doc(db, "productTypes", client.productId);
+        const productSnap = await getDoc(productRef);
+        if (productSnap.exists()) {
+          setSelectedClientProduct(productSnap.data());
         } else {
+          console.warn("Product not found for client:", client.id);
           setSelectedClientProduct(null);
         }
-        setSimpleModalOpen(true);
-      };
-      fetchProductData();
+      } catch (error) {
+        console.error("Error fetching product data:", error);
+        setSelectedClientProduct(null);
+      }
     } else {
-      // For "unique" or any other designType, use the full modal
-      setModalOpen(true);
+      setSelectedClientProduct(null);
     }
+
+    // ✅ Always open the unified modal
+    setModalOpen(true);
   };
+
+  fetchProductData();
+};
+
 
   const handleOpenProductModal = (product) => {
     setSelectedProduct(product);
