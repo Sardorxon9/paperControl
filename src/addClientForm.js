@@ -192,26 +192,42 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
     return errors;
   };
 
-  // NEW: Function to create log entries for initial paper rolls
-  const createInitialPaperLogs = async (clientId, paperRolls, userId) => {
+  // NEW: Function to create log entries for initial paper rolls with correct rollIDs
+  const createInitialPaperLogs = async (clientId, createdRolls, userId) => {
     try {
+      console.log("Creating logs for rolls:", createdRolls);
       const logsRef = collection(db, `clients/${clientId}/logs`);
       
-      // Create log entries for each paper roll
-      const logPromises = paperRolls.map(async (roll, index) => {
-        const amount = parseFloat(roll.paperRemaining);
-        return addDoc(logsRef, {
-          date: Timestamp.now(),
-          userID: userId || 'unknown',
-          actionType: 'paperIn',
-          amount: amount,
-          details: `Initial paper added - Roll ${index + 1}: ${amount}kg`,
-          rollId: null // Will be updated after roll creation if needed
-        });
+      // Create log entries for each created paper roll with their actual rollIDs
+      const logPromises = createdRolls.map(async (rollData, index) => {
+        const amount = rollData.paperRemaining;
+      const logEntry = {
+  date: Timestamp.now(),
+  userID: userId || 'unknown',
+  actionType: 'paperIn',
+  amount: amount,
+  details: `Initial paper added - Roll ${index + 1}: ${amount}kg`,
+  rollId: rollData.rollId || 'MISSING'  // <- force check here
+};
+
+console.log("📝 Creating log entry:", logEntry);
+
+await addDoc(logsRef, logEntry);
+
+        
+        console.log(`Creating log entry for roll ${rollData.id}:`, logEntry);
+        
+        return addDoc(logsRef, logEntry);
       });
 
-      await Promise.all(logPromises);
-      console.log(`Created ${paperRolls.length} initial log entries for client ${clientId}`);
+      const logResults = await Promise.all(logPromises);
+      console.log(`Successfully created ${logResults.length} initial log entries with rollIDs for client ${clientId}`);
+      
+      // Double-check by logging each created log's ID
+      logResults.forEach((logRef, index) => {
+        console.log(`Log ${index + 1} created with ID: ${logRef.id} for roll: ${createdRolls[index].id}`);
+      });
+      
     } catch (error) {
       console.error('Error creating initial paper logs:', error);
       throw error;
@@ -340,25 +356,46 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
 
       // If unique design, create paper rolls subcollection and logs
       if (formData.designType === "unique") {
-        // Create paper rolls subcollection
-        const paperRollsPromises = paperRolls.map(roll => 
-          addDoc(collection(db, `clients/${clientId}/paperRolls`), {
+        // Step 1: Create paper rolls subcollection and collect their IDs
+        console.log("Creating paper rolls...");
+        const paperRollsPromises = paperRolls.map(async (roll, index) => {
+          console.log(`Creating roll ${index + 1} with ${roll.paperRemaining}kg`);
+          const rollRef = await addDoc(collection(db, `clients/${clientId}/paperRolls`), {
             dateCreated: Timestamp.now(),
             paperRemaining: parseFloat(roll.paperRemaining)
-          })
-        );
+          });
+          console.log(`Created roll ${index + 1} with ID: ${rollRef.id}`);
+          return rollRef;
+        });
 
-        await Promise.all(paperRollsPromises);
-        console.log(`Created ${paperRolls.length} paper rolls for client ${clientId}`);
+        const createdRollRefs = await Promise.all(paperRollsPromises);
+        
+        // Step 2: Build array with roll data including their actual IDs
+      // Step 2: Build array with roll data including their actual IDs
+const createdRollsData = createdRollRefs.map((rollRef, index) => {
+  const rollId = rollRef.id;
+  const rollData = {
+    rollId: rollId, // Firestore doc ID
+    paperRemaining: parseFloat(paperRolls[index].paperRemaining),
+    dateCreated: Timestamp.now()
+  };
+  console.log(`✅ Roll ${index + 1} created with rollId=${rollId}`, rollData);
+  return rollData;
+});
 
-        // NEW: Create initial log entries for paper addition
+
+
+        console.log(`Created ${createdRollsData.length} paper rolls for client ${clientId}`);
+
+        // Step 3: Create initial log entries with correct rollIDs
+        console.log("Creating log entries with rollIDs...");
         await createInitialPaperLogs(
           clientId, 
-          paperRolls, 
+          createdRollsData, // Pass the rolls with their actual IDs
           currentUser?.uid
         );
 
-        // NEW: Check for low paper notification
+        // Step 4: Check for low paper notification
         const totalPaper = clientData.paperRemaining;
         await checkInitialLowPaperNotification(clientData, totalPaper);
       }
