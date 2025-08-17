@@ -3,6 +3,7 @@ import {
   Box,
   Paper,
   Typography,
+  Snackbar,
   TextField,
   Button,
   Grid,
@@ -31,8 +32,9 @@ import {
   Timestamp 
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { checkAndNotifyLowPaper } from './notificationService';
 
-export default function AddClientForm({ onClientAdded, onClose }) {
+export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
   const [products, setProducts] = useState([]);
   const [productInputs, setProductInputs] = useState({
     type: "",
@@ -57,6 +59,13 @@ export default function AddClientForm({ onClientAdded, onClose }) {
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
+  
+  // Snackbar for notifications
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   const handleInputChange = (field) => (event) => {
     setFormData(prev => ({
@@ -183,6 +192,59 @@ export default function AddClientForm({ onClientAdded, onClose }) {
     return errors;
   };
 
+  // NEW: Function to create log entries for initial paper rolls
+  const createInitialPaperLogs = async (clientId, paperRolls, userId) => {
+    try {
+      const logsRef = collection(db, `clients/${clientId}/logs`);
+      
+      // Create log entries for each paper roll
+      const logPromises = paperRolls.map(async (roll, index) => {
+        const amount = parseFloat(roll.paperRemaining);
+        return addDoc(logsRef, {
+          date: Timestamp.now(),
+          userID: userId || 'unknown',
+          actionType: 'paperIn',
+          amount: amount,
+          details: `Initial paper added - Roll ${index + 1}: ${amount}kg`,
+          rollId: null // Will be updated after roll creation if needed
+        });
+      });
+
+      await Promise.all(logPromises);
+      console.log(`Created ${paperRolls.length} initial log entries for client ${clientId}`);
+    } catch (error) {
+      console.error('Error creating initial paper logs:', error);
+      throw error;
+    }
+  };
+
+  // NEW: Function to check and notify low paper for new client
+  const checkInitialLowPaperNotification = async (clientData, totalPaper) => {
+    try {
+      const thresholdValue = parseFloat(clientData.notifyWhen) || 3;
+      
+      if (totalPaper <= thresholdValue) {
+        const notificationResult = await checkAndNotifyLowPaper(
+          clientData,
+          totalPaper,
+          thresholdValue,
+          db
+        );
+
+        if (notificationResult.notificationSent) {
+          setSnackbar({
+            open: true,
+            message: `Клиент создан! Уведомление отправлено ${notificationResult.successfulNotifications} администраторам о низком уровне бумаги!`,
+            severity: 'warning'
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error checking initial low paper notification:', error);
+      // Don't throw error as this is not critical for client creation
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     
@@ -276,8 +338,9 @@ export default function AddClientForm({ onClientAdded, onClose }) {
       const clientDocRef = await addDoc(collection(db, "clients"), clientData);
       const clientId = clientDocRef.id;
 
-      // If unique design, create paper rolls subcollection
+      // If unique design, create paper rolls subcollection and logs
       if (formData.designType === "unique") {
+        // Create paper rolls subcollection
         const paperRollsPromises = paperRolls.map(roll => 
           addDoc(collection(db, `clients/${clientId}/paperRolls`), {
             dateCreated: Timestamp.now(),
@@ -287,6 +350,17 @@ export default function AddClientForm({ onClientAdded, onClose }) {
 
         await Promise.all(paperRollsPromises);
         console.log(`Created ${paperRolls.length} paper rolls for client ${clientId}`);
+
+        // NEW: Create initial log entries for paper addition
+        await createInitialPaperLogs(
+          clientId, 
+          paperRolls, 
+          currentUser?.uid
+        );
+
+        // NEW: Check for low paper notification
+        const totalPaper = clientData.paperRemaining;
+        await checkInitialLowPaperNotification(clientData, totalPaper);
       }
       
       setMessage({ type: "success", text: "Клиент успешно добавлен!" });
@@ -344,223 +418,109 @@ export default function AddClientForm({ onClientAdded, onClose }) {
   const isStandardDesign = formData.designType === "standart";
 
   return (
-    <Box sx={{ 
-      position: 'fixed', 
-      top: 0, 
-      left: 0, 
-      width: '100vw',
-      height: '100vh',
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      zIndex: 9999,
-      overflow: 'auto',
-      display: 'flex',
-      alignItems: 'flex-start',
-      justifyContent: 'center',
-      pt: 4,
-      pb: 4
-    }}>
-      <Paper 
-        elevation={24} 
-        sx={{ 
-          p: 4, 
-          position: 'relative', 
-          width: '90%',
-          maxWidth: 900,
-          minHeight: 'auto',
-          fontSize: '1.15em',
-          backgroundColor: 'white',
-          mx: 'auto'
-        }}
-      >
-        {/* Close Button */}
-        <IconButton
-          onClick={onClose}
-          sx={{
-            position: 'absolute',
-            top: 16,
-            right: 16,
-            color: 'text.secondary'
+    <>
+      <Box sx={{ 
+        position: 'fixed', 
+        top: 0, 
+        left: 0, 
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        zIndex: 9999,
+        overflow: 'auto',
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        pt: 4,
+        pb: 4
+      }}>
+        <Paper 
+          elevation={24} 
+          sx={{ 
+            p: 4, 
+            position: 'relative', 
+            width: '90%',
+            maxWidth: 900,
+            minHeight: 'auto',
+            fontSize: '1.15em',
+            backgroundColor: 'white',
+            mx: 'auto'
           }}
         >
-          <CloseIcon />
-        </IconButton>
+          {/* Close Button */}
+          <IconButton
+            onClick={onClose}
+            sx={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              color: 'text.secondary'
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
 
-        {/* Title */}
-        <Typography
-          variant="h5"
-          gutterBottom
-          sx={{
-            mb: 3,
-            textAlign: 'center',
-            fontWeight: 600,
-            color: 'primary.dark',
-            fontSize: '1.15em'
-          }}
-        >
-          Добавить нового клиента
-        </Typography>
+          {/* Title */}
+          <Typography
+            variant="h5"
+            gutterBottom
+            sx={{
+              mb: 3,
+              textAlign: 'center',
+              fontWeight: 600,
+              color: 'primary.dark',
+              fontSize: '1.15em'
+            }}
+          >
+            Добавить нового клиента
+          </Typography>
 
-        <Divider sx={{ mb: 3 }} />
+          <Divider sx={{ mb: 3 }} />
 
-        {message.text && (
-          <Alert severity={message.type} sx={{ mb: 3 }}>
-            {message.text}
-          </Alert>
-        )}
+          {message.text && (
+            <Alert severity={message.type} sx={{ mb: 3 }}>
+              {message.text}
+            </Alert>
+          )}
 
-        <Box component="form" onSubmit={handleSubmit}>
-          <Grid container spacing={4}>
-            {/* --- Design Type Selection --- */}
-            <Grid item xs={12}>
-              <Paper 
-                variant="outlined" 
-                sx={{ 
-                  p: 3, 
-                  backgroundColor: 'primary.50',
-                  border: '2px solid',
-                  borderColor: 'primary.200'
-                }}
-              >
-                <FormControl component="fieldset">
-                  <FormLabel component="legend" sx={{ fontWeight: 600, fontSize: '1.15em', mb: 2 }}>
-                    Тип дизайна *
-                  </FormLabel>
-                  <RadioGroup
-                    row
-                    value={formData.designType}
-                    onChange={handleDesignTypeChange}
-                  >
-                    <FormControlLabel 
-                      value="unique" 
-                      control={<Radio />} 
-                      label="Дизайн с лого" 
-                    />
-                    <FormControlLabel 
-                      value="standart" 
-                      control={<Radio />} 
-                      label="Стандарт дизайн" 
-                    />
-                  </RadioGroup>
-                </FormControl>
-              </Paper>
-            </Grid>
-
-            {/* --- Restaurant Info Section --- */}
-            <Grid item xs={12}>
-              <Paper 
-                variant="outlined" 
-                sx={{ 
-                  p: 3, 
-                  backgroundColor: 'grey.50',
-                  border: '1px solid',
-                  borderColor: 'grey.200'
-                }}
-              >
-                <Typography
-                  variant="subtitle1"
-                  sx={{
-                    fontWeight: 600,
-                    mb: 3,
-                    color: 'text.primary',
-                    fontSize: '1.15em'
+          <Box component="form" onSubmit={handleSubmit}>
+            <Grid container spacing={4}>
+              {/* --- Design Type Selection --- */}
+              <Grid item xs={12}>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 3, 
+                    backgroundColor: 'primary.50',
+                    border: '2px solid',
+                    borderColor: 'primary.200'
                   }}
                 >
-                  Информация о ресторане
-                </Typography>
-
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Название ресторана"
-                      variant="outlined"
-                      value={formData.name}
-                      onChange={handleInputChange('name')}
-                      required
-                      size="small"
-                      sx={{ fontSize: '1.15em' }}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Наименование организации (Фирма)"
-                      variant="outlined"
-                      value={formData.orgName}
-                      onChange={handleInputChange('orgName')}
-                      size="small"
-                      sx={{ fontSize: '1.15em' }}
-                    />
-                  </Grid>
-
-                  {/* Show shellNum only for unique design */}
-                  {!isStandardDesign && (
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        label="Номер полки"
-                        variant="outlined"
-                        value={formData.shellNum}
-                        onChange={handleInputChange('shellNum')}
-                        required
-                        size="small"
-                        sx={{ fontSize: '1.15em' }}
+                  <FormControl component="fieldset">
+                    <FormLabel component="legend" sx={{ fontWeight: 600, fontSize: '1.15em', mb: 2 }}>
+                      Тип дизайна *
+                    </FormLabel>
+                    <RadioGroup
+                      row
+                      value={formData.designType}
+                      onChange={handleDesignTypeChange}
+                    >
+                      <FormControlLabel 
+                        value="unique" 
+                        control={<Radio />} 
+                        label="Дизайн с лого" 
                       />
-                    </Grid>
-                  )}
-
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Адрес"
-                      variant="outlined"
-                      value={formData.addressShort}
-                      onChange={handleInputChange('addressShort')}
-                      size="small"
-                      sx={{ fontSize: '1.15em' }}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Локация ( координаты )"
-                      variant="outlined"
-                      value={formData.geoPoint}
-                      onChange={handleInputChange('geoPoint')}
-                      required
-                      size="small"
-                      placeholder="41.2995, 69.2401"
-                      sx={{ fontSize: '1.15em' }}
-                    />
-                  </Grid>
-
-                  {/* Show notifyWhen only for unique design */}
-                  {!isStandardDesign && (
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        label="Уведомить при (кг)"
-                        variant="outlined"
-                        type="number"
-                        value={formData.notifyWhen}
-                        onChange={handleInputChange('notifyWhen')}
-                        required
-                        size="small"
-                        inputProps={{ step: '0.01', min: '0' }}
-                        placeholder="4"
-                        helperText="Минимальный остаток для уведомления"
-                        sx={{ fontSize: '1.15em' }}
+                      <FormControlLabel 
+                        value="standart" 
+                        control={<Radio />} 
+                        label="Стандарт дизайн" 
                       />
-                    </Grid>
-                  )}
-                </Grid>
-              </Paper>
-            </Grid>
+                    </RadioGroup>
+                  </FormControl>
+                </Paper>
+              </Grid>
 
-            {/* --- Paper Rolls Section (Only for Unique Design) --- */}
-            {!isStandardDesign && (
+              {/* --- Restaurant Info Section --- */}
               <Grid item xs={12}>
                 <Paper 
                   variant="outlined" 
@@ -571,215 +531,347 @@ export default function AddClientForm({ onClientAdded, onClose }) {
                     borderColor: 'grey.200'
                   }}
                 >
-                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                    <Typography
-                      variant="subtitle1"
-                      sx={{
-                        fontWeight: 600,
-                        color: 'text.primary',
-                        fontSize: '1.15em'
-                      }}
-                    >
-                      Рулоны бумаги
-                    </Typography>
-                    <IconButton
-                      onClick={handleAddPaperRoll}
-                      color="primary"
-                      sx={{
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                        '&:hover': { bgcolor: 'primary.dark' }
-                      }}
-                    >
-                      <AddIcon />
-                    </IconButton>
-                  </Box>
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      fontWeight: 600,
+                      mb: 3,
+                      color: 'text.primary',
+                      fontSize: '1.15em'
+                    }}
+                  >
+                    Информация о ресторане
+                  </Typography>
 
-                  <Grid container spacing={2}>
-                    {paperRolls.map((roll, index) => (
-                      <Grid item xs={12} sm={6} key={roll.id}>
-                        <Card variant="outlined" sx={{ position: 'relative' }}>
-                          {paperRolls.length > 1 && (
-                            <IconButton
-                              onClick={() => handleRemovePaperRoll(roll.id)}
-                              sx={{
-                                position: 'absolute',
-                                top: 8,
-                                right: 8,
-                                color: 'error.main',
-                                zIndex: 1
-                              }}
-                              size="small"
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          )}
-                          <CardContent sx={{ p: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom>
-                              Рулон {index + 1}
-                            </Typography>
-                            <TextField
-                              fullWidth
-                              label="Остаток (кг)"
-                              variant="outlined"
-                              type="number"
-                              value={roll.paperRemaining}
-                              onChange={(e) => handlePaperRollChange(roll.id, e.target.value)}
-                              required
-                              size="small"
-                              inputProps={{
-                                step: '0.01',
-                                min: '0'
-                              }}
-                              placeholder="55.00"
-                              sx={{ fontSize: '1.15em' }}
-                            />
-                          </CardContent>
-                        </Card>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Название ресторана"
+                        variant="outlined"
+                        value={formData.name}
+                        onChange={handleInputChange('name')}
+                        required
+                        size="small"
+                        sx={{ fontSize: '1.15em' }}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Наименование организации (Фирма)"
+                        variant="outlined"
+                        value={formData.orgName}
+                        onChange={handleInputChange('orgName')}
+                        size="small"
+                        sx={{ fontSize: '1.15em' }}
+                      />
+                    </Grid>
+
+                    {/* Show shellNum only for unique design */}
+                    {!isStandardDesign && (
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Номер полки"
+                          variant="outlined"
+                          value={formData.shellNum}
+                          onChange={handleInputChange('shellNum')}
+                          required
+                          size="small"
+                          sx={{ fontSize: '1.15em' }}
+                        />
                       </Grid>
-                    ))}
+                    )}
+
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Адрес"
+                        variant="outlined"
+                        value={formData.addressShort}
+                        onChange={handleInputChange('addressShort')}
+                        size="small"
+                        sx={{ fontSize: '1.15em' }}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Локация ( координаты )"
+                        variant="outlined"
+                        value={formData.geoPoint}
+                        onChange={handleInputChange('geoPoint')}
+                        required
+                        size="small"
+                        placeholder="41.2995, 69.2401"
+                        sx={{ fontSize: '1.15em' }}
+                      />
+                    </Grid>
+
+                    {/* Show notifyWhen only for unique design */}
+                    {!isStandardDesign && (
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Уведомить при (кг)"
+                          variant="outlined"
+                          type="number"
+                          value={formData.notifyWhen}
+                          onChange={handleInputChange('notifyWhen')}
+                          required
+                          size="small"
+                          inputProps={{ step: '0.01', min: '0' }}
+                          placeholder="4"
+                          helperText="Минимальный остаток для уведомления"
+                          sx={{ fontSize: '1.15em' }}
+                        />
+                      </Grid>
+                    )}
                   </Grid>
                 </Paper>
               </Grid>
-            )}
 
-            {/* --- Product Section --- */}
-            <Grid item xs={12}>
-              <Paper 
-                variant="outlined" 
-                sx={{ 
-                  p: 3, 
-                  backgroundColor: 'grey.50',
-                  border: '1px solid',
-                  borderColor: 'grey.200'
-                }}
-              >
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 3, fontSize: '1.15em' }}>
-                  Продукт
-                </Typography>
-
-                <Grid container spacing={3}>
-                  {/* Тип продукта */}
-                  <Grid item xs={12} sm={4}>
-                    <TextField
-                      select
-                      fullWidth
-                      label="Тип упаковки"
-                      value={productInputs.type}
-                      onChange={(e) =>
-                        setProductInputs((prev) => ({ ...prev, type: e.target.value }))
-                      }
-                      required
-                      size="small"
-                      sx={{ fontSize: '1.15em' }}
-                    >
-                      <MenuItem value="">-- Выберите --</MenuItem>
-                      {getUniqueTypes().map((type) => (
-                        <MenuItem key={type} value={type}>
-                          {type}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid>
-
-                  {/* Продукт */}
-                  <Grid item xs={12} sm={4}>
-                    <TextField
-                      select
-                      fullWidth
-                      label="Продукт"
-                      value={productInputs.packaging}
-                      onChange={(e) =>
-                        setProductInputs((prev) => ({ ...prev, packaging: e.target.value }))
-                      }
-                      required
-                      size="small"
-                      sx={{ fontSize: '1.15em' }}
-                    >
-                      <MenuItem value="">-- Выберите --</MenuItem>
-                      {getUniquePackaging().map((option) => (
-                        <MenuItem key={option} value={option}>
-                          {option}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid>
-
-                  {/* Грамм */}
-                  <Grid item xs={12} sm={4}>
-                    <TextField
-                      select
-                      fullWidth
-                      label="Граммаж"
-                      value={productInputs.gramm}
-                      onChange={(e) =>
-                        setProductInputs((prev) => ({ ...prev, gramm: e.target.value }))
-                      }
-                      required
-                      size="small"
-                      sx={{ fontSize: '1.15em' }}
-                    >
-                      <MenuItem value="">-- Выберите --</MenuItem>
-                      {getUniqueGramms().map((gram) => (
-                        <MenuItem key={gram} value={gram}>
-                          {gram} г
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid>
-                </Grid>
-
-                {/* Comment Field */}
-                <Grid container sx={{ mt: 2 }}>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Комментарии"
-                      variant="outlined"
-                      multiline
-                      minRows={4}
-                      value={formData.comment}
-                      onChange={handleInputChange('comment')}
-                      size="small"
-                      placeholder="Дополнительная информация, например, особенности доставки или учета"
-                      sx={{ fontSize: '1.15em' }}
-                    />
-                  </Grid>
-                </Grid>
-
-                {/* Action Buttons */}
-                <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3 }}>
-                  <Button 
+              {/* --- Paper Rolls Section (Only for Unique Design) --- */}
+              {!isStandardDesign && (
+                <Grid item xs={12}>
+                  <Paper 
                     variant="outlined" 
-                    onClick={onClose} 
-                    disabled={loading} 
-                    size="medium"
-                    sx={{ fontSize: '1.15em' }}
+                    sx={{ 
+                      p: 3, 
+                      backgroundColor: 'grey.50',
+                      border: '1px solid',
+                      borderColor: 'grey.200'
+                    }}
                   >
-                    Отмена
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    variant="contained" 
-                    size="medium" 
-                    disabled={loading}
-                    sx={{ fontSize: '1.15em' }}
-                  >
-                    {loading ? (
-                      <>
-                        <CircularProgress size={20} sx={{ mr: 1 }} />
-                        Сохранение...
-                      </>
-                    ) : (
-                      'Сохранить'
-                    )}
-                  </Button>
-                </Stack>
-              </Paper>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          fontWeight: 600,
+                          color: 'text.primary',
+                          fontSize: '1.15em'
+                        }}
+                      >
+                        Рулоны бумаги
+                      </Typography>
+                      <IconButton
+                        onClick={handleAddPaperRoll}
+                        color="primary"
+                        sx={{
+                          bgcolor: 'primary.main',
+                          color: 'white',
+                          '&:hover': { bgcolor: 'primary.dark' }
+                        }}
+                      >
+                        <AddIcon />
+                      </IconButton>
+                    </Box>
+
+                    <Grid container spacing={2}>
+                      {paperRolls.map((roll, index) => (
+                        <Grid item xs={12} sm={6} key={roll.id}>
+                          <Card variant="outlined" sx={{ position: 'relative' }}>
+                            {paperRolls.length > 1 && (
+                              <IconButton
+                                onClick={() => handleRemovePaperRoll(roll.id)}
+                                sx={{
+                                  position: 'absolute',
+                                  top: 8,
+                                  right: 8,
+                                  color: 'error.main',
+                                  zIndex: 1
+                                }}
+                                size="small"
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            )}
+                            <CardContent sx={{ p: 2 }}>
+                              <Typography variant="subtitle2" gutterBottom>
+                                Рулон {index + 1}
+                              </Typography>
+                              <TextField
+                                fullWidth
+                                label="Остаток (кг)"
+                                variant="outlined"
+                                type="number"
+                                value={roll.paperRemaining}
+                                onChange={(e) => handlePaperRollChange(roll.id, e.target.value)}
+                                required
+                                size="small"
+                                inputProps={{
+                                  step: '0.01',
+                                  min: '0'
+                                }}
+                                placeholder="55.00"
+                                sx={{ fontSize: '1.15em' }}
+                              />
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Paper>
+                </Grid>
+              )}
+
+              {/* --- Product Section --- */}
+              <Grid item xs={12}>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 3, 
+                    backgroundColor: 'grey.50',
+                    border: '1px solid',
+                    borderColor: 'grey.200'
+                  }}
+                >
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 3, fontSize: '1.15em' }}>
+                    Продукт
+                  </Typography>
+
+                  <Grid container spacing={3}>
+                    {/* Тип продукта */}
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        select
+                        fullWidth
+                        label="Тип упаковки"
+                        value={productInputs.type}
+                        onChange={(e) =>
+                          setProductInputs((prev) => ({ ...prev, type: e.target.value }))
+                        }
+                        required
+                        size="small"
+                        sx={{ fontSize: '1.15em' }}
+                      >
+                        <MenuItem value="">-- Выберите --</MenuItem>
+                        {getUniqueTypes().map((type) => (
+                          <MenuItem key={type} value={type}>
+                            {type}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+
+                    {/* Продукт */}
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        select
+                        fullWidth
+                        label="Продукт"
+                        value={productInputs.packaging}
+                        onChange={(e) =>
+                          setProductInputs((prev) => ({ ...prev, packaging: e.target.value }))
+                        }
+                        required
+                        size="small"
+                        sx={{ fontSize: '1.15em' }}
+                      >
+                        <MenuItem value="">-- Выберите --</MenuItem>
+                        {getUniquePackaging().map((option) => (
+                          <MenuItem key={option} value={option}>
+                            {option}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+
+                    {/* Грамм */}
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        select
+                        fullWidth
+                        label="Граммаж"
+                        value={productInputs.gramm}
+                        onChange={(e) =>
+                          setProductInputs((prev) => ({ ...prev, gramm: e.target.value }))
+                        }
+                        required
+                        size="small"
+                        sx={{ fontSize: '1.15em' }}
+                      >
+                        <MenuItem value="">-- Выберите --</MenuItem>
+                        {getUniqueGramms().map((gram) => (
+                          <MenuItem key={gram} value={gram}>
+                            {gram} г
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+                  </Grid>
+
+                  {/* Comment Field */}
+                  <Grid container sx={{ mt: 2 }}>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Комментарии"
+                        variant="outlined"
+                        multiline
+                        minRows={4}
+                        value={formData.comment}
+                        onChange={handleInputChange('comment')}
+                        size="small"
+                        placeholder="Дополнительная информация, например, особенности доставки или учета"
+                        sx={{ fontSize: '1.15em' }}
+                      />
+                    </Grid>
+                  </Grid>
+
+                  {/* Action Buttons */}
+                  <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3 }}>
+                    <Button 
+                      variant="outlined" 
+                      onClick={onClose} 
+                      disabled={loading} 
+                      size="medium"
+                      sx={{ fontSize: '1.15em' }}
+                    >
+                      Отмена
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      variant="contained" 
+                      size="medium" 
+                      disabled={loading}
+                      sx={{ fontSize: '1.15em' }}
+                    >
+                      {loading ? (
+                        <>
+                          <CircularProgress size={20} sx={{ mr: 1 }} />
+                          Сохранение...
+                        </>
+                      ) : (
+                        'Сохранить'
+                      )}
+                    </Button>
+                  </Stack>
+                </Paper>
+              </Grid>
             </Grid>
-          </Grid>
-        </Box>
-      </Paper>
-    </Box>
+          </Box>
+        </Paper>
+      </Box>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </>
   );
 }
