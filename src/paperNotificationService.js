@@ -58,7 +58,7 @@ const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen, db) =>
       minute: '2-digit'
     });
 
-    const alertMessage = `🚨 <b>ВНИМАНИЕ! Заканчивается бумага</b>
+    const alertMessage = `🚨 <b>ВНИМАНИЕ! Заканчивается бумага(test)</b>
 
 📍 <b>Ресторан:</b> ${client.restaurant || client.name}
 📦 <b>Остаток бумаги:</b> ${paperRemaining} кг
