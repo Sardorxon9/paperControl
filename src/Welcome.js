@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import {
   collection,
   getDocs,
+  query,
+  orderBy,
   doc,
   getDoc,
   addDoc,
@@ -48,12 +50,19 @@ import ReportGmailerrorredIcon from '@mui/icons-material/ReportGmailerrorred';
 import LogoutIcon from '@mui/icons-material/Logout'; // <-- Import LogoutIcon
 import resetFirestoreDefaults from "./resetFirestoreDefaults";// Product Details Modal Component
 import ExportClientsToCSV from "./ExportClientsCSV";
-function ProductDetailsModal({ open, onClose, product, clients }) {
+import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
+import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
+import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
+import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
+
+
+function ProductDetailsModal({ open, onClose, product, currentUser }) {
   const [paperInfo, setPaperInfo] = useState(null);
-  const [logs, setLogs] = useState([]);
+
   const [priyemka, setPriyemka] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+  const [logs, setLogs] = useState([]);
+
   // Edit states
   const [editingUsage, setEditingUsage] = useState(false);
   const [editingPriyemka, setEditingPriyemka] = useState(false);
@@ -140,40 +149,55 @@ const [selectedClient, setSelectedClient] = useState("");
   };
 
 
-const handleUpdateRoll = async (rollId, newAmount, clientId) => {
-  if (!paperInfo || !clientId) return;
+const handleUpdateRoll = async (rollId, newAmount) => {
+  if (!paperInfo) return;
+  
+  // Validation
+  if (isNaN(newAmount) || parseFloat(newAmount) < 0) {
+    alert('Пожалуйста, введите корректное количество бумаги');
+    return;
+  }
+
+  const newAmountValue = parseFloat(newAmount);
   
   try {
     // Get current roll data
     const rollRef = doc(db, "productTypes", product.id, "paperInfo", paperInfo.id, "individualRolls", rollId);
     const rollSnap = await getDoc(rollRef);
     const currentAmount = rollSnap.data().paperRemaining;
-    const amountUsed = currentAmount - parseFloat(newAmount);
+    const amountUsed = currentAmount - newAmountValue;
     
     // Update individual roll
     await updateDoc(rollRef, {
-      paperRemaining: parseFloat(newAmount)
+      paperRemaining: newAmountValue
     });
     
-    // Update paperInfo tota
+    // Update paperInfo total
     await updateDoc(doc(db, "productTypes", product.id, "paperInfo", paperInfo.id), {
       paperRemaining: (paperInfo.paperRemaining || 0) - amountUsed
     });
     
-    // Add log entry
-    if (amountUsed > 0) {
-      await addDoc(collection(db, "productTypes", product.id, "logs"), {
-        usedAmount: amountUsed,
-        dateRecorded: serverTimestamp(),
-        clientId: clientId,
-        rollId: rollId
+    // Create log entry in new location
+    if (amountUsed !== 0) {
+      const logsRef = collection(db, "productTypes", product.id, "paperInfo", paperInfo.id, "logs");
+      await addDoc(logsRef, {
+        actionType: amountUsed > 0 ? 'paperOut' : 'paperIn',
+        amount: Math.abs(amountUsed),
+        date: serverTimestamp(),
+        rollId: rollId,
+        userID: currentUser?.uid || 'unknown',
+        remainingAfter: newAmountValue
       });
     }
+
+
     
+    // Reset editing state and refresh
     setEditingRollId(null);
     setRollEditAmount("");
-    setSelectedClient("");
+    setSelectedClient(""); // Remove this line eventually
     await fetchProductDetails();
+    
   } catch (error) {
     console.error("Error updating roll:", error);
     alert("Ошибка при обновлении рулона");
@@ -183,56 +207,76 @@ const handleUpdateRoll = async (rollId, newAmount, clientId) => {
 
 
 
- const handleSavePriyemka = async () => {
+const handleSavePriyemka = async () => {
   if (!paperIn || !paperInfo) return;
   
+  const amount = parseFloat(paperIn);
+  if (isNaN(amount) || amount <= 0) {
+    alert("Пожалуйста, введите корректное количество больше 0.");
+    return;
+  }
+
   try {
-    console.log("Saving priyemka:", { paperIn, paperInfo });
-    
-    // Add priyemka entry to productTypes/{id}/priyemka
-    const priyemkaRef = await addDoc(collection(db, "productTypes", product.id, "priyemka"), {
-      paperIn: parseFloat(paperIn),
-      date: serverTimestamp()
+    // Create new roll
+    const rollsRef = collection(db, "productTypes", product.id, "paperInfo", paperInfo.id, "individualRolls");
+    const newRollRef = await addDoc(rollsRef, {
+      dateCreated: serverTimestamp(),
+      paperRemaining: amount
     });
-    console.log("Priyemka added with ID:", priyemkaRef.id);
-    
-    // Create new roll in individualRolls subcollection
-    await addDoc(
-      collection(db, "productTypes", product.id, "paperInfo", paperInfo.id, "individualRolls"),
-      {
-        paperRemaining: parseFloat(paperIn),
-        dateCreated: serverTimestamp()
-      }
-    );
-    console.log("New roll created with amount:", parseFloat(paperIn));
-    
-    // Update paperRemaining and totalKg in paperInfo subcollection
-    const newPaperRemaining = (paperInfo.paperRemaining || 0) + parseFloat(paperIn);
-    const newTotalKg = (paperInfo.totalKg || 0) + parseFloat(paperIn);
-    
+
+    // Update total paperRemaining
     await updateDoc(doc(db, "productTypes", product.id, "paperInfo", paperInfo.id), {
-      paperRemaining: newPaperRemaining,
-      totalKg: newTotalKg
+      paperRemaining: (paperInfo.paperRemaining || 0) + amount
     });
-    console.log("Paper remaining updated to:", newPaperRemaining, "totalKg:", newTotalKg);
-    
-    // Reset form
-    setPaperIn('');
+
+    // Create log entry
+    const logsRef = collection(db, "productTypes", product.id, "paperInfo", paperInfo.id, "logs");
+    await addDoc(logsRef, {
+      actionType: 'paperIn',
+      amount: amount,
+      date: serverTimestamp(),
+      rollId: newRollRef.id,
+      userID: currentUser?.uid || 'unknown',
+      remainingAfter: amount
+    });
+
+    // Reset and refresh
     setEditingPriyemka(false);
-    
-    // Refresh data
+    setPaperIn('');
     await fetchProductDetails();
+
   } catch (error) {
-    console.error("Error saving priyemka:", error);
-    alert("Ошибка при сохранении: " + error.message);
+    console.error('Error adding paper:', error);
+    alert('Ошибка при добавлении бумаги');
+  }
+};
+// Add this function inside your component
+const fetchLogs = async () => {
+  if (!product?.id || !paperInfo?.id) return;
+
+  try {
+    const logsRef = collection(db, "productTypes", product.id, "paperInfo", paperInfo.id, "logs");
+    const logsQuery = query(logsRef, orderBy('date', 'desc'));
+    const logsSnapshot = await getDocs(logsQuery);
+    
+    const logsData = logsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    setLogs(logsData);
+  } catch (error) {
+    console.error('Error fetching logs:', error);
   }
 };
 
   useEffect(() => {
     if (open && product) {
       fetchProductDetails();
+      fetchLogs(); 
+
     }
-  }, [open, product]);
+  }, [open, product, paperInfo?.id]);
 
   if (!product) return null;
 
@@ -330,26 +374,13 @@ const handleUpdateRoll = async (rollId, newAmount, clientId) => {
                               onChange={(e) => setRollEditAmount(e.target.value)}
                               sx={{ width: '100%' }}
                             />
-                            <FormControl size="small" sx={{ width: '100%' }}>
-                              <InputLabel>Выберите клиента</InputLabel>
-                              <Select
-                                value={selectedClient}
-                                onChange={(e) => setSelectedClient(e.target.value)}
-                                label="Выберите клиента"
-                              >
-                                {clients.map(client => (
-                                  <MenuItem key={client.id} value={client.id}>
-                                    {client.restaurant || client.name}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
+                            
                             <Stack direction="row" spacing={1}>
                               <Button
                                 size="small"
                                 variant="contained"
-                                onClick={() => handleUpdateRoll(roll.id, rollEditAmount, selectedClient)}
-                                disabled={!selectedClient || !rollEditAmount}
+                                onClick={() => handleUpdateRoll(roll.id, rollEditAmount)}
+                            
                               >
                                 ✓
                               </Button>
@@ -447,36 +478,80 @@ const handleUpdateRoll = async (rollId, newAmount, clientId) => {
 
               <Divider sx={{ my: 2 }} />
               
-              <Typography variant="subtitle2" gutterBottom>
-                История поступлений
-              </Typography>
-              
-              {priyemka.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  Нет записей
-                </Typography>
-              ) : (
-                <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 200 }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Дата</TableCell>
-                        <TableCell>Поступило (кг)</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {priyemka.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            {item.date ? new Date(item.date.seconds * 1000).toLocaleDateString() : '-'}
-                          </TableCell>
-                          <TableCell>{item.paperIn}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
+             <Typography variant="subtitle2" gutterBottom>
+  История операций
+</Typography>
+
+<TableContainer 
+  component={Paper} 
+  variant="outlined" 
+  sx={{ maxHeight: 250, border: '1px solid #e0e0e0' }}
+>
+  <Table size="small" stickyHeader>
+    <TableHead>
+      <TableRow>
+        <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
+          Дата
+        </TableCell>
+        <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
+          Действие
+        </TableCell>
+        <TableCell sx={{ backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
+          Количество (кг)
+        </TableCell>
+      </TableRow>
+    </TableHead>
+    <TableBody>
+      {logs.length === 0 ? (
+        <TableRow>
+          <TableCell colSpan={3} align="center">
+            Нет записей
+          </TableCell>
+        </TableRow>
+      ) : (
+        logs.map((log) => {
+          const getActionDisplay = (actionType, amount) => {
+            switch (actionType) {
+              case 'paperIn':
+                return { 
+                  icon: <ArrowUpwardRoundedIcon sx={{ color: '#2e7d32' }} fontSize="small" />,
+                  text: '+' + amount.toFixed(2)
+                };
+              case 'paperOut':
+                return { 
+                  icon: <ArrowDownwardRoundedIcon sx={{ color: '#d32f2f' }} fontSize="small" />,
+                  text: '-' + amount.toFixed(2)
+                };
+              default:
+                return { 
+                  icon: <HelpOutlineRoundedIcon sx={{ color: '#757575' }} fontSize="small" />,
+                  text: amount.toFixed(2)
+                };
+            }
+          };
+
+          const actionDisplay = getActionDisplay(log.actionType, log.amount || 0);
+
+          return (
+            <TableRow key={log.id} hover>
+              <TableCell>
+                {log.date?.toDate?.()?.toLocaleDateString('ru-RU') || 'N/A'}
+              </TableCell>
+              <TableCell>
+                <Box display="flex" alignItems="center" gap={1}>
+                  {actionDisplay.icon}
+                </Box>
+              </TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>
+                {actionDisplay.text}
+              </TableCell>
+            </TableRow>
+          );
+        })
+      )}
+    </TableBody>
+  </Table>
+</TableContainer>
             </CardContent>
           </Card>
         </Grid>
@@ -494,113 +569,7 @@ const handleUpdateRoll = async (rollId, newAmount, clientId) => {
   );
 }
 
-// Simple Modal Component for Standard Design Type
-function SimpleClientModal({ open, onClose, client, product }) {
-  if (!client) return null;
 
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      aria-labelledby="simple-client-modal"
-      sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-    >
-      <Box
-        sx={{
-          bgcolor: 'background.paper',
-          borderRadius: 2,
-          boxShadow: 24,
-          p: 4,
-          minWidth: 400,
-          maxWidth: 600,
-          maxHeight: '90vh',
-          overflow: 'auto'
-        }}
-      >
-        <Typography variant="h5" component="h2" sx={{ mb: 3, fontWeight: 600 }}>
-          Информация о клиенте
-        </Typography>
-
-        <Stack spacing={2}>
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary">
-              Название клиента
-            </Typography>
-            <Typography variant="body1">
-              {client.restaurant || client.name || '-'}
-            </Typography>
-          </Box>
-
-          {product ? (
-            <>
-              <Box>
-                <Typography variant="subtitle2" color="#bfc9c9">
-                  Тип продукта
-                </Typography>
-                <Typography variant="body1" fontWeight={700}>
-                  {product.type || '-'}
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Упаковка
-                </Typography>
-                <Typography variant="body1">
-                  {product.packaging || '-'}
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Граммовка
-                </Typography>
-                <Typography variant="body1">
-                  {product.gramm || '-'}
-                </Typography>
-              </Box>
-            </>
-          ) : (
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                Продукт не найден.
-              </Typography>
-            </Box>
-          )}
-
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary">
-              Полный адрес
-            </Typography>
-            <Typography variant="body1">
-              {client.addressLong ? `${client.addressLong.latitude}, ${client.addressLong.longitude}` : '-'}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary">
-              Короткий адрес
-            </Typography>
-            <Typography variant="body1">
-              {client.addressShort || '-'}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary">
-              Комментарий
-            </Typography>
-            <Typography variant="body1">
-              {client.comment || '-'}
-            </Typography>
-          </Box>
-        </Stack>
-
-        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-          <Button onClick={onClose} variant="contained">
-            Закрыть
-          </Button>
-        </Box>
-      </Box>
-    </Modal>
-  );
-}
 
 const getHiddenColumns = (userRole) => {
   if (userRole === 'admin') {
@@ -853,11 +822,7 @@ return {
     setSelectedClient(null);
   };
 
-  const handleCloseSimpleModal = () => {
-    setSimpleModalOpen(false);
-    setSelectedClient(null);
-    setSelectedClientProduct(null);
-  };
+
 
   const handleCloseProductModal = () => {
     setProductModalOpen(false);
@@ -890,11 +855,7 @@ return {
     setCurrentTab(newValue);
   };
 
-  const filteredClients = clientData.filter((client) =>
-    (client.restaurant || client.name || "")
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase())
-  );
+
 
 const visibleClients = clientData.filter((client) =>
   (client.restaurant || client.name || '')
@@ -1345,15 +1306,10 @@ const sortedClients = [...visibleClients].sort((a, b) => {
           onClose={handleCloseProductModal}
           product={selectedProduct}
           clients={clientData}
+          currentUser={user} 
         />
 
-        {/* Simple Client Details Modal (for designType: "standart") */}
-        <SimpleClientModal
-          open={simpleModalOpen}
-          onClose={handleCloseSimpleModal}
-          client={selectedClient}
-          product={selectedClientProduct}
-        />
+     
 
         {/* Full Client Details Modal (for designType: "unique") */}
         <ClientDetailsModal
