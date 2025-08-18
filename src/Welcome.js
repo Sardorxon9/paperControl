@@ -495,112 +495,7 @@ const handleUpdateRoll = async (rollId, newAmount, clientId) => {
 }
 
 // Simple Modal Component for Standard Design Type
-function SimpleClientModal({ open, onClose, client, product }) {
-  if (!client) return null;
 
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      aria-labelledby="simple-client-modal"
-      sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-    >
-      <Box
-        sx={{
-          bgcolor: 'background.paper',
-          borderRadius: 2,
-          boxShadow: 24,
-          p: 4,
-          minWidth: 400,
-          maxWidth: 600,
-          maxHeight: '90vh',
-          overflow: 'auto'
-        }}
-      >
-        <Typography variant="h5" component="h2" sx={{ mb: 3, fontWeight: 600 }}>
-          Информация о клиенте
-        </Typography>
-
-        <Stack spacing={2}>
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary">
-              Название клиента
-            </Typography>
-            <Typography variant="body1">
-              {client.restaurant || client.name || '-'}
-            </Typography>
-          </Box>
-
-          {product ? (
-            <>
-              <Box>
-                <Typography variant="subtitle2" color="#bfc9c9">
-                  Тип продукта
-                </Typography>
-                <Typography variant="body1" fontWeight={700}>
-                  {product.type || '-'}
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Упаковка
-                </Typography>
-                <Typography variant="body1">
-                  {product.packaging || '-'}
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary">
-                  Граммовка
-                </Typography>
-                <Typography variant="body1">
-                  {product.gramm || '-'}
-                </Typography>
-              </Box>
-            </>
-          ) : (
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                Продукт не найден.
-              </Typography>
-            </Box>
-          )}
-
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary">
-              Полный адрес
-            </Typography>
-            <Typography variant="body1">
-              {client.addressLong ? `${client.addressLong.latitude}, ${client.addressLong.longitude}` : '-'}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary">
-              Короткий адрес
-            </Typography>
-            <Typography variant="body1">
-              {client.addressShort || '-'}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary">
-              Комментарий
-            </Typography>
-            <Typography variant="body1">
-              {client.comment || '-'}
-            </Typography>
-          </Box>
-        </Stack>
-
-        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-          <Button onClick={onClose} variant="contained">
-            Закрыть
-          </Button>
-        </Box>
-      </Box>
-    </Modal>
-  );
-}
 
 const getHiddenColumns = (userRole) => {
   if (userRole === 'admin') {
@@ -1348,13 +1243,7 @@ const sortedClients = [...visibleClients].sort((a, b) => {
         />
 
         {/* Simple Client Details Modal (for designType: "standart") */}
-        <SimpleClientModal
-          open={simpleModalOpen}
-          onClose={handleCloseSimpleModal}
-          client={selectedClient}
-          product={selectedClientProduct}
-        />
-
+       
         {/* Full Client Details Modal (for designType: "unique") */}
         <ClientDetailsModal
           open={modalOpen}
