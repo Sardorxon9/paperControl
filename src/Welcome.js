@@ -37,8 +37,7 @@ import ClientDetailsModal from './ClientDetailsModal';
 import ProductDetailsModal from './ProductDetailsModal'; // Import the extracted component
 import ReportGmailerrorredIcon from '@mui/icons-material/ReportGmailerrorred';
 import LogoutIcon from '@mui/icons-material/Logout';
-import resetFirestoreDefaults from "./resetFirestoreDefaults";
-import ExportClientsToCSV from "./ExportClientsCSV";
+
 import AddStandardDesignModal from "./AddStandardDesignModal";
 
 const getHiddenColumns = (userRole) => {
@@ -602,238 +601,247 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
     </TableContainer>
   );
 
-  return (
-    <>
-      {/* Header */}
-      <Box
-        sx={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 1100,
-          bgcolor: '#fff',
-          boxShadow: '0 2px 8px -2px rgba(0,0,0,.12)',
-          px: { xs: 2, sm: 4, md: 6 },
-          py: 2,
-          mb: 3
-        }}
-      >
-        <Container maxWidth="lg" disableGutters>
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
-            {/* Logo */}
-            <Box
-              sx={{
-                cursor: 'pointer',
-                "&:hover": { opacity: 0.8 }
-              }}
-              onClick={onBackToDashboard}
-            >
-              <img
-                src="https://whiteray.uz/images/whiteray_1200px_logo_green.png"
-                alt="WhiteRay"
-                style={{ height: 38, objectFit: 'contain' }}
-              />
-            </Box>
+return (
+  <>
+    {/* Header */}
+    <Box
+      sx={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 1100,
+        bgcolor: '#fff',
+        boxShadow: '0 2px 8px -2px rgba(0,0,0,.12)',
+        px: { xs: 2, sm: 4, md: 6 },
+        py: 1.5,
+        mb: 3,
+      }}
+    >
+      <Container maxWidth={false} sx={{ maxWidth: "1400px" }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          
+          {/* Logo */}
+          <Box
+            sx={{
+              cursor: 'pointer',
+              "&:hover": { opacity: 0.8 }
+            }}
+            onClick={onBackToDashboard}
+          >
+            <img
+              src="https://whiteray.uz/images/whiteray_1200px_logo_green.png"
+              alt="WhiteRay"
+              style={{ height: 34, objectFit: 'contain' }}
+            />
+          </Box>
 
-            {/* Center Section - Search and Add Client Button */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              {currentTab === 0 && (
-                <>
-                  <TextField
-                    size="small"
-                    variant="outlined"
-                    placeholder="Поиск по названию"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={handleOpenAddClientModal}
-                    sx={{
-                      backgroundColor: '#0F9D8C',
-                      '&:hover': { backgroundColor: '#0c7a6e' },
-                      fontSize: '1rem',
-                      px: 3,
-                      py: 1.2
-                    }}
-                  >
-                    Добавить клиента
-                  </Button>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => setShowAddStandardDesignModal(true)}
-                    sx={{
-                      backgroundColor: '#0F9D8C',
-                      '&:hover': { backgroundColor: '#0c7a6e' },
-                      fontSize: '1rem',
-                      px: 3,
-                      py: 1.2,
-                      ml: 2
-                    }}
-                  >
-                    Добавить стандартный дизайн
-                  </Button>
-                </>
-              )}
-            </Box>
-
-            {/* User Info Section */}
-            <Stack direction="row" spacing={2} alignItems="center">
-              <Box 
-                display="flex" 
-                alignItems="center" 
-                gap={1} 
-                px={2} 
-                py={1} 
-                bgcolor="#f5f5f5" 
-                borderRadius={2}
-              >
-                {userRole === 'admin' ? <Shield color="primary" /> : <Work color="success" />}
-                <Box>
-                  <Typography variant="body2" fontWeight={600}>
-                    {user?.name || 'Пользователь'}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {userRole === 'admin' ? 'Администратор' : 'Сотрудник'}
-                  </Typography>
-                </Box>
-              </Box>
-              
-              <Button
+          {/* Center Section - Search + Buttons */}
+          {currentTab === 0 && (
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <TextField
+                size="small"
                 variant="outlined"
-                color="error"
-                startIcon={<LogoutIcon />}
-                onClick={onLogout}
+                placeholder="Поиск по названию"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                sx={{ minWidth: 240 }}
+              />
+
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleOpenAddClientModal}
+                sx={{
+                  backgroundColor: '#0F9D8C',
+                  '&:hover': { backgroundColor: '#0c7a6e' },
+                  fontSize: '0.85rem',
+                  px: 2.5,
+                  py: 0.8,
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  whiteSpace: "nowrap"
+                }}
               >
-                Выйти
+                Добавить клиента
               </Button>
-              {userRole === "admin" && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
-                  <ExportClientsToCSV />
-                </div>
-              )}
+
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setShowAddStandardDesignModal(true)}
+                sx={{
+                  backgroundColor: '#0F9D8C',
+                  '&:hover': { backgroundColor: '#0c7a6e' },
+                  fontSize: '0.85rem',
+                  px: 2.5,
+                  py: 0.8,
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  whiteSpace: "nowrap"
+                }}
+              >
+                Добавить стандартный дизайн
+              </Button>
             </Stack>
+          )}
+
+          {/* User Info Section */}
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Box
+              display="flex"
+              alignItems="center"
+              gap={1}
+              px={2}
+              py={0.8}
+              bgcolor="#f5f5f5"
+              borderRadius={2}
+            >
+              {userRole === 'admin' ? <Shield color="primary" /> : <Work color="success" />}
+              <Box>
+                <Typography variant="body2" fontWeight={600}>
+                  {user?.name || 'Пользователь'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {userRole === 'admin' ? 'Администратор' : 'Сотрудник'}
+                </Typography>
+              </Box>
+            </Box>
+
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<LogoutIcon />}
+              onClick={onLogout}
+              sx={{
+                fontSize: '0.8rem',
+                px: 2,
+                py: 0.6,
+                textTransform: 'none',
+                borderRadius: 2
+              }}
+            >
+              Выйти
+            </Button>
           </Stack>
-        </Container>
+        </Stack>
+      </Container>
+    </Box>
+
+    {/* Main Content with Tabs */}
+    <Container maxWidth="lg" sx={{ pt: 1, pb: 6 }}>
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs
+          value={currentTab}
+          onChange={handleTabChange}
+          sx={{
+            '& .MuiTab-root.Mui-selected': {
+              color: '#0F9D8C',
+            },
+            '& .MuiTabs-indicator': {
+              backgroundColor: '#0F9D8C',
+              fontWeight: '700',
+            },
+          }}
+        >
+          <Tab label="Клиенты и этикетки" />
+          <Tab label="Стандартные рулоны" />
+        </Tabs>
       </Box>
 
-      {/* Main Content with Tabs */}
-      <Container maxWidth="lg" sx={{ pt: 1, pb: 6 }}>
-        {/* Tabs */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Tabs
-            value={currentTab}
-            onChange={handleTabChange}
-            sx={{
-              '& .MuiTab-root.Mui-selected': {
-                color: '#0F9D8C',
-              },
-              '& .MuiTabs-indicator': {
-                backgroundColor: '#0F9D8C',
-                fontWeight: '700',
-              },
-            }}
-          >
-            <Tab label="Клиенты и этикетки" />
-            <Tab label="Стандартные рулоны" />
-          </Tabs>
-        </Box>
-
-        {/* Tab Content */}
-        {currentTab === 0 && (
-          <>
-            {loading ? (
-              <Box display="flex" justifyContent="center" mt={4}>
-                <CircularProgress />
-              </Box>
-            ) : clientData.length === 0 ? (
-              <Typography variant="h6" color="text.secondary">
-                Данные клиентов не найдены.
-              </Typography>
-            ) : (
-              <ClientsTable />
-            )}
-          </>
-        )}
-
-        {currentTab === 1 && (
-          <>
-            {productTypesLoading ? (
-              <Box display="flex" justifyContent="center" mt={4}>
-                <CircularProgress />
-              </Box>
-            ) : productTypesData.length === 0 ? (
-              <Typography variant="h6" color="text.secondary">
-                Данные стандартных рулонов не найдены.
-              </Typography>
-            ) : (
-              <ProductTypesTable />
-            )}
-          </>
-        )}
-
-        {/* Add Client Modal - FIXED */}
-        {addClientModalOpen && (
-          <Modal
-            open={addClientModalOpen}
-            onClose={handleCloseAddClientModal}
-            aria-labelledby="add-client-modal"
-            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            <Box>
-              <AddClientForm
-                onClose={handleCloseAddClientModal}
-                onClientAdded={handleClientAdded}
-              />
+      {/* Tab Content */}
+      {currentTab === 0 && (
+        <>
+          {loading ? (
+            <Box display="flex" justifyContent="center" mt={4}>
+              <CircularProgress />
             </Box>
-          </Modal>
-        )}
+          ) : clientData.length === 0 ? (
+            <Typography variant="h6" color="text.secondary">
+              Данные клиентов не найдены.
+            </Typography>
+          ) : (
+            <ClientsTable />
+          )}
+        </>
+      )}
 
-        {/* Product Details Modal - FIXED */}
-        {productModalOpen && selectedProduct && (
-          <ProductDetailsModal
-            open={productModalOpen}
-            onClose={handleCloseProductModal}
-            product={selectedProduct}
-            currentUser={user}
-          />
-        )}
-
-        {/* Add Standard Design Modal - FIXED */}
-        {showAddStandardDesignModal && (
-          <Modal
-            open={showAddStandardDesignModal}
-            onClose={() => setShowAddStandardDesignModal(false)}
-            aria-labelledby="add-standard-design-modal"
-            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            <Box>
-              <AddStandardDesignModal
-                open={showAddStandardDesignModal}
-                onClose={() => setShowAddStandardDesignModal(false)}
-                onDesignAdded={() => {
-                  setShowAddStandardDesignModal(false);
-                  fetchProductTypesData();
-                }}
-                currentUser={user}
-              />
+      {currentTab === 1 && (
+        <>
+          {productTypesLoading ? (
+            <Box display="flex" justifyContent="center" mt={4}>
+              <CircularProgress />
             </Box>
-          </Modal>
-        )}
+          ) : productTypesData.length === 0 ? (
+            <Typography variant="h6" color="text.secondary">
+              Данные стандартных рулонов не найдены.
+            </Typography>
+          ) : (
+            <ProductTypesTable />
+          )}
+        </>
+      )}
 
-        {/* Full Client Details Modal - FIXED */}
-        {modalOpen && selectedClient && (
-          <ClientDetailsModal
-            open={modalOpen}
-            onClose={handleCloseModal}
-            client={selectedClient}
-            onClientUpdate={handleClientUpdate}
-            currentUser={user}
-          />
-        )}
-      </Container>
-    </>
-  );
+      {/* Add Client Modal */}
+      {addClientModalOpen && (
+        <Modal
+          open={addClientModalOpen}
+          onClose={handleCloseAddClientModal}
+          aria-labelledby="add-client-modal"
+          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Box>
+            <AddClientForm
+              onClose={handleCloseAddClientModal}
+              onClientAdded={handleClientAdded}
+            />
+          </Box>
+        </Modal>
+      )}
+
+      {/* Product Details Modal */}
+      {productModalOpen && selectedProduct && (
+        <ProductDetailsModal
+          open={productModalOpen}
+          onClose={handleCloseProductModal}
+          product={selectedProduct}
+          currentUser={user}
+        />
+      )}
+
+      {/* Add Standard Design Modal */}
+      {showAddStandardDesignModal && (
+        <Modal
+          open={showAddStandardDesignModal}
+          onClose={() => setShowAddStandardDesignModal(false)}
+          aria-labelledby="add-standard-design-modal"
+          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Box>
+            <AddStandardDesignModal
+              open={showAddStandardDesignModal}
+              onClose={() => setShowAddStandardDesignModal(false)}
+              onDesignAdded={() => {
+                setShowAddStandardDesignModal(false);
+                fetchProductTypesData();
+              }}
+              currentUser={user}
+            />
+          </Box>
+        </Modal>
+      )}
+
+      {/* Full Client Details Modal */}
+      {modalOpen && selectedClient && (
+        <ClientDetailsModal
+          open={modalOpen}
+          onClose={handleCloseModal}
+          client={selectedClient}
+          onClientUpdate={handleClientUpdate}
+          currentUser={user}
+        />
+      )}
+    </Container>
+  </>
+);
+
 }

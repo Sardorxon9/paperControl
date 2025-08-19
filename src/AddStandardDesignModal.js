@@ -15,7 +15,9 @@ import {
   Alert,
   CircularProgress,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  RadioGroup,
+  Radio
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -23,9 +25,11 @@ import { db } from './firebase';
 
 const AddStandardDesignModal = ({ open, onClose, onDesignAdded, currentUser }) => {
   const [formData, setFormData] = useState({
+    name: '',
     type: '',
-    packaging: '',
+    packaging: 'Сашет',
     gramm: '',
+    shellNum: '',
     notifyWhen: 3
   });
   const [paperRolls, setPaperRolls] = useState([{ id: 1, paperRemaining: '' }]);
@@ -59,7 +63,7 @@ const AddStandardDesignModal = ({ open, onClose, onDesignAdded, currentUser }) =
 
     try {
       // Validate form
-      if (!formData.type || !formData.packaging || !formData.gramm) {
+      if (!formData.name || !formData.type || !formData.packaging || !formData.gramm || !formData.shellNum) {
         throw new Error('Пожалуйста, заполните все обязательные поля');
       }
 
@@ -67,16 +71,18 @@ const AddStandardDesignModal = ({ open, onClose, onDesignAdded, currentUser }) =
         throw new Error('Пожалуйста, укажите корректное количество бумаги для всех рулонов');
       }
 
-      // Calculate total paper
+      // Calculate total paper from rolls
       const totalKg = paperRolls.reduce((sum, roll) => sum + parseFloat(roll.paperRemaining), 0);
 
       // Create product document
       const productRef = await addDoc(collection(db, 'productTypes'), {
+        name: formData.name,
         type: formData.type,
         packaging: formData.packaging,
         gramm: formData.gramm,
+        shellNum: formData.shellNum,
+        totalKG: totalKg,
         notifyWhen: parseFloat(formData.notifyWhen) || 3,
-        totalKg,
         createdAt: serverTimestamp()
       });
 
@@ -86,28 +92,28 @@ const AddStandardDesignModal = ({ open, onClose, onDesignAdded, currentUser }) =
         dateCreated: serverTimestamp()
       });
 
-  // Add individual rolls
-await Promise.all(paperRolls.map(async (roll) => {
-  await addDoc(
-    collection(db, 'productTypes', productRef.id, 'paperInfo', paperInfoRef.id, 'individualRolls'),
-    {
-      paperRemaining: parseFloat(roll.paperRemaining),
-      dateCreated: serverTimestamp()
-    }
-  );
-}));
+      // Add individual rolls
+      await Promise.all(paperRolls.map(async (roll) => {
+        await addDoc(
+          collection(db, 'productTypes', productRef.id, 'paperInfo', paperInfoRef.id, 'individualRolls'),
+          {
+            paperRemaining: parseFloat(roll.paperRemaining),
+            dateCreated: serverTimestamp()
+          }
+        );
+      }));
 
-// Add initial log entries
-await Promise.all(paperRolls.map(async (roll) => {
-  await addDoc(collection(db, 'productTypes', productRef.id, 'logs'), {
-    actionType: 'paperIn',
-    amount: parseFloat(roll.paperRemaining),
-    date: serverTimestamp(),
-    remainingAfter: totalKg,
-    rollId: roll.id,
-    userID: currentUser?.uid || 'system'
-  });
-}));
+      // Add initial log entries
+      await Promise.all(paperRolls.map(async (roll) => {
+        await addDoc(collection(db, 'productTypes', productRef.id, 'logs'), {
+          actionType: 'paperIn',
+          amount: parseFloat(roll.paperRemaining),
+          date: serverTimestamp(),
+          remainingAfter: totalKg,
+          rollId: roll.id,
+          userID: currentUser?.uid || 'system'
+        });
+      }));
 
       setSnackbar({
         open: true,
@@ -121,9 +127,11 @@ await Promise.all(paperRolls.map(async (roll) => {
 
       // Reset form
       setFormData({
+        name: '',
         type: '',
-        packaging: '',
+        packaging: 'Сашет',
         gramm: '',
+        shellNum: '',
         notifyWhen: 3
       });
       setPaperRolls([{ id: 1, paperRemaining: '' }]);
@@ -170,7 +178,18 @@ await Promise.all(paperRolls.map(async (roll) => {
                 </Typography>
                 
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={4}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Название"
+                      value={formData.name}
+                      onChange={handleInputChange('name')}
+                      required
+                      size="small"
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
                       label="Тип продукта"
@@ -182,14 +201,25 @@ await Promise.all(paperRolls.map(async (roll) => {
                   </Grid>
                   
                   <Grid item xs={12} sm={4}>
-                    <TextField
-                      fullWidth
-                      label="Упаковка"
+                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                      Упаковка *
+                    </Typography>
+                    <RadioGroup
                       value={formData.packaging}
                       onChange={handleInputChange('packaging')}
-                      required
-                      size="small"
-                    />
+                      row
+                    >
+                      <FormControlLabel
+                        value="Сашет"
+                        control={<Radio size="small" />}
+                        label="Сашет"
+                      />
+                      <FormControlLabel
+                        value="Стик"
+                        control={<Radio size="small" />}
+                        label="Стик"
+                      />
+                    </RadioGroup>
                   </Grid>
                   
                   <Grid item xs={12} sm={4}>
@@ -198,6 +228,17 @@ await Promise.all(paperRolls.map(async (roll) => {
                       label="Граммовка"
                       value={formData.gramm}
                       onChange={handleInputChange('gramm')}
+                      required
+                      size="small"
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      label="Номер полки"
+                      value={formData.shellNum}
+                      onChange={handleInputChange('shellNum')}
                       required
                       size="small"
                     />
