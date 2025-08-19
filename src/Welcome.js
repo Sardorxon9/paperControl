@@ -39,6 +39,7 @@ import ReportGmailerrorredIcon from '@mui/icons-material/ReportGmailerrorred';
 import LogoutIcon from '@mui/icons-material/Logout';
 import resetFirestoreDefaults from "./resetFirestoreDefaults";
 import ExportClientsToCSV from "./ExportClientsCSV";
+import AddStandardDesignModal from "./AddStandardDesignModal";
 
 const getHiddenColumns = (userRole) => {
   if (userRole === 'admin') {
@@ -94,6 +95,7 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
   const [searchQuery, setSearchQuery] = useState("");
   const [addClientModalOpen, setAddClientModalOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
+  const [showAddStandardDesignModal, setShowAddStandardDesignModal] = useState(false);
 
   const [sortBy, setSortBy] = useState('name');   
   const [sortDirection, setSortDirection] = useState('asc'); 
@@ -658,6 +660,21 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                   >
                     Добавить клиента
                   </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => setShowAddStandardDesignModal(true)}
+                    sx={{
+                      backgroundColor: '#0F9D8C',
+                      '&:hover': { backgroundColor: '#0c7a6e' },
+                      fontSize: '1rem',
+                      px: 3,
+                      py: 1.2,
+                      ml: 2
+                    }}
+                  >
+                    Добавить стандартный дизайн
+                  </Button>
                 </>
               )}
             </Box>
@@ -757,35 +774,65 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
           </>
         )}
 
-        {/* Add Client Modal */}
-        <Modal
-          open={addClientModalOpen}
-          onClose={handleCloseAddClientModal}
-          aria-labelledby="add-client-modal"
-          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <AddClientForm
+        {/* Add Client Modal - FIXED */}
+        {addClientModalOpen && (
+          <Modal
+            open={addClientModalOpen}
             onClose={handleCloseAddClientModal}
-            onClientAdded={handleClientAdded}
-          />
-        </Modal>
+            aria-labelledby="add-client-modal"
+            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Box>
+              <AddClientForm
+                onClose={handleCloseAddClientModal}
+                onClientAdded={handleClientAdded}
+              />
+            </Box>
+          </Modal>
+        )}
 
-        {/* Product Details Modal */}
-        <ProductDetailsModal
-          open={productModalOpen}
-          onClose={handleCloseProductModal}
-          product={selectedProduct}
-          clients={clientData}
-        />
-       
-        {/* Full Client Details Modal (for designType: "unique") */}
-        <ClientDetailsModal
-          open={modalOpen}
-          onClose={handleCloseModal}
-          client={selectedClient}
-          onClientUpdate={handleClientUpdate}
-          currentUser={user}
-        />
+        {/* Product Details Modal - FIXED */}
+        {productModalOpen && selectedProduct && (
+          <ProductDetailsModal
+            open={productModalOpen}
+            onClose={handleCloseProductModal}
+            product={selectedProduct}
+            currentUser={user}
+          />
+        )}
+
+        {/* Add Standard Design Modal - FIXED */}
+        {showAddStandardDesignModal && (
+          <Modal
+            open={showAddStandardDesignModal}
+            onClose={() => setShowAddStandardDesignModal(false)}
+            aria-labelledby="add-standard-design-modal"
+            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Box>
+              <AddStandardDesignModal
+                open={showAddStandardDesignModal}
+                onClose={() => setShowAddStandardDesignModal(false)}
+                onDesignAdded={() => {
+                  setShowAddStandardDesignModal(false);
+                  fetchProductTypesData();
+                }}
+                currentUser={user}
+              />
+            </Box>
+          </Modal>
+        )}
+
+        {/* Full Client Details Modal - FIXED */}
+        {modalOpen && selectedClient && (
+          <ClientDetailsModal
+            open={modalOpen}
+            onClose={handleCloseModal}
+            client={selectedClient}
+            onClientUpdate={handleClientUpdate}
+            currentUser={user}
+          />
+        )}
       </Container>
     </>
   );

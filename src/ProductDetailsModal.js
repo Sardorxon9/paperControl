@@ -1,247 +1,303 @@
-// ProductDetailsModal.js
+import React, { useState, useEffect } from 'react';
+import { Modal } from '@mui/material';
 
-import { useEffect, useState } from "react";
 import {
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  addDoc,
-  updateDoc,
-  serverTimestamp
-} from "firebase/firestore";
-import { db } from "./firebase";
-import {
+  Box,
+  Paper,
   Typography,
+  TextField,
+  Button,
+  Grid,
+  Card,
+  CardContent,
+  IconButton,
+  Divider,
+  Snackbar,
+  Alert,
   CircularProgress,
+  FormControlLabel,
+  Checkbox,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Box,
-  Button,
-  Modal,
-  TextField,
-  Stack,
-  Card,
-  CardContent,
-  Grid,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Divider
-} from "@mui/material";
+  Stack
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Close as CloseIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
+  Autorenew as AutorenewIcon
+} from '@mui/icons-material';
+import {
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  addDoc,
+  updateDoc,
+  serverTimestamp,
+  query,
+  orderBy,
+  increment
+} from 'firebase/firestore';
+import { db } from './firebase';
 
-function ProductDetailsModal({ open, onClose, product, clients }) {
+const modalStyle = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: '90%',
+  maxWidth: '1200px',
+  bgcolor: 'background.paper',
+  border: '2px solid #000',
+  boxShadow: 24,
+  p: 5,
+  borderRadius: 2,
+  maxHeight: '95vh',
+  overflowY: 'auto'
+};
+
+const ProductDetailsModal = ({ open, onClose, product, currentUser }) => {
+ // State variables (add these at the top)
   const [paperInfo, setPaperInfo] = useState(null);
   const [logs, setLogs] = useState([]);
-  const [priyemka, setPriyemka] = useState([]);
+  const [individualRolls, setIndividualRolls] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // Edit states
-  const [editingUsage, setEditingUsage] = useState(false);
-  const [editingPriyemka, setEditingPriyemka] = useState(false);
-  const [usedAmount, setUsedAmount] = useState('');
-
-  const [paperIn, setPaperIn] = useState('');
-
-  const [individualRolls, setIndividualRolls] = useState([]);
-  const [addingRoll, setAddingRoll] = useState(false);
-  const [rollToAdd, setRollToAdd] = useState("");
-  const [showAddRollInput, setShowAddRollInput] = useState(false);
+  // Paper addition state
+  const [addingPaper, setAddingPaper] = useState(false);
+  const [paperToAdd, setPaperToAdd] = useState("");
+  const [showAddPaperInput, setShowAddPaperInput] = useState(false);
+  
+  // Paper roll editing state
   const [editingRollId, setEditingRollId] = useState(null);
-  const [rollEditAmount, setRollEditAmount] = useState("");
-  const [selectedClient, setSelectedClient] = useState("");
+  const [rollEditValue, setRollEditValue] = useState("");
+  const [updatingRoll, setUpdatingRoll] = useState(false);
+  const [isCorrection, setIsCorrection] = useState(false);
+  const [correctWeight, setCorrectWeight] = useState("");
 
-  const fetchProductDetails = async () => {
-    if (!product) return;
-    
-    setLoading(true);
-    try {
-      // Fetch paperInfo from subcollection
-      const paperInfoQuery = await getDocs(collection(db, "productTypes", product.id, "paperInfo"));
-      let paperInfoData = null;
-      
-      if (!paperInfoQuery.empty) {
-        const paperInfoDoc = paperInfoQuery.docs[0];
-        paperInfoData = { id: paperInfoDoc.id, ...paperInfoDoc.data() };
-        setPaperInfo(paperInfoData);
-        
-        // NEW: Fetch individual rolls from paperInfo -> individualRolls
-        const rollsQuery = await getDocs(
-          collection(db, "productTypes", product.id, "paperInfo", paperInfoDoc.id, "individualRolls")
-        );
-        const rollsData = rollsQuery.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })).sort((a, b) => a.dateCreated?.seconds - b.dateCreated?.seconds);
-        setIndividualRolls(rollsData);
-      }
-      
-      // Fetch logs directly from productTypes/{id}/logs
-      const logsQuery = await getDocs(collection(db, "productTypes", product.id, "logs"));
-      const logsData = await Promise.all(
-        logsQuery.docs.map(async (logDoc) => {
-          const logData = logDoc.data();
-          // Get client name
-          let clientName = 'Unknown';
-          if (logData.clientId) {
-            try {
-              const clientDoc = await getDoc(doc(db, "clients", logData.clientId));
-              if (clientDoc.exists()) {
-                const client = clientDoc.data();
-                clientName = client.restaurant || client.name || 'Unknown';
-              }
-            } catch (error) {
-              console.error("Error fetching client:", error);
-            }
-          }
-          return {
-            id: logDoc.id,
-            ...logData,
-            clientName
-          };
-        })
-      );
-      setLogs(logsData.sort((a, b) => (b.date?.seconds || 0) - (a.date?.seconds || 0)));
-      
-      // Fetch priyemka directly from productTypes/{id}/priyemka
-      const priyemkaQuery = await getDocs(collection(db, "productTypes", product.id, "priyemka"));
-      const priyemkaData = priyemkaQuery.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })).sort((a, b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
-      setPriyemka(priyemkaData);
-      
-    } catch (error) {
-      console.error("Error fetching product details:", error);
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!open) {
       setPaperInfo(null);
       setLogs([]);
-      setPriyemka([]);
-    } finally {
+      setIndividualRolls([]);
       setLoading(false);
-    }
-  };
-
-  const handleUpdateRoll = async (rollId, newAmount, clientId) => {
-    if (!paperInfo || !clientId) return;
-    
-    try {
-      // Get current roll data
-      const rollRef = doc(db, "productTypes", product.id, "paperInfo", paperInfo.id, "individualRolls", rollId);
-      const rollSnap = await getDoc(rollRef);
-      const currentAmount = rollSnap.data().paperRemaining;
-      const amountUsed = currentAmount - parseFloat(newAmount);
-      
-      // Update individual roll
-      await updateDoc(rollRef, {
-        paperRemaining: parseFloat(newAmount)
-      });
-      
-      // Update paperInfo total
-      await updateDoc(doc(db, "productTypes", product.id, "paperInfo", paperInfo.id), {
-        paperRemaining: (paperInfo.paperRemaining || 0) - amountUsed
-      });
-      
-      // Add log entry
-      if (amountUsed > 0) {
-        await addDoc(collection(db, "productTypes", product.id, "logs"), {
-          usedAmount: amountUsed,
-          dateRecorded: serverTimestamp(),
-          clientId: clientId,
-          rollId: rollId
-        });
-      }
-      
+      setAddingPaper(false);
+      setPaperToAdd("");
+      setShowAddPaperInput(false);
       setEditingRollId(null);
-      setRollEditAmount("");
-      setSelectedClient("");
-      await fetchProductDetails();
-    } catch (error) {
-      console.error("Error updating roll:", error);
-      alert("Ошибка при обновлении рулона");
+      setRollEditValue("");
+      setUpdatingRoll(false);
+      setIsCorrection(false);
+      setCorrectWeight("");
     }
-  };
-
-  const handleSavePriyemka = async () => {
-    if (!paperIn || !paperInfo) return;
-    
-    try {
-      console.log("Saving priyemka:", { paperIn, paperInfo });
-      
-      // Add priyemka entry to productTypes/{id}/priyemka
-      const priyemkaRef = await addDoc(collection(db, "productTypes", product.id, "priyemka"), {
-        paperIn: parseFloat(paperIn),
-        date: serverTimestamp()
+  }, [open]);
+  
+const fetchProductDetails = async () => {
+  if (!product?.id) return;
+  
+  setLoading(true);
+  try {
+    // Fetch paperInfo
+    const paperInfoQuery = await getDocs(collection(db, 'productTypes', product.id, 'paperInfo'));
+    if (!paperInfoQuery.empty) {
+      const paperInfoDoc = paperInfoQuery.docs[0];
+      setPaperInfo({ 
+        id: paperInfoDoc.id, 
+        ...paperInfoDoc.data(),
+        // Ensure these fields exist
+        paperRemaining: paperInfoDoc.data().paperRemaining || 0,
+        totalKg: paperInfoDoc.data().totalKg || 0
       });
-      console.log("Priyemka added with ID:", priyemkaRef.id);
       
-      // Create new roll in individualRolls subcollection
-      await addDoc(
-        collection(db, "productTypes", product.id, "paperInfo", paperInfo.id, "individualRolls"),
-        {
-          paperRemaining: parseFloat(paperIn),
-          dateCreated: serverTimestamp()
-        }
+      // Fetch individual rolls
+      const rollsQuery = query(
+        collection(db, 'productTypes', product.id, 'paperInfo', paperInfoDoc.id, 'individualRolls'),
+        orderBy('dateCreated', 'asc')
       );
-      console.log("New roll created with amount:", parseFloat(paperIn));
-      
-      // Update paperRemaining and totalKg in paperInfo subcollection
-      const newPaperRemaining = (paperInfo.paperRemaining || 0) + parseFloat(paperIn);
-      const newTotalKg = (paperInfo.totalKg || 0) + parseFloat(paperIn);
-      
-      await updateDoc(doc(db, "productTypes", product.id, "paperInfo", paperInfo.id), {
-        paperRemaining: newPaperRemaining,
-        totalKg: newTotalKg
-      });
-      console.log("Paper remaining updated to:", newPaperRemaining, "totalKg:", newTotalKg);
-      
-      // Reset form
-      setPaperIn('');
-      setEditingPriyemka(false);
-      
-      // Refresh data
-      await fetchProductDetails();
-    } catch (error) {
-      console.error("Error saving priyemka:", error);
-      alert("Ошибка при сохранении: " + error.message);
+      const rollsSnapshot = await getDocs(rollsQuery);
+      setIndividualRolls(rollsSnapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data(),
+        paperRemaining: doc.data().paperRemaining || 0
+      })));
     }
-  };
+    
+    // Fetch logs
+    const logsQuery = query(
+      collection(db, 'productTypes', product.id, 'logs'),
+      orderBy('date', 'desc')
+    );
+    const logsSnapshot = await getDocs(logsQuery);
+    setLogs(logsSnapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data(),
+      // Ensure these fields exist
+      amount: doc.data().amount || 0,
+      remainingAfter: doc.data().remainingAfter || 0
+    })));
+    
+  } catch (error) {
+    console.error('Error fetching product details:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleAddPaper = async () => {
+  if (!product?.id || !paperToAdd) return;
+  
+  setAddingPaper(true);
+  const amount = parseFloat(paperToAdd);
+
+  try {
+    // Create new roll
+    const rollRef = await addDoc(
+      collection(db, 'productTypes', product.id, 'paperInfo', paperInfo.id, 'individualRolls'),
+      {
+        dateCreated: serverTimestamp(),
+        paperRemaining: amount
+      }
+    );
+
+    // Update totals
+    await updateDoc(doc(db, 'productTypes', product.id, 'paperInfo', paperInfo.id), {
+      paperRemaining: increment(amount),
+      totalKg: increment(amount)
+    });
+
+    // Add log
+    await addDoc(collection(db, 'productTypes', product.id, 'logs'), {
+      actionType: 'paperIn',
+      amount: amount,
+      date: serverTimestamp(),
+      rollId: rollRef.id,
+      userID: currentUser?.uid || 'unknown',
+      remainingAfter: (paperInfo.paperRemaining || 0) + amount
+    });
+
+    // Refresh data
+    await fetchProductDetails();
+    setPaperToAdd("");
+    setShowAddPaperInput(false);
+    
+  } catch (error) {
+    console.error('Error adding paper:', error);
+  } finally {
+    setAddingPaper(false);
+  }
+};
+
+const handleUpdateRoll = async (rollId, newAmount) => {
+  if (!product?.id || !paperInfo?.id) return;
+  
+  setUpdatingRoll(true);
+  const newAmountValue = parseFloat(newAmount);
+
+  try {
+    // Get current roll data
+    const rollRef = doc(db, 'productTypes', product.id, 'paperInfo', paperInfo.id, 'individualRolls', rollId);
+    const rollSnap = await getDoc(rollRef);
+    const currentAmount = rollSnap.data().paperRemaining || 0;
+
+    if (isCorrection) {
+      // Correction mode
+      const difference = newAmountValue - currentAmount;
+      
+      await updateDoc(rollRef, { paperRemaining: newAmountValue });
+      
+      // Update totals
+      await updateDoc(doc(db, 'productTypes', product.id, 'paperInfo', paperInfo.id), {
+        paperRemaining: increment(difference),
+        totalKg: increment(difference)
+      });
+
+      // Add correction log
+      await addDoc(collection(db, 'productTypes', product.id, 'logs'), {
+        actionType: 'fixing',
+        amount: Math.abs(difference),
+        date: serverTimestamp(),
+        rollId: rollId,
+        userID: currentUser?.uid || 'unknown',
+        remainingAfter: (paperInfo.paperRemaining || 0) + difference,
+        details: `Corrected from ${currentAmount}kg to ${newAmountValue}kg`
+      });
+    } else {
+      // Normal usage mode
+      const amountUsed = currentAmount - newAmountValue;
+      
+      await updateDoc(rollRef, { paperRemaining: newAmountValue });
+      
+      // Update remaining (don't change totalKg)
+      await updateDoc(doc(db, 'productTypes', product.id, 'paperInfo', paperInfo.id), {
+        paperRemaining: increment(-amountUsed)
+      });
+
+      // Add usage log
+      await addDoc(collection(db, 'productTypes', product.id, 'logs'), {
+        actionType: 'paperOut',
+        amount: amountUsed,
+        date: serverTimestamp(),
+        rollId: rollId,
+        userID: currentUser?.uid || 'unknown',
+        remainingAfter: (paperInfo.paperRemaining || 0) - amountUsed
+      });
+    }
+
+    // Refresh data
+    await fetchProductDetails();
+    setEditingRollId(null);
+    setRollEditValue('');
+    setIsCorrection(false);
+    setCorrectWeight('');
+    
+  } catch (error) {
+    console.error('Error updating roll:', error);
+  } finally {
+    setUpdatingRoll(false);
+  }
+};
 
   useEffect(() => {
-    if (open && product) {
+    if (open && product?.id) {
       fetchProductDetails();
     }
-  }, [open, product]);
+  }, [open, product?.id]);
 
+  // Don't render anything if product is not provided
   if (!product) return null;
 
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      aria-labelledby="product-details-modal"
-      sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-    >
-      <Box
-        sx={{
-          bgcolor: 'background.paper',
-          borderRadius: 2,
-          boxShadow: 24,
-          p: 4,
-          minWidth: 800,
-          maxWidth: '90vw',
-          maxHeight: '90vh',
-          overflow: 'auto'
-        }}
-      >
-        <Typography variant="h5" component="h2" sx={{ mb: 3, fontWeight: 600 }}>
-          Подробная информация: {product.type}
+  // Don't render modal if not open
+  if (!open) return null;
+
+return (
+  <Modal
+    open={open}
+    onClose={onClose}
+    aria-labelledby="product-details-modal"
+    aria-describedby="product-details-description"
+  >
+    <Box sx={modalStyle}>
+      <IconButton onClick={onClose} sx={{ position: 'absolute', right: 16, top: 16 }}>
+        <CloseIcon />
+      </IconButton>
+
+        <Typography variant="h4" gutterBottom fontWeight="bold">
+          {product?.type} ({product?.packaging}, {product?.gramm}г)
         </Typography>
+        <Divider sx={{ mb: 4 }} />
 
         {loading ? (
           <Box display="flex" justifyContent="center" p={4}>
@@ -249,230 +305,236 @@ function ProductDetailsModal({ open, onClose, product, clients }) {
           </Box>
         ) : (
           <Grid container spacing={3}>
-            {/* Box 1: Basic Information */}
+            {/* Left Column - Product Info */}
             <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" paddingBottom={2} fontWeight={700} gutterBottom color="primary">
-                    Основная информация
-                  </Typography>
-                  <Stack spacing={2}>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">Тип продукта</Typography>
-                      <Typography variant="body1" fontWeight={700}>{product.type}</Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">Номер полки</Typography>
-                      <Typography variant="body1" fontWeight={700} fontSize={18}>
-                        {paperInfo?.shellNum || '-'}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">Общий остаток</Typography>
-                      <Typography variant="body1" fontWeight={700} fontSize={18}>
-                        {paperInfo?.paperRemaining || 0} кг
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">Всего рулонов</Typography>
-                      <Typography variant="body1" fontWeight={700} fontSize={18}>
-                        {individualRolls.length}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Box 2: Individual Rolls Management */}
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" fontWeight={700} gutterBottom color="primary">
-                    Управление рулонами
-                  </Typography>
-
-                  <Divider sx={{ my: 2 }} />
-
-                  {/* Individual Rolls List */}
-                  <Typography variant="subtitle2" gutterBottom>Рулоны</Typography>
-                  <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
-                    {individualRolls.map((roll, index) => (
-                      <Card key={roll.id} sx={{ mb: 2, bgcolor: '#E2F0EE', border: '1px solid #BDDCD8' }}>
-                        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                         <Box display="flex" flexDirection="column" alignItems="flex-start" gap={1}>
-                            <Typography variant="body2">Рулон {index + 1}</Typography>
-                            {editingRollId === roll.id ? (
-                              <Stack spacing={1} alignItems="flex-start" sx={{ width: '100%' }}>
-                                <TextField
-                                  size="small"
-                                  type="number"
-                                  label="Сколько кг осталось?"
-                                  value={rollEditAmount}
-                                  onChange={(e) => setRollEditAmount(e.target.value)}
-                                  sx={{ width: '100%' }}
-                                />
-                                <FormControl size="small" sx={{ width: '100%' }}>
-                                  <InputLabel>Выберите клиента</InputLabel>
-                                  <Select
-                                    value={selectedClient}
-                                    onChange={(e) => setSelectedClient(e.target.value)}
-                                    label="Выберите клиента"
-                                  >
-                                    {clients.map(client => (
-                                      <MenuItem key={client.id} value={client.id}>
-                                        {client.restaurant || client.name}
-                                      </MenuItem>
-                                    ))}
-                                  </Select>
-                                </FormControl>
-                                <Stack direction="row" spacing={1}>
-                                  <Button
-                                    size="small"
-                                    variant="contained"
-                                    onClick={() => handleUpdateRoll(roll.id, rollEditAmount, selectedClient)}
-                                    disabled={!selectedClient || !rollEditAmount}
-                                  >
-                                    ✓
-                                  </Button>
-                                  <Button
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={() => {
-                                      setEditingRollId(null);
-                                      setRollEditAmount("");
-                                      setSelectedClient("");
-                                    }}
-                                  >
-                                    ✗
-                                  </Button>
-                                </Stack>
-                              </Stack>
-                            ) : (
-                              <Stack direction="row" spacing={1} alignItems="center">
-                                <Typography variant="h6" fontWeight="bold">
-                                  {roll.paperRemaining} кг
-                                </Typography>
-                                <Button
-                                  size="small"
-                                  variant="contained"
-                                  sx={{
-                                    backgroundColor: '#0F9D8C',
-                                    color: "white",
-                                    '&:hover': { backgroundColor: '#0b7f73' }
-                                  }}
-                                  onClick={() => {
-                                    setEditingRollId(roll.id);
-                                    setRollEditAmount(roll.paperRemaining.toString());
-                                  }}
-                                >
-                                  Редактировать
-                                </Button>
-                              </Stack>
-                            )}
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    ))}
+              <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
+                <Typography variant="h6" gutterBottom fontWeight="bold">
+                  Основная информация
+                </Typography>
+                
+                <Stack spacing={2}>
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Тип продукта</Typography>
+                    <Typography variant="body1">{product?.type}</Typography>
                   </Box>
-                </CardContent>
-              </Card>
+                  
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Упаковка</Typography>
+                    <Typography variant="body1">{product?.packaging}</Typography>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Граммовка</Typography>
+                    <Typography variant="body1">{product?.gramm}г</Typography>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Всего куплено</Typography>
+                    <Typography variant="h6" fontWeight="bold">
+                      {paperInfo?.totalKg?.toFixed(2) || '0.00'} кг
+                    </Typography>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">Остаток бумаги</Typography>
+                    <Typography variant="h6" fontWeight="bold">
+                      {paperInfo?.paperRemaining?.toFixed(2) || '0.00'} кг
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Paper>
             </Grid>
 
-            {/* Box 3: Приемка */}
+            {/* Middle Column - Paper Rolls */}
             <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" fontWeight={700} gutterBottom color="primary">
-                    Приемка
+              <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="h6" fontWeight="bold">
+                    Рулоны бумаги
                   </Typography>
                   
-                  {!editingPriyemka ? (
+                  {!showAddPaperInput ? (
                     <Button
-                      variant="outlined"
-                      onClick={() => setEditingPriyemka(true)}
-                      sx={{ mb: 2 }}
+                      variant="contained"
+                      onClick={() => setShowAddPaperInput(true)}
+                      startIcon={<AddIcon />}
                     >
-                      Приемка
+                      Добавить рулон
                     </Button>
                   ) : (
-                    <Stack spacing={2} sx={{ mb: 2 }}>
+                    <Stack spacing={1} sx={{ width: '100%' }}>
                       <TextField
-                        size="small"
-                        label="Сколько кг поступило?"
+                        label="Количество (кг)"
                         type="number"
-                        value={paperIn}
-                        onChange={(e) => setPaperIn(e.target.value)}
+                        value={paperToAdd}
+                        onChange={(e) => setPaperToAdd(e.target.value)}
+                        inputProps={{ step: '0.01', min: '0.01' }}
                       />
-                      <Stack direction="row" spacing={1}>
+                      <Box display="flex" gap={1}>
                         <Button
                           variant="contained"
-                          size="small"
-                          onClick={handleSavePriyemka}
-                          disabled={!paperIn}
+                          onClick={handleAddPaper}
+                          disabled={addingPaper || !paperToAdd}
                         >
-                          Сохранить
+                          {addingPaper ? 'Сохранение...' : 'Сохранить'}
                         </Button>
                         <Button
                           variant="outlined"
-                          size="small"
                           onClick={() => {
-                            setEditingPriyemka(false);
-                            setPaperIn('');
+                            setShowAddPaperInput(false);
+                            setPaperToAdd('');
                           }}
                         >
                           Отмена
                         </Button>
-                      </Stack>
+                      </Box>
                     </Stack>
                   )}
+                </Box>
+                
+                <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+                  {individualRolls.map((roll, index) => (
+                    <Card key={roll.id} sx={{ mb: 2, bgcolor: '#f5f5f5' }}>
+                      <CardContent>
+                        <Box display="flex" justifyContent="space-between">
+                          <Box>
+                            <Typography variant="body2">Рулон {index + 1}</Typography>
+                            
+                            {editingRollId === roll.id ? (
+                              <Box mt={1}>
+                                <TextField
+                                  label="Сколько кг осталось"
+                                  type="number"
+                                  value={rollEditValue}
+                                  onChange={(e) => setRollEditValue(e.target.value)}
+                                  inputProps={{ step: '0.01', min: '0' }}
+                                  sx={{ mb: 1 }}
+                                />
+                                
+                                <FormControlLabel
+                                  control={
+                                    <Checkbox
+                                      checked={isCorrection}
+                                      onChange={(e) => setIsCorrection(e.target.checked)}
+                                    />
+                                  }
+                                  label="Исправить ошибку"
+                                />
+                                
+                                {isCorrection && (
+                                  <TextField
+                                    label="Корректное количество"
+                                    type="number"
+                                    value={correctWeight}
+                                    onChange={(e) => setCorrectWeight(e.target.value)}
+                                    inputProps={{ step: '0.01', min: '0' }}
+                                    sx={{ mt: 1 }}
+                                  />
+                                )}
+                                
+                                <Box display="flex" gap={1} mt={1}>
+                                  <Button
+                                    variant="contained"
+                                    onClick={() => handleUpdateRoll(
+                                      roll.id, 
+                                      isCorrection ? correctWeight : rollEditValue
+                                    )}
+                                  >
+                                    Сохранить
+                                  </Button>
+                                  <Button
+                                    variant="outlined"
+                                    onClick={() => {
+                                      setEditingRollId(null);
+                                      setRollEditValue('');
+                                      setIsCorrection(false);
+                                      setCorrectWeight('');
+                                    }}
+                                  >
+                                    Отмена
+                                  </Button>
+                                </Box>
+                              </Box>
+                            ) : (
+                              <Typography variant="h6" fontWeight="bold">
+                                {roll.paperRemaining?.toFixed(2) || '0.00'} кг
+                              </Typography>
+                            )}
+                          </Box>
+                          
+                          {editingRollId !== roll.id && (
+                            <Button
+                              variant="contained"
+                              startIcon={<EditIcon />}
+                              onClick={() => {
+                                setEditingRollId(roll.id);
+                                setRollEditValue(roll.paperRemaining?.toString() || '0');
+                              }}
+                            >
+                              Редактировать
+                            </Button>
+                          )}
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Box>
+              </Paper>
+            </Grid>
 
-                  <Divider sx={{ my: 2 }} />
-                  
-                  <Typography variant="subtitle2" gutterBottom>
-                    История поступлений
-                  </Typography>
-                  
-                  {priyemka.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">
-                      Нет записей
-                    </Typography>
-                  ) : (
-                    <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 200 }}>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Дата</TableCell>
-                            <TableCell>Поступило (кг)</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {priyemka.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell>
-                                {item.date ? new Date(item.date.seconds * 1000).toLocaleDateString() : '-'}
-                              </TableCell>
-                              <TableCell>{item.paperIn}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-                </CardContent>
-              </Card>
+            {/* Right Column - History */}
+            <Grid item xs={12} md={4}>
+              <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
+                <Typography variant="h6" gutterBottom fontWeight="bold">
+                  История операций
+                </Typography>
+                
+                <TableContainer sx={{ maxHeight: 400 }}>
+                  <Table size="small" stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Дата</TableCell>
+                        <TableCell>Действие</TableCell>
+                        <TableCell>Количество</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {logs.map((log) => (
+                        <TableRow key={log.id}>
+                          <TableCell>
+                            {log.date?.toDate?.()?.toLocaleDateString('ru-RU') || '-'}
+                          </TableCell>
+                          <TableCell>
+                            {log.actionType === 'paperIn' ? (
+                              <ArrowDownwardIcon color="success" />
+                            ) : log.actionType === 'paperOut' ? (
+                              <ArrowUpwardIcon color="error" />
+                            ) : (
+                              <AutorenewIcon color="warning" />
+                            )}
+                          </TableCell>
+                          <TableCell sx={{ 
+                            color: log.actionType === 'paperIn' ? 'success.main' : 
+                                   log.actionType === 'paperOut' ? 'error.main' : 'warning.main',
+                            fontWeight: 'bold'
+                          }}>
+                            {log.actionType === 'paperIn' ? '+' : 
+                             log.actionType === 'paperOut' ? '-' : '±'}
+                            {log.amount?.toFixed(2) || '0.00'} кг
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
             </Grid>
           </Grid>
         )}
-
-        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-          <Button onClick={onClose} variant="contained">
-            Закрыть
-          </Button>
-        </Box>
       </Box>
-    </Modal>
-  );
-}
+  </Modal>
+);
+ 
+};
 
 export default ProductDetailsModal;
