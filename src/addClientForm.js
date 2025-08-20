@@ -19,11 +19,13 @@ import {
   FormControlLabel,
   Radio,
   Card,
-  CardContent
+  CardContent,
+  CardMedia
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { 
   collection, 
   getDocs, 
@@ -56,6 +58,11 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
   const [paperRolls, setPaperRolls] = useState([
     { id: 1, paperRemaining: "" }
   ]);
+
+  // State for image uploads
+  const [images, setImages] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -122,6 +129,183 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
     }
   };
 
+  // Image upload functions
+  const validateFile = (file) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    const maxSize = 3 * 1024 * 1024; // 3MB
+
+    if (!allowedTypes.includes(file.type)) {
+      return 'Поддерживаются только JPG и PNG форматы';
+    }
+
+    if (file.size > maxSize) {
+      return 'Размер файла не должен превышать 3MB';
+    }
+
+    return null;
+  };
+
+  const handleImageSelect = (event) => {
+    const files = Array.from(event.target.files);
+    
+    if (images.length + files.length > 2) {
+      setImageUploadError('Можно загрузить максимум 2 изображения');
+      return;
+    }
+
+    const validFiles = [];
+    for (const file of files) {
+      const validation = validateFile(file);
+      if (validation) {
+        setImageUploadError(validation);
+        return;
+      }
+      validFiles.push(file);
+    }
+
+    // Create preview objects
+    const newImages = validFiles.map((file, index) => ({
+      id: `new-${Date.now()}-${index}`,
+      file: file,
+      preview: URL.createObjectURL(file),
+      uploaded: false,
+      url: null
+    }));
+
+    setImages(prev => [...prev, ...newImages]);
+    setImageUploadError('');
+
+    // Upload images
+    uploadImages(newImages);
+  };
+
+  const uploadImages = async (imagesToUpload) => {
+    setUploading(true);
+    const updatedImages = [...images];
+
+    try {
+      for (let i = 0; i < imagesToUpload.length; i++) {
+        const imageObj = imagesToUpload[i];
+        const imageIndex = updatedImages.findIndex(img => img.id === imageObj.id);
+
+        // Upload to ImageKit
+        const uploadedUrl = await uploadToImageKit(imageObj.file);
+        
+        updatedImages[imageIndex] = {
+          ...updatedImages[imageIndex],
+          url: uploadedUrl,
+          uploaded: true
+        };
+        
+        setImages([...updatedImages]);
+      }
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      setImageUploadError(`Ошибка при загрузке изображения: ${error.message}`);
+      
+      // Remove failed uploads
+      setImages(prev => prev.filter(img => img.uploaded));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const uploadToImageKit = async (file) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        console.log('Starting ImageKit upload for file:', file.name);
+        
+        // Get authentication parameters from your auth server
+        console.log('Fetching auth parameters...');
+        const authResponse = await fetch('http://localhost:3001/auth');
+        
+        if (!authResponse.ok) {
+          throw new Error(`Auth server error: ${authResponse.status} - ${authResponse.statusText}`);
+        }
+        
+        const authParams = await authResponse.json();
+        console.log('Auth parameters received:', {
+          hasSignature: !!authParams.signature,
+          hasToken: !!authParams.token,
+          hasExpire: !!authParams.expire
+        });
+
+        // Validate auth parameters
+        if (!authParams.signature || !authParams.token || !authParams.expire) {
+          throw new Error('Missing required authentication parameters');
+        }
+
+        // Create form data for upload
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('fileName', `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+        formData.append('folder', '/clients');
+        
+        // Add authentication parameters
+        formData.append('signature', authParams.signature);
+        formData.append('expire', authParams.expire);
+        formData.append('token', authParams.token);
+        formData.append('publicKey', authParams.publicKey);
+
+
+        // Debug: Log what we're sending
+        console.log('Upload parameters:', {
+          fileName: `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          folder: '/clients',
+          fileSize: file.size,
+          fileType: file.type
+        });
+        
+        // Upload to ImageKit
+        console.log('Uploading to ImageKit...');
+        const uploadResponse = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        console.log('ImageKit response status:', uploadResponse.status);
+        
+        if (!uploadResponse.ok) {
+          // Try to get error details from response
+          let errorMessage = `Upload failed: ${uploadResponse.status}`;
+          try {
+            const errorData = await uploadResponse.json();
+            console.error('ImageKit error response:', errorData);
+            errorMessage += ` - ${errorData.message || JSON.stringify(errorData)}`;
+          } catch (e) {
+            console.error('Could not parse error response');
+          }
+          throw new Error(errorMessage);
+        }
+
+        const data = await uploadResponse.json();
+        console.log('ImageKit upload successful:', data);
+
+        if (data.url) {
+          resolve(data.url);
+        } else {
+          reject(new Error('Upload failed: No URL returned'));
+        }
+
+      } catch (error) {
+        console.error('ImageKit upload error:', error);
+        reject(error);
+      }
+    });
+  };
+
+  const handleRemoveImage = (imageId) => {
+    const imageToRemove = images.find(img => img.id === imageId);
+    
+    // Revoke object URL to prevent memory leaks
+    if (imageToRemove && imageToRemove.preview && imageToRemove.preview.startsWith('blob:')) {
+      URL.revokeObjectURL(imageToRemove.preview);
+    }
+    
+    setImages(prev => prev.filter(img => img.id !== imageId));
+  };
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -150,6 +334,12 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
     if (!formData.addressShort.trim()) errors.push("Адрес обязателен");
     if (!formData.geoPoint.trim()) errors.push("Координаты обязательны");
     if (!formData.designType) errors.push("Тип дизайна обязателен");
+
+    // Image validation
+    const uploadedImages = images.filter(img => img.uploaded && img.url);
+    if (uploadedImages.length !== 2) {
+      errors.push("Необходимо загрузить ровно 2 изображения");
+    }
 
     // Product selection validation
     if (!productInputs.type || !productInputs.packaging || !productInputs.gramm) {
@@ -192,7 +382,7 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
     return errors;
   };
 
-  // NEW: Function to create log entries for initial paper rolls with correct rollIDs
+  // Function to create log entries for initial paper rolls with correct rollIDs
   const createInitialPaperLogs = async (clientId, createdRolls, userId) => {
     try {
       console.log("Creating logs for rolls:", createdRolls);
@@ -201,32 +391,21 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
       // Create log entries for each created paper roll with their actual rollIDs
       const logPromises = createdRolls.map(async (rollData, index) => {
         const amount = rollData.paperRemaining;
-      const logEntry = {
-  date: Timestamp.now(),
-  userID: userId || 'unknown',
-  actionType: 'paperIn',
-  amount: amount,
-  details: `Initial paper added - Roll ${index + 1}: ${amount}kg`,
-  rollId: rollData.rollId || 'MISSING'  // <- force check here
-};
+        const logEntry = {
+          date: Timestamp.now(),
+          userID: userId || 'unknown',
+          actionType: 'paperIn',
+          amount: amount,
+          details: `Initial paper added - Roll ${index + 1}: ${amount}kg`,
+          rollId: rollData.rollId || 'MISSING'
+        };
 
-console.log("📝 Creating log entry:", logEntry);
-
-await addDoc(logsRef, logEntry);
-
-        
-        console.log(`Creating log entry for roll ${rollData.id}:`, logEntry);
-        
+        console.log("📝 Creating log entry:", logEntry);
         return addDoc(logsRef, logEntry);
       });
 
       const logResults = await Promise.all(logPromises);
       console.log(`Successfully created ${logResults.length} initial log entries with rollIDs for client ${clientId}`);
-      
-      // Double-check by logging each created log's ID
-      logResults.forEach((logRef, index) => {
-        console.log(`Log ${index + 1} created with ID: ${logRef.id} for roll: ${createdRolls[index].id}`);
-      });
       
     } catch (error) {
       console.error('Error creating initial paper logs:', error);
@@ -234,7 +413,7 @@ await addDoc(logsRef, logEntry);
     }
   };
 
-  // NEW: Function to check and notify low paper for new client
+  // Function to check and notify low paper for new client
   const checkInitialLowPaperNotification = async (clientData, totalPaper) => {
     try {
       const thresholdValue = parseFloat(clientData.notifyWhen) || 3;
@@ -314,6 +493,11 @@ await addDoc(logsRef, logEntry);
       // Parse coordinates
       const [latitude, longitude] = formData.geoPoint.split(',').map(coord => parseFloat(coord.trim()));
       
+      // Get uploaded image URLs
+      const uploadedImages = images.filter(img => img.uploaded && img.url);
+      const imageURL1 = uploadedImages[0]?.url || null;
+      const imageURL2 = uploadedImages[1]?.url || null;
+      
       // Build client data based on design type
       const baseClientData = {
         name: formData.name.trim(),
@@ -323,7 +507,9 @@ await addDoc(logsRef, logEntry);
         addressLong: new GeoPoint(latitude, longitude),
         productId: matchedProduct.productId || matchedProduct.id,
         designType: formData.designType,
-        comment: formData.comment.trim()
+        comment: formData.comment.trim(),
+        imageURL1: imageURL1,
+        imageURL2: imageURL2
       };
 
       let clientData;
@@ -371,19 +557,16 @@ await addDoc(logsRef, logEntry);
         const createdRollRefs = await Promise.all(paperRollsPromises);
         
         // Step 2: Build array with roll data including their actual IDs
-      // Step 2: Build array with roll data including their actual IDs
-const createdRollsData = createdRollRefs.map((rollRef, index) => {
-  const rollId = rollRef.id;
-  const rollData = {
-    rollId: rollId, // Firestore doc ID
-    paperRemaining: parseFloat(paperRolls[index].paperRemaining),
-    dateCreated: Timestamp.now()
-  };
-  console.log(`✅ Roll ${index + 1} created with rollId=${rollId}`, rollData);
-  return rollData;
-});
-
-
+        const createdRollsData = createdRollRefs.map((rollRef, index) => {
+          const rollId = rollRef.id;
+          const rollData = {
+            rollId: rollId, // Firestore doc ID
+            paperRemaining: parseFloat(paperRolls[index].paperRemaining),
+            dateCreated: Timestamp.now()
+          };
+          console.log(`✅ Roll ${index + 1} created with rollId=${rollId}`, rollData);
+          return rollData;
+        });
 
         console.log(`Created ${createdRollsData.length} paper rolls for client ${clientId}`);
 
@@ -421,6 +604,15 @@ const createdRollsData = createdRollRefs.map((rollRef, index) => {
       });
 
       setPaperRolls([{ id: 1, paperRemaining: "" }]);
+      
+      // Reset images and cleanup
+      images.forEach(img => {
+        if (img.preview && img.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(img.preview);
+        }
+      });
+      setImages([]);
+      setImageUploadError('');
 
       if (onClientAdded) {
         setTimeout(() => {
@@ -453,6 +645,7 @@ const createdRollsData = createdRollRefs.map((rollRef, index) => {
   };
 
   const isStandardDesign = formData.designType === "standart";
+  const canAddMoreImages = images.length < 2 && !loading;
 
   return (
     <>
@@ -755,6 +948,157 @@ const createdRollsData = createdRollRefs.map((rollRef, index) => {
                 </Grid>
               )}
 
+              {/* --- Image Upload Section --- */}
+              <Grid item xs={12}>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 3, 
+                    backgroundColor: 'grey.50',
+                    border: '1px solid',
+                    borderColor: 'grey.200'
+                  }}
+                >
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      fontWeight: 600,
+                      mb: 2,
+                      color: 'text.primary',
+                      fontSize: '1.15em'
+                    }}
+                  >
+                    Изображения клиента *
+                  </Typography>
+
+                  {imageUploadError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                      {imageUploadError}
+                    </Alert>
+                  )}
+
+                  <Grid container spacing={2}>
+                    {/* Display current images */}
+                    {images.map((image, index) => (
+                      <Grid item xs={12} sm={6} key={image.id}>
+                        <Card variant="outlined" sx={{ position: 'relative' }}>
+                          <CardMedia
+                            component="img"
+                            height="200"
+                            image={image.preview}
+                            alt={`Client image ${index + 1}`}
+                            sx={{ objectFit: 'cover' }}
+                          />
+                          
+                          {!image.uploaded && (
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: 'rgba(0,0,0,0.5)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white'
+                              }}
+                            >
+                              <CircularProgress color="inherit" />
+                              <Typography sx={{ ml: 1 }}>Загрузка...</Typography>
+                            </Box>
+                          )}
+
+                          <IconButton
+                            onClick={() => handleRemoveImage(image.id)}
+                            sx={{
+                              position: 'absolute',
+                              top: 8,
+                              right: 8,
+                              backgroundColor: 'rgba(255,255,255,0.8)',
+                              color: 'error.main',
+                              '&:hover': {
+                                backgroundColor: 'rgba(255,255,255,0.9)'
+                              }
+                            }}
+                            size="small"
+                            disabled={uploading}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                          
+                          <Box sx={{ p: 1, textAlign: 'center' }}>
+                            <Typography variant="caption">
+                              {image.uploaded ? 'Загружено' : 'Загружается...'}
+                            </Typography>
+                          </Box>
+                        </Card>
+                      </Grid>
+                    ))}
+
+                    {/* Add new image button */}
+                    {canAddMoreImages && (
+                      <Grid item xs={12} sm={6}>
+                        <Card 
+                          variant="outlined" 
+                          sx={{ 
+                            height: 200,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            border: '2px dashed',
+                            borderColor: 'primary.main',
+                            backgroundColor: 'primary.50',
+                            '&:hover': {
+                              backgroundColor: 'primary.100'
+                            }
+                          }}
+                        >
+                          <Stack alignItems="center" spacing={1}>
+                            <input
+                              accept="image/jpeg,image/jpg,image/png"
+                              style={{ display: 'none' }}
+                              id={`image-upload-${images.length}`}
+                              multiple={images.length === 0}
+                              type="file"
+                              onChange={handleImageSelect}
+                              disabled={uploading || loading}
+                            />
+                            <label htmlFor={`image-upload-${images.length}`}>
+                              <Button
+                                variant="contained"
+                                component="span"
+                                startIcon={<CloudUploadIcon />}
+                                disabled={uploading || loading}
+                              >
+                                Добавить изображение
+                              </Button>
+                            </label>
+                            <Typography variant="caption" color="text.secondary">
+                              JPG, PNG (макс. 3MB)
+                            </Typography>
+                          </Stack>
+                        </Card>
+                      </Grid>
+                    )}
+                  </Grid>
+
+                  {images.length === 0 && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                      Добавьте 2 изображения клиента (обязательно)
+                    </Typography>
+                  )}
+                  
+                  {images.length > 0 && images.length < 2 && (
+                    <Typography variant="body2" color="warning.main" sx={{ mt: 2 }}>
+                      Добавьте еще {2 - images.length} изображение(й)
+                    </Typography>
+                  )}
+                </Paper>
+              </Grid>
+
               {/* --- Product Section --- */}
               <Grid item xs={12}>
                 <Paper 
@@ -874,13 +1218,18 @@ const createdRollsData = createdRollRefs.map((rollRef, index) => {
                       type="submit" 
                       variant="contained" 
                       size="medium" 
-                      disabled={loading}
+                      disabled={loading || uploading}
                       sx={{ fontSize: '1.15em' }}
                     >
                       {loading ? (
                         <>
                           <CircularProgress size={20} sx={{ mr: 1 }} />
                           Сохранение...
+                        </>
+                      ) : uploading ? (
+                        <>
+                          <CircularProgress size={20} sx={{ mr: 1 }} />
+                          Загрузка изображений...
                         </>
                       ) : (
                         'Сохранить'
