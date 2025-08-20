@@ -49,7 +49,8 @@ import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
 import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
 import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
-
+import EditClientForm from "./EditClientForm";
+import { PhotoProvider, PhotoView } from 'react-photo-view';
 
 const modalStyle = {
   position: 'absolute',
@@ -98,6 +99,12 @@ const [correctWeight, setCorrectWeight] = useState("");
 const [showFtulkaModal, setShowFtulkaModal] = useState(false);
 const [ftulkaWeight, setFtulkaWeight] = useState("");
 const [rollToDelete, setRollToDelete] = useState(null);
+
+
+const [openEdit, setOpenEdit] = useState(false);
+
+  const handleOpen = () => setOpenEdit(true);
+  const handleClose = () => setOpenEdit(false);
 
   
   // Telegram integration states
@@ -693,7 +700,7 @@ const handleSendViaTelegram = async () => {
 
   return (
     <>
-      <Modal open={open} onClose={handleCloseModal} aria-labelledby="client-details-modal">
+      <Modal open={open} disableEscapeKeyDown onClose={handleCloseModal} aria-labelledby="client-details-modal">
         <Box
           sx={{
             ...modalStyle,
@@ -712,7 +719,24 @@ const handleSendViaTelegram = async () => {
           <Typography variant="h4" gutterBottom fontWeight="bold">
             Детали клиента
           </Typography>
+
+
+          <IconButton color="primary" onClick={handleOpen}>
+          <EditIcon />
+        </IconButton>
+
           <Divider sx={{ mb: 4 }} />
+
+
+      {/* Edit Modal */}
+      <Dialog open={openEdit} onClose={handleClose} maxWidth="md" fullWidth>
+        <EditClientForm
+          clientId={client.id}
+          currentUser={currentUser}
+          onClientUpdated={onClientUpdate}
+          onClose={handleClose}
+        />
+      </Dialog>
 
           <Grid container spacing={2}>
             {/* Left Section - Client Details */}
@@ -736,6 +760,50 @@ const handleSendViaTelegram = async () => {
                       ? `${productType.packaging}, ${productType.type}, ${productType.gramm}г`
                       : 'Загрузка...'}
                   </Typography>
+
+{/* --- New Image Block --- */}
+  {(client.imageURL1 || client.imageURL2) && (
+    <PhotoProvider>
+      <Box display="flex" gap={1}>
+        {client.imageURL1 && (
+          <PhotoView src={client.imageURL1}>
+            <Box
+              component="img"
+              src={client.imageURL1}
+              alt="Client Image 1"
+              sx={{
+                width: 64,
+                height: 64,
+                objectFit: 'cover',
+                borderRadius: 1,
+                cursor: 'pointer',
+                border: '1px solid #ddd',
+              }}
+            />
+          </PhotoView>
+        )}
+        {client.imageURL2 && (
+          <PhotoView src={client.imageURL2}>
+            <Box
+              component="img"
+              src={client.imageURL2}
+              alt="Client Image 2"
+              sx={{
+                width: 64,
+                height: 64,
+                objectFit: 'cover',
+                borderRadius: 1,
+                cursor: 'pointer',
+                border: '1px solid #ddd',
+              }}
+            />
+          </PhotoView>
+        )}
+      </Box>
+    </PhotoProvider>
+  )}
+  {/* --- End of Image Block --- */}
+
                 </Box>
 
                 <Stack spacing={2}>

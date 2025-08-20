@@ -138,43 +138,62 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
     try {
       const querySnapshot = await getDocs(collection(db, "clients"));
 
-      const clientsArray = await Promise.all(
-        querySnapshot.docs.map(async (docSnap) => {
-          const data = docSnap.data();
-          
-          // Fetch product type data (packaging, shellNum, paperRemaining based on designType)
-          const productTypeData = await fetchProductTypeData(data.productId, data.designType);
-          
-          // Count paper rolls in clients/{id}/paperRolls
-          let rollCount = 0;
-          try {
-            const paperRollsQuery = await getDocs(collection(db, "clients", docSnap.id, "paperRolls"));
-            rollCount = paperRollsQuery.size || paperRollsQuery.docs.length;
-          } catch (error) {
-            console.error("Error fetching paper rolls count for client", docSnap.id, error);
-            rollCount = 0;
-          }
+      // Filter out any undefined documents and ensure each doc has an id
+      const validDocs = querySnapshot.docs.filter(docSnap => 
+        docSnap && docSnap.id && docSnap.exists()
+      );
 
-          return { 
-            id: docSnap.id, 
-            ...data, 
-            packaging: productTypeData.packaging,
-            // For standard design type, use shellNum and paperRemaining from productTypes
-            // For unique design type, use the client's own shellNum and paperRemaining
-            shellNum: data.designType === "standart" ? productTypeData.shellNum : (data.shellNum || ''),
-            paperRemaining: data.designType === "standart" ? productTypeData.paperRemaining : (data.paperRemaining || ''),
-            // Add orgName from client data
-            orgName: data.orgName || data.organization || '-',
-            // NEW: total number of small rolls
-            totalRolls: rollCount
-          };
+      const clientsArray = await Promise.all(
+        validDocs.map(async (docSnap) => {
+          try {
+            const data = docSnap.data();
+            
+            // Ensure we have minimum required data
+            if (!data) {
+              console.warn("Document has no data:", docSnap.id);
+              return null;
+            }
+            
+            // Fetch product type data (packaging, shellNum, paperRemaining based on designType)
+            const productTypeData = await fetchProductTypeData(data.productId, data.designType);
+            
+            // Count paper rolls in clients/{id}/paperRolls
+            let rollCount = 0;
+            try {
+              const paperRollsQuery = await getDocs(collection(db, "clients", docSnap.id, "paperRolls"));
+              rollCount = paperRollsQuery.size || paperRollsQuery.docs.length;
+            } catch (error) {
+              console.error("Error fetching paper rolls count for client", docSnap.id, error);
+              rollCount = 0;
+            }
+
+            return { 
+              id: docSnap.id, 
+              ...data, 
+              packaging: productTypeData.packaging,
+              // For standard design type, use shellNum and paperRemaining from productTypes
+              // For unique design type, use the client's own shellNum and paperRemaining
+              shellNum: data.designType === "standart" ? productTypeData.shellNum : (data.shellNum || ''),
+              paperRemaining: data.designType === "standart" ? productTypeData.paperRemaining : (data.paperRemaining || ''),
+              // Add orgName from client data
+              orgName: data.orgName || data.organization || '-',
+              // NEW: total number of small rolls
+              totalRolls: rollCount
+            };
+          } catch (error) {
+            console.error("Error processing client document:", docSnap.id, error);
+            return null;
+          }
         })
       );
 
-      console.log("Parsed clients array:", clientsArray);
-      setClientData(clientsArray);
+      // Filter out any null results from failed processing
+      const validClients = clientsArray.filter(client => client !== null && client.id);
 
-      if (clientsArray.length > 0) {
+      console.log("Parsed clients array:", validClients);
+      setClientData(validClients);
+
+      if (validClients.length > 0) {
         setColumnHeaders(getColumnHeaders(userRole));
       } else {
         setColumnHeaders([]);
@@ -192,48 +211,67 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
     try {
       const querySnapshot = await getDocs(collection(db, "productTypes"));
       
+      // Filter out any undefined documents and ensure each doc has an id
+      const validDocs = querySnapshot.docs.filter(docSnap => 
+        docSnap && docSnap.id && docSnap.exists()
+      );
+
       const productTypesArray = await Promise.all(
-        querySnapshot.docs.map(async (docSnap) => {
-          const data = docSnap.data();
-          
-          // Get shellNum and paperRemaining from paperInfo subcollection
-          let shellNum = '-';
-          let paperRemaining = 0;
-          let totalRolls = 0;
-          
+        validDocs.map(async (docSnap) => {
           try {
-            const paperInfoQuery = await getDocs(collection(db, "productTypes", docSnap.id, "paperInfo"));
-            if (!paperInfoQuery.empty) {
-              const paperInfoDoc = paperInfoQuery.docs[0];
-              const paperInfoData = paperInfoDoc.data();
-              shellNum = paperInfoData.shellNum || '-';
-              paperRemaining = paperInfoData.paperRemaining || 0;
-              
-              // Count individual rolls
-              const rollsQuery = await getDocs(
-                collection(db, "productTypes", docSnap.id, "paperInfo", paperInfoDoc.id, "individualRolls")
-              );
-              totalRolls = rollsQuery.docs.length;
+            const data = docSnap.data();
+            
+            // Ensure we have minimum required data
+            if (!data) {
+              console.warn("Product document has no data:", docSnap.id);
+              return null;
             }
+            
+            // Get shellNum and paperRemaining from paperInfo subcollection
+            let shellNum = '-';
+            let paperRemaining = 0;
+            let totalRolls = 0;
+            
+            try {
+              const paperInfoQuery = await getDocs(collection(db, "productTypes", docSnap.id, "paperInfo"));
+              if (!paperInfoQuery.empty) {
+                const paperInfoDoc = paperInfoQuery.docs[0];
+                const paperInfoData = paperInfoDoc.data();
+                shellNum = paperInfoData.shellNum || '-';
+                paperRemaining = paperInfoData.paperRemaining || 0;
+                
+                // Count individual rolls
+                const rollsQuery = await getDocs(
+                  collection(db, "productTypes", docSnap.id, "paperInfo", paperInfoDoc.id, "individualRolls")
+                );
+                totalRolls = rollsQuery.docs.length;
+              }
+            } catch (error) {
+              console.error("Error fetching paperInfo:", error);
+            }
+            
+            return {
+              id: docSnap.id,
+              type: data.type || '-',
+              packaging: data.packaging || '-',
+              gramm: data.gramm || '-',
+              shellNum,
+              paperRemaining,
+              totalRolls
+            };
           } catch (error) {
-            console.error("Error fetching paperInfo:", error);
+            console.error("Error processing product document:", docSnap.id, error);
+            return null;
           }
-          
-          return {
-            id: docSnap.id,
-            type: data.type || '-',
-            packaging: data.packaging || '-',
-            gramm: data.gramm || '-',
-            shellNum,
-            paperRemaining,
-            totalRolls
-          };
         })
       );
 
-      setProductTypesData(productTypesArray);
+      // Filter out any null results
+      const validProducts = productTypesArray.filter(product => product !== null && product.id);
+      setProductTypesData(validProducts);
     } catch (error) {
       console.error("Error fetching product types data:", error);
+      setProductTypesData([]);
     } finally {
       setProductTypesLoading(false);
     }
@@ -297,11 +335,25 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
   };
 
   const handleClientUpdate = (updatedClient) => {
-    setClientData(prevData =>
-      prevData.map(client =>
-        client.id === updatedClient.id ? updatedClient : client
-      )
-    );
+    setClientData(prevData => {
+      // Guard against undefined prevData
+      if (!prevData || !Array.isArray(prevData)) {
+        console.warn("prevData is not an array:", prevData);
+        return updatedClient ? [updatedClient] : [];
+      }
+      
+      // Ensure updatedClient has an id
+      if (!updatedClient || !updatedClient.id) {
+        console.warn("updatedClient is invalid:", updatedClient);
+        return prevData;
+      }
+      
+      return prevData
+        .filter(client => client && client.id) // Remove undefined/null clients
+        .map(client =>
+          client.id === updatedClient.id ? updatedClient : client
+        );
+    });
     setSelectedClient(updatedClient);
   };
 
@@ -322,13 +374,16 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
     setCurrentTab(newValue);
   };
 
-  const filteredClients = clientData.filter((client) =>
+  // Safe filtering with null checks
+  const filteredClients = (clientData || []).filter((client) =>
+    client && 
     (client.restaurant || client.name || "")
       .toLowerCase()
       .includes(searchQuery.toLowerCase())
   );
 
-  const visibleClients = clientData.filter((client) =>
+  const visibleClients = (clientData || []).filter((client) =>
+    client &&
     (client.restaurant || client.name || '')
       .toLowerCase()
       .includes(searchQuery.toLowerCase())
@@ -336,6 +391,7 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
 
   // 2) default alphabetical sort by restaurant
   visibleClients.sort((a, b) => {
+    if (!a || !b) return 0;
     const nameA = (a.restaurant || a.name || "").toLowerCase();
     const nameB = (b.restaurant || b.name || "").toLowerCase();
     return nameA.localeCompare(nameB);
@@ -343,6 +399,8 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
 
   // 3) apply paperRemaining sort if arrows are clicked
   const sortedClients = [...visibleClients].sort((a, b) => {
+    if (!a || !b) return 0;
+    
     if (sortBy === 'name') {
       const nameA = (a.restaurant || a.name || '').toLowerCase();
       const nameB = (b.restaurant || b.name || '').toLowerCase();
@@ -419,6 +477,8 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
 
         <TableBody>
           {sortedClients.map((client, index) => {
+            if (!client || !client.id) return null;
+
             const lowPaper =
               client.paperRemaining !== undefined &&
               client.notifyWhen !== undefined &&
@@ -446,7 +506,7 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                           {lowPaper && <ReportGmailerrorredIcon color="error" />}
                           <Box>
                             <Typography fontWeight={600}>
-                              {client.restaurant || client.name || '-'}
+                              {client.name || '-'}
                             </Typography>
                             <Typography variant="body2" color="#0F9D8C">
                               {client.productType || ''}
@@ -532,70 +592,74 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
         </TableHead>
 
         <TableBody>
-          {productTypesData.map((product, index) => (
-            <TableRow
-              key={product.id}
-              sx={{
-                '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
-                '&:hover': { backgroundColor: '#e3f2fd' }
-              }}
-            >
-              {/* 1. № */}
-              <TableCell sx={{ padding: '16px' }}>
-                {index + 1}
-              </TableCell>
-              
-              {/* 2. Тип продукта */}
-              <TableCell sx={{ padding: '16px' }}>
-                {product.type}
-              </TableCell>
-              
-              {/* 3. Упаковка */}
-              <TableCell sx={{ padding: '16px' }}>
-                {product.packaging}
-              </TableCell>
-              
-              {/* 4. Граммовка */}
-              <TableCell sx={{ padding: '16px' }}>
-                {product.gramm}
-              </TableCell>
-              
-              {/* 5. Количество рулонов */}
-              <TableCell sx={{ padding: '16px' }}>
-                {product.totalRolls || 0}
-              </TableCell>
-              
-              {/* 6. Остаток (кг) */}
-              <TableCell sx={{ padding: '16px' }}>
-                {product.paperRemaining != null ? `${product.paperRemaining.toFixed(2)} кг` : 'N/A'}
-              </TableCell>
-              
-              {/* 7. Номер полки */}
-              <TableCell sx={{ padding: '16px' }}>
-                {product.shellNum}
-              </TableCell>
-              
-              {/* 8. Подробно */}
-              <TableCell sx={{ padding: '16px' }}>
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  size="small"
-                  sx={{
-                    color: '#0F9D8C',
-                    borderColor: '#0F9D8C',
-                    '&:hover': {
-                      borderColor: '#0c7a6e',
-                      color: '#0c7a6e'
-                    }
-                  }}
-                  onClick={() => handleOpenProductModal(product)}
-                >
-                  Подробно
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
+          {(productTypesData || []).map((product, index) => {
+            if (!product || !product.id) return null;
+
+            return (
+              <TableRow
+                key={product.id}
+                sx={{
+                  '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
+                  '&:hover': { backgroundColor: '#e3f2fd' }
+                }}
+              >
+                {/* 1. № */}
+                <TableCell sx={{ padding: '16px' }}>
+                  {index + 1}
+                </TableCell>
+                
+                {/* 2. Тип продукта */}
+                <TableCell sx={{ padding: '16px' }}>
+                  {product.type}
+                </TableCell>
+                
+                {/* 3. Упаковка */}
+                <TableCell sx={{ padding: '16px' }}>
+                  {product.packaging}
+                </TableCell>
+                
+                {/* 4. Граммовка */}
+                <TableCell sx={{ padding: '16px' }}>
+                  {product.gramm}
+                </TableCell>
+                
+                {/* 5. Количество рулонов */}
+                <TableCell sx={{ padding: '16px' }}>
+                  {product.totalRolls || 0}
+                </TableCell>
+                
+                {/* 6. Остаток (кг) */}
+                <TableCell sx={{ padding: '16px' }}>
+                  {product.paperRemaining != null ? `${product.paperRemaining.toFixed(2)} кг` : 'N/A'}
+                </TableCell>
+                
+                {/* 7. Номер полки */}
+                <TableCell sx={{ padding: '16px' }}>
+                  {product.shellNum}
+                </TableCell>
+                
+                {/* 8. Подробно */}
+                <TableCell sx={{ padding: '16px' }}>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    size="small"
+                    sx={{
+                      color: '#0F9D8C',
+                      borderColor: '#0F9D8C',
+                      '&:hover': {
+                        borderColor: '#0c7a6e',
+                        color: '#0c7a6e'
+                      }
+                    }}
+                    onClick={() => handleOpenProductModal(product)}
+                  >
+                    Подробно
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </TableContainer>
