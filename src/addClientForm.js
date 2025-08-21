@@ -883,7 +883,7 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
                       type="submit" 
                       variant="contained" 
                       size="medium" 
-                      disabled={loading}
+                      disabled={loading || formData.imageURLs.length !== 2}
                       sx={{ fontSize: '1.15em' }}
                     >
                       {loading ? (
