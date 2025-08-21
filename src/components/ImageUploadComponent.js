@@ -32,6 +32,8 @@ const uploadToImageKit = async (file) => {
     // Ensure the expire parameter is sent as a number
     formData.append("expire", authParams.expire);
     formData.append("fileName", file.name);
+    formData.append("folder", "/Clients");
+
 
     const uploadResponse = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
       method: 'POST',

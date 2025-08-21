@@ -156,9 +156,9 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
     if (!formData.designType) errors.push("Тип дизайна обязателен");
 
     // Image validation (now using formData.imageURLs)
-    if (!formData.imageURLs || formData.imageURLs.length !== 2) {
-      errors.push("Необходимо загрузить ровно 2 изображения");
-    }
+   if (!formData.imageURLs || formData.imageURLs.length > 1) {
+  errors.push("Можно загрузить максимум 1 изображение");
+}
 
     // Product selection validation
     if (!productInputs.type || !productInputs.packaging || !productInputs.gramm) {
@@ -312,8 +312,9 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
       // Parse coordinates
       const [latitude, longitude] = formData.geoPoint.split(',').map(coord => parseFloat(coord.trim()));
       
-      const imageURL1 = formData.imageURLs[0] || null;
-      const imageURL2 = formData.imageURLs[1] || null;
+      const imageURL1 = formData.imageURLs[0] 
+  || "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg?updatedAt=1755710788958";
+      
       
       // Build client data based on design type
       const baseClientData = {
@@ -326,7 +327,7 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
         designType: formData.designType,
         comment: formData.comment.trim(),
         imageURL1: imageURL1,
-        imageURL2: imageURL2
+       
       };
 
       let clientData;
@@ -412,7 +413,7 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
         shellNum: "",
         notifyWhen: "",
         comment: "",
-        imageURLs: []
+       imageURLs: []
       });
 
       setProductInputs({
@@ -883,7 +884,7 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
                       type="submit" 
                       variant="contained" 
                       size="medium" 
-                      disabled={loading || formData.imageURLs.length !== 2}
+                       disabled={loading}
                       sx={{ fontSize: '1.15em' }}
                     >
                       {loading ? (
