@@ -17,10 +17,22 @@ import {
   FormLabel,
   RadioGroup,
   FormControlLabel,
-  Radio
+  Radio,
+  InputAdornment,
+  Card,
+  CardContent
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
+import BusinessIcon from "@mui/icons-material/Business";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
+import DesignServicesIcon from "@mui/icons-material/DesignServices";
+import InventoryIcon from "@mui/icons-material/Inventory";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import CommentIcon from "@mui/icons-material/Comment";
+import ImageIcon from "@mui/icons-material/Image";
+import RestaurantIcon from "@mui/icons-material/Restaurant";
+import LocalOfferIcon from "@mui/icons-material/LocalOffer";
 import {
   doc,
   getDoc,
@@ -32,6 +44,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 
+import './components/ui/css/EditClientForm.css'
 // 🔗 Default placeholder
 const DEFAULT_PLACEHOLDER_URL =
   "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg?updatedAt=1755710788958";
@@ -111,7 +124,7 @@ const EditableImageSlot = ({ label, imageUrl, onImageChange, disabled }) => {
 
   return (
     <Box sx={{ textAlign: "center" }}>
-      <Typography variant="body2" sx={{ mb: 1 }}>
+      <Typography variant="body2" sx={{ mb: 1, color: "#616161", fontWeight: 500 }}>
         {label}
       </Typography>
       <Box sx={{ position: "relative", width: 160, height: 160, mx: "auto" }}>
@@ -123,7 +136,8 @@ const EditableImageSlot = ({ label, imageUrl, onImageChange, disabled }) => {
             height: "100%",
             objectFit: "cover",
             borderRadius: 8,
-            border: "1px solid #ddd"
+            border: "1px solid #e0e0e0",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
           }}
         />
         <input
@@ -143,12 +157,12 @@ const EditableImageSlot = ({ label, imageUrl, onImageChange, disabled }) => {
               bottom: 8,
               right: 8,
               bgcolor: "white",
-              boxShadow: 1,
-              "&:hover": { bgcolor: "white" }
+              boxShadow: 2,
+              "&:hover": { bgcolor: "#f5f5f5" }
             }}
             disabled={uploading || disabled}
           >
-            <EditIcon />
+            <EditIcon fontSize="small" />
           </IconButton>
         </label>
         {uploading && (
@@ -179,7 +193,6 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
     notifyWhen: "",
     comment: "",
     imageURL1: DEFAULT_PLACEHOLDER_URL,
-    
   });
   const [productInputs, setProductInputs] = useState({
     type: "",
@@ -219,7 +232,6 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
             notifyWhen: data.notifyWhen || "",
             comment: data.comment || "",
             imageURL1: data.imageURL1 || DEFAULT_PLACEHOLDER_URL,
-            
           });
 
           const matchedProduct = productList.find(
@@ -269,7 +281,6 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
         notifyWhen: parseFloat(formData.notifyWhen),
         comment: formData.comment,
         imageURL1: formData.imageURL1 || DEFAULT_PLACEHOLDER_URL,
-       
         updatedAt: Timestamp.now()
       };
 
@@ -297,26 +308,8 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
     [...new Set(products.map((p) => p.gramm))].filter(Boolean);
 
   return (
-    <Box
-      sx={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100vw",
-        height: "100vh",
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "center",
-        pt: 4,
-        pb: 4
-      }}
-    >
-      <Paper
-        elevation={24}
-        sx={{ p: 4, position: "relative", width: "90%", maxWidth: 900 }}
-      >
+    <Box className="edit-client-modal">
+      <Paper className="edit-client-paper">
         <IconButton
           onClick={onClose}
           sx={{ position: "absolute", top: 16, right: 16 }}
@@ -324,10 +317,10 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
           <CloseIcon />
         </IconButton>
 
-        <Typography variant="h5" sx={{ mb: 3, textAlign: "center" }}>
+        <Typography variant="h5" className="edit-client-header">
           Редактировать клиента
         </Typography>
-        <Divider sx={{ mb: 3 }} />
+        <Divider className="edit-client-divider" />
 
         {message.text && (
           <Alert severity={message.type} sx={{ mb: 2 }}>
@@ -336,29 +329,44 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
         )}
 
         <Box component="form" onSubmit={handleSubmit}>
-          <Grid container spacing={3}>
-            {/* Restaurant Info */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Название ресторана"
-                value={formData.name}
-                onChange={handleInputChange("name")}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Организация"
-                value={formData.orgName}
-                onChange={handleInputChange("orgName")}
-              />
-            </Grid>
+          {/* Restaurant Information Section */}
+          <Card className="form-section" variant="outlined">
+            <CardContent>
+              <Typography variant="h6" className="form-section-title">
+                <BusinessIcon /> Информация о ресторане
+              </Typography>
+              
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Название ресторана"
+                    value={formData.name}
+                    onChange={handleInputChange("name")}
+                   
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Организация"
+                    value={formData.orgName}
+                    onChange={handleInputChange("orgName")}
+                  
+                  />
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
 
-            {/* Design Type Radio Buttons */}
-            <Grid item xs={12}>
-              <FormControl component="fieldset">
-                <FormLabel component="legend">Тип дизайна</FormLabel>
+          {/* Design Type Section */}
+          <Card className="form-section" variant="outlined">
+            <CardContent>
+              <Typography variant="h6" className="form-section-title">
+                <DesignServicesIcon /> Тип дизайна
+              </Typography>
+              
+              <FormControl component="fieldset" className="radio-group-container">
                 <RadioGroup
                   row
                   value={formData.designType}
@@ -366,164 +374,210 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
                 >
                   <FormControlLabel
                     value="unique"
-                    control={<Radio />}
+                    control={<Radio color="primary" />}
                     label="Уникальный"
                   />
                   <FormControlLabel
                     value="standart"
-                    control={<Radio />}
+                    control={<Radio color="primary" />}
                     label="Стандартный"
                   />
                 </RadioGroup>
               </FormControl>
-            </Grid>
 
-            {!isStandardDesign && (
-              <Grid item xs={12} sm={6}>
+              {!isStandardDesign && (
                 <TextField
                   fullWidth
                   label="Номер полки"
                   value={formData.shellNum}
                   onChange={handleInputChange("shellNum")}
+                  sx={{ mt: 2 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <InventoryIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
                 />
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Location Section */}
+          <Card className="form-section" variant="outlined">
+            <CardContent>
+              <Typography variant="h6" className="form-section-title">
+                <LocationOnIcon /> Местоположение
+              </Typography>
+              
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Адрес"
+                    value={formData.addressShort}
+                    onChange={handleInputChange("addressShort")}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LocationOnIcon color="action" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Координаты (широта, долгота)"
+                    placeholder="например: 41.2995, 69.2401"
+                    value={formData.geoPoint}
+                    onChange={handleInputChange("geoPoint")}
+                    helperText="Введите координаты через запятую"
+                  />
+                </Grid>
               </Grid>
-            )}
+            </CardContent>
+          </Card>
 
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Адрес"
-                value={formData.addressShort}
-                onChange={handleInputChange("addressShort")}
-              />
-            </Grid>
+          {/* Product Section */}
+          <Card className="form-section" variant="outlined">
+            <CardContent>
+              <Typography variant="h6" className="form-section-title">
+                <LocalOfferIcon /> Продукт
+              </Typography>
+              
+              <div className="product-inputs-grid">
+                <TextField
+                  select
+                  fullWidth
+                  label="Тип продукта"
+                  value={productInputs.type}
+                  onChange={(e) =>
+                    setProductInputs((p) => ({ ...p, type: e.target.value }))
+                  }
+                >
+                  {getUniqueTypes().map((t) => (
+                    <MenuItem key={t} value={t}>
+                      {t}
+                    </MenuItem>
+                  ))}
+                </TextField>
 
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Локация (координаты)"
-                placeholder="например: 41.2995, 69.2401"
-                value={formData.geoPoint}
-                onChange={handleInputChange("geoPoint")}
-              />
-            </Grid>
+                <TextField
+                  select
+                  fullWidth
+                  label="Упаковка"
+                  value={productInputs.packaging}
+                  onChange={(e) =>
+                    setProductInputs((p) => ({ ...p, packaging: e.target.value }))
+                  }
+                >
+                  {getUniquePackaging().map((p) => (
+                    <MenuItem key={p} value={p}>
+                      {p}
+                    </MenuItem>
+                  ))}
+                </TextField>
 
-            {!isStandardDesign && (
-              <Grid item xs={12} sm={6}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Граммаж"
+                  value={productInputs.gramm}
+                  onChange={(e) =>
+                    setProductInputs((p) => ({ ...p, gramm: e.target.value }))
+                  }
+                >
+                  {getUniqueGramms().map((g) => (
+                    <MenuItem key={g} value={g}>
+                      {g} г
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Notification Section */}
+          {!isStandardDesign && (
+            <Card className="form-section" variant="outlined">
+              <CardContent>
+                <Typography variant="h6" className="form-section-title">
+                  <NotificationsIcon /> Уведомления
+                </Typography>
+                
                 <TextField
                   fullWidth
-                  label="Уведомить при (кг)"
+                  label="Уведомить при остатке (кг)"
                   type="number"
                   value={formData.notifyWhen}
                   onChange={handleInputChange("notifyWhen")}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <NotificationsIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
                 />
-              </Grid>
-            )}
+              </CardContent>
+            </Card>
+          )}
 
-            {/* Product */}
-            <Grid item xs={12}>
-              <Typography sx={{ mb: 2 }}>Продукт</Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    select
-                    fullWidth
-                    label="Тип"
-                    value={productInputs.type}
-                    onChange={(e) =>
-                      setProductInputs((p) => ({ ...p, type: e.target.value }))
-                    }
-                  >
-                    {getUniqueTypes().map((t) => (
-                      <MenuItem key={t} value={t}>
-                        {t}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    select
-                    fullWidth
-                    label="Упаковка"
-                    value={productInputs.packaging}
-                    onChange={(e) =>
-                      setProductInputs((p) => ({ ...p, packaging: e.target.value }))
-                    }
-                  >
-                    {getUniquePackaging().map((p) => (
-                      <MenuItem key={p} value={p}>
-                        {p}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    select
-                    fullWidth
-                    label="Граммаж"
-                    value={productInputs.gramm}
-                    onChange={(e) =>
-                      setProductInputs((p) => ({ ...p, gramm: e.target.value }))
-                    }
-                  >
-                    {getUniqueGramms().map((g) => (
-                      <MenuItem key={g} value={g}>
-                        {g} г
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-              </Grid>
-            </Grid>
-
-            {/* Comment */}
-            <Grid item xs={12}>
+          {/* Comment Section */}
+          <Card className="form-section" variant="outlined">
+            <CardContent>
+              <Typography variant="h6" className="form-section-title">
+                <CommentIcon /> Комментарии
+              </Typography>
+              
               <TextField
                 fullWidth
                 multiline
                 minRows={3}
-                label="Комментарии"
+                placeholder="Добавьте комментарии о клиенте..."
                 value={formData.comment}
                 onChange={handleInputChange("comment")}
               />
-            </Grid>
+            </CardContent>
+          </Card>
 
-            {/* Images */}
-            <Grid item xs={12}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Изображения клиента
+          {/* Images Section */}
+          <Card className="form-section" variant="outlined">
+            <CardContent>
+              <Typography variant="h6" className="form-section-title">
+                <ImageIcon /> Изображения клиента
               </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <EditableImageSlot
-                    label="Изображение 1"
-                    imageUrl={formData.imageURL1 || DEFAULT_PLACEHOLDER_URL}
-                    onImageChange={(url) =>
-                      setFormData((prev) => ({ ...prev, imageURL1: url }))
-                    }
-                    disabled={saving}
-                  />
-                </Grid>
-            
-              </Grid>
-            </Grid>
-          </Grid>
+              
+              <div className="image-upload-container">
+                <EditableImageSlot
+                  label="Основное изображение"
+                  imageUrl={formData.imageURL1 || DEFAULT_PLACEHOLDER_URL}
+                  onImageChange={(url) =>
+                    setFormData((prev) => ({ ...prev, imageURL1: url }))
+                  }
+                  disabled={saving}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-          <Stack
-            direction="row"
-            spacing={2}
-            justifyContent="flex-end"
-            sx={{ mt: 3 }}
-          >
+          {/* Form Actions */}
+          <div className="form-actions">
             <Button variant="outlined" onClick={onClose} disabled={saving}>
               Отмена
             </Button>
-            <Button type="submit" variant="contained" disabled={saving}>
-              {saving ? <CircularProgress size={20} /> : "Сохранить"}
+            <Button 
+              type="submit" 
+              variant="contained" 
+              disabled={saving}
+              startIcon={saving ? <CircularProgress size={16} /> : null}
+            >
+              {saving ? "Сохранение..." : "Сохранить изменения"}
             </Button>
-          </Stack>
+          </div>
         </Box>
       </Paper>
 
