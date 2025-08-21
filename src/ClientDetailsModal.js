@@ -700,7 +700,15 @@ const handleSendViaTelegram = async () => {
 
   return (
     <>
-      <Modal open={open} disableEscapeKeyDown onClose={handleCloseModal} aria-labelledby="client-details-modal">
+     <Modal
+  open={open}
+  disableEscapeKeyDown
+  onClose={(event, reason) => {
+    if (reason === "backdropClick") return; // ignore backdrop clicks
+    handleCloseModal();
+  }}
+  aria-labelledby="client-details-modal"
+>
         <Box
           sx={{
             ...modalStyle,
