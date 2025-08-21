@@ -24,8 +24,7 @@ const ImageUploadComponent = ({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
-  // ImageKit configuration
-  const authenticationEndpoint = 'http://localhost:3001/auth';
+
 
   useEffect(() => {
     // Load existing images if provided
@@ -93,90 +92,128 @@ const ImageUploadComponent = ({
   };
 
   // Upload images to ImageKit
-  const uploadImages = async (imagesToUpload) => {
-    setUploading(true);
-    const updatedImages = [...images];
+const uploadImages = async (imagesToUpload) => {
+  setUploading(true);
+  const updatedImages = [...images];
 
-    try {
-      for (let i = 0; i < imagesToUpload.length; i++) {
-        const imageObj = imagesToUpload[i];
-        const imageIndex = updatedImages.findIndex(img => img.id === imageObj.id);
+  try {
+    for (let i = 0; i < imagesToUpload.length; i++) {
+      const imageObj = imagesToUpload[i];
+      const imageIndex = updatedImages.findIndex(img => img.id === imageObj.id);
 
-        // Upload using ImageKit with authentication
-        const uploadedUrl = await uploadToImageKit(imageObj.file);
-        
-        updatedImages[imageIndex] = {
-          ...updatedImages[imageIndex],
-          url: uploadedUrl,
-          uploaded: true
-        };
-        setImages([...updatedImages]);
-      }
-
-      // Call parent callback with uploaded URLs
-      const uploadedUrls = updatedImages
-        .filter(img => img.uploaded && img.url)
-        .map(img => img.url);
+      // Upload using ImageKit with authentication
+      const uploadedUrl = await uploadToImageKit(imageObj.file);
       
-      onImagesChange(uploadedUrls);
-
-    } catch (error) {
-      console.error('Upload error:', error);
-      setError('Ошибка при загрузке изображения. Попробуйте еще раз.');
-      
-      // Remove failed uploads
-      setImages(prev => prev.filter(img => img.uploaded));
-    } finally {
-      setUploading(false);
+      updatedImages[imageIndex] = {
+        ...updatedImages[imageIndex],
+        url: uploadedUrl,
+        uploaded: true
+      };
+      setImages([...updatedImages]);
     }
-  };
+
+    // Call parent callback with uploaded URLs
+    const uploadedUrls = updatedImages
+      .filter(img => img.uploaded && img.url)
+      .map(img => img.url);
+    
+    onImagesChange(uploadedUrls);
+
+  } catch (error) {
+    console.error('Upload error:', error);
+    setError('Ошибка при загрузке изображения. Попробуйте еще раз.');
+    
+    // Remove failed uploads
+    setImages(prev => prev.filter(img => img.uploaded));
+  } finally {
+    setUploading(false);
+  }
+};
+
 
   // Upload single image using ImageKit with proper authentication
-  const uploadToImageKit = async (file) => {
-    return new Promise((resolve, reject) => {
-      // First get authentication parameters from your auth server
-      fetch(authenticationEndpoint)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Failed to get authentication parameters');
-          }
-          return response.json();
-        })
-        .then(authParams => {
-          // Create form data for upload
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('fileName', `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
-          formData.append('folder', '/clients');
-          
-          // Add authentication parameters
-          formData.append('signature', authParams.signature);
-          formData.append('expire', authParams.expire);
-          formData.append('token', authParams.token);
-          
-          // Upload to ImageKit's actual upload endpoint
-          return fetch('https://upload.imagekit.io/api/v1/files/upload', {
-            method: 'POST',
-            body: formData
-          });
-        })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`Upload failed: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          if (data.url) {
-            resolve(data.url);
-          } else {
-            reject(new Error('Upload failed: No URL returned'));
-          }
-        })
-        .catch(reject);
-    });
-  };
+const uploadToImageKit = async (file) => {
+  try {
+    console.log("📤 Starting ImageKit upload for file:", file.name);
 
+    // 1. Get authentication parameters from your auth server
+  const authResponse = await fetch("/api/auth"); 
+
+
+    if (!authResponse.ok) {
+      throw new Error(`Auth server error: ${authResponse.status} - ${authResponse.statusText}`);
+    }
+
+    const authParams = await authResponse.json();
+    console.log("🔑 Auth parameters received:", authParams);
+
+    // 2. Prepare form data with EXACT parameter names ImageKit expects
+    const uniqueFileName = `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const formData = new FormData();
+    
+    // File and basic parameters
+    formData.append("file", file);
+    formData.append("fileName", uniqueFileName);
+    formData.append("folder", "/clients");
+
+    // CRITICAL: Authentication parameters with correct names
+    formData.append("signature", authParams.signature);
+    formData.append("expire", authParams.expire.toString()); // Ensure it's a string
+    formData.append("token", authParams.token);
+    formData.append("publicKey", authParams.publicKey); // This was missing before
+
+    // Optional: Add additional parameters if needed
+    formData.append("useUniqueFileName", "false"); // Since we're providing fileName
+
+    console.log("📦 Upload parameters being sent:", {
+      fileName: uniqueFileName,
+      folder: "/clients",
+      fileSize: file.size,
+      fileType: file.type,
+      expire: authParams.expire,
+      token: authParams.token.substring(0, 8) + "...",
+      signature: authParams.signature.substring(0, 10) + "...",
+      publicKey: authParams.publicKey.substring(0, 10) + "..."
+    });
+
+    // 3. Upload to ImageKit with proper headers
+    const uploadResponse = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
+      method: "POST",
+      body: formData,
+      // Don't set Content-Type header - let browser set it with boundary for FormData
+    });
+
+    console.log("📡 ImageKit response status:", uploadResponse.status);
+
+    // 4. Handle response
+    if (!uploadResponse.ok) {
+      let errorMessage = `Upload failed: ${uploadResponse.status}`;
+      try {
+        const errorData = await uploadResponse.json();
+        console.error("❌ ImageKit error response:", errorData);
+        errorMessage += ` - ${errorData.message || JSON.stringify(errorData)}`;
+      } catch {
+        const rawText = await uploadResponse.text();
+        console.error("❌ Non-JSON error response:", rawText);
+        errorMessage += " - " + rawText.substring(0, 200);
+      }
+      throw new Error(errorMessage);
+    }
+
+    // 5. Parse successful response
+    const data = await uploadResponse.json();
+    console.log("✅ ImageKit upload successful:", data);
+
+    if (data.url) {
+      return data.url;
+    } else {
+      throw new Error("Upload failed: No URL returned by ImageKit");
+    }
+  } catch (error) {
+    console.error("🔥 ImageKit upload error:", error);
+    throw error;
+  }
+};
   // Remove image
   const handleRemoveImage = (imageId) => {
     const imageToRemove = images.find(img => img.id === imageId);

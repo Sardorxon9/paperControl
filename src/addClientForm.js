@@ -211,89 +211,90 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
     }
   };
 
-  const uploadToImageKit = async (file) => {
-    return new Promise(async (resolve, reject) => {
-      try {
-        console.log('Starting ImageKit upload for file:', file.name);
-        
-        // Get authentication parameters from your auth server
-        console.log('Fetching auth parameters...');
-        const authResponse = await fetch('http://localhost:3001/auth');
-        
-        if (!authResponse.ok) {
-          throw new Error(`Auth server error: ${authResponse.status} - ${authResponse.statusText}`);
-        }
-        
-        const authParams = await authResponse.json();
-        console.log('Auth parameters received:', {
-          hasSignature: !!authParams.signature,
-          hasToken: !!authParams.token,
-          hasExpire: !!authParams.expire
-        });
 
-        // Validate auth parameters
-        if (!authParams.signature || !authParams.token || !authParams.expire) {
-          throw new Error('Missing required authentication parameters');
-        }
+const uploadToImageKit = async (file) => {
+  try {
+    console.log("📤 Starting ImageKit upload for file:", file.name);
 
-        // Create form data for upload
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('fileName', `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
-        formData.append('folder', '/clients');
-        
-        // Add authentication parameters
-        formData.append('signature', authParams.signature);
-        formData.append('expire', authParams.expire);
-        formData.append('token', authParams.token);
-        formData.append('publicKey', authParams.publicKey);
+    // 1. Get authentication parameters from your Vercel serverless function
+    const authResponse = await fetch("/api/auth"); 
+    // ✅ On localhost → http://localhost:3000/api/auth
+    // ✅ On Vercel → https://your-app.vercel.app/api/auth
 
+    if (!authResponse.ok) {
+      throw new Error(`Auth server error: ${authResponse.status} - ${authResponse.statusText}`);
+    }
 
-        // Debug: Log what we're sending
-        console.log('Upload parameters:', {
-          fileName: `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          folder: '/clients',
-          fileSize: file.size,
-          fileType: file.type
-        });
-        
-        // Upload to ImageKit
-        console.log('Uploading to ImageKit...');
-        const uploadResponse = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
-          method: 'POST',
-          body: formData
-        });
-
-        console.log('ImageKit response status:', uploadResponse.status);
-        
-        if (!uploadResponse.ok) {
-          // Try to get error details from response
-          let errorMessage = `Upload failed: ${uploadResponse.status}`;
-          try {
-            const errorData = await uploadResponse.json();
-            console.error('ImageKit error response:', errorData);
-            errorMessage += ` - ${errorData.message || JSON.stringify(errorData)}`;
-          } catch (e) {
-            console.error('Could not parse error response');
-          }
-          throw new Error(errorMessage);
-        }
-
-        const data = await uploadResponse.json();
-        console.log('ImageKit upload successful:', data);
-
-        if (data.url) {
-          resolve(data.url);
-        } else {
-          reject(new Error('Upload failed: No URL returned'));
-        }
-
-      } catch (error) {
-        console.error('ImageKit upload error:', error);
-        reject(error);
-      }
+    const authParams = await authResponse.json();
+    console.log("🔑 Auth parameters received:", {
+      hasSignature: !!authParams.signature,
+      hasToken: !!authParams.token,
+      hasExpire: !!authParams.expire,
+      hasPublicKey: !!authParams.publicKey,
     });
-  };
+
+    // 2. Prepare form data
+    const uniqueFileName = `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("fileName", uniqueFileName);
+    formData.append("folder", "/clients");
+
+    // Required authentication parameters
+    formData.append("signature", authParams.signature);
+    formData.append("expire", authParams.expire.toString());
+    formData.append("token", authParams.token);
+    formData.append("publicKey", authParams.publicKey);
+
+    // Keep filenames deterministic since we provide fileName
+    formData.append("useUniqueFileName", "false");
+
+    console.log("📦 Upload parameters:", {
+      fileName: uniqueFileName,
+      folder: "/clients",
+      fileSize: file.size,
+      fileType: file.type,
+      publicKey: authParams.publicKey.substring(0, 10) + "...",
+    });
+
+    // 3. Upload to ImageKit
+    const uploadResponse = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    console.log("📡 ImageKit response status:", uploadResponse.status);
+
+    if (!uploadResponse.ok) {
+      let errorMessage = `Upload failed: ${uploadResponse.status}`;
+      try {
+        const errorData = await uploadResponse.json();
+        console.error("❌ ImageKit error response:", errorData);
+        errorMessage += ` - ${errorData.message || JSON.stringify(errorData)}`;
+      } catch {
+        const rawText = await uploadResponse.text();
+        console.error("❌ Non-JSON error response:", rawText);
+        errorMessage += " - " + rawText.substring(0, 200);
+      }
+      throw new Error(errorMessage);
+    }
+
+    // 4. Parse success
+    const data = await uploadResponse.json();
+    console.log("✅ ImageKit upload successful:", data);
+
+    if (data.url) {
+      return data.url;
+    } else {
+      throw new Error("Upload failed: No URL returned by ImageKit");
+    }
+  } catch (error) {
+    console.error("🔥 ImageKit upload error:", error);
+    throw error;
+  }
+};
+
+
 
   const handleRemoveImage = (imageId) => {
     const imageToRemove = images.find(img => img.id === imageId);
