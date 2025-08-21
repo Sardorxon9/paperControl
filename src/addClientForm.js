@@ -25,7 +25,6 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { 
   collection, 
   getDocs, 
@@ -53,18 +52,14 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
     designType: "unique", // Default to unique
     shellNum: "",
     notifyWhen: "",
-    comment: ""
+    comment: "",
+    imageURLs: [] // Store the uploaded URLs here
   });
 
   // State for multiple paper rolls
   const [paperRolls, setPaperRolls] = useState([
     { id: 1, paperRemaining: "" }
   ]);
-
-  // State for image uploads
-  const [images, setImages] = useState([]);
-  const [uploading, setUploading] = useState(false);
-  const [imageUploadError, setImageUploadError] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -131,185 +126,6 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
     }
   };
 
-  // Image upload functions
-  const validateFile = (file) => {
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-    const maxSize = 3 * 1024 * 1024; // 3MB
-
-    if (!allowedTypes.includes(file.type)) {
-      return 'Поддерживаются только JPG и PNG форматы';
-    }
-
-    if (file.size > maxSize) {
-      return 'Размер файла не должен превышать 3MB';
-    }
-
-    return null;
-  };
-
-  const handleImageSelect = (event) => {
-    const files = Array.from(event.target.files);
-    
-    if (images.length + files.length > 2) {
-      setImageUploadError('Можно загрузить максимум 2 изображения');
-      return;
-    }
-
-    const validFiles = [];
-    for (const file of files) {
-      const validation = validateFile(file);
-      if (validation) {
-        setImageUploadError(validation);
-        return;
-      }
-      validFiles.push(file);
-    }
-
-    // Create preview objects
-    const newImages = validFiles.map((file, index) => ({
-      id: `new-${Date.now()}-${index}`,
-      file: file,
-      preview: URL.createObjectURL(file),
-      uploaded: false,
-      url: null
-    }));
-
-    setImages(prev => [...prev, ...newImages]);
-    setImageUploadError('');
-
-    // Upload images
-    uploadImages(newImages);
-  };
-
-  const uploadImages = async (imagesToUpload) => {
-    setUploading(true);
-    const updatedImages = [...images];
-
-    try {
-      for (let i = 0; i < imagesToUpload.length; i++) {
-        const imageObj = imagesToUpload[i];
-        const imageIndex = updatedImages.findIndex(img => img.id === imageObj.id);
-
-        // Upload to ImageKit
-        const uploadedUrl = await uploadToImageKit(imageObj.file);
-        
-updatedImages[imageIndex] = {
-  ...updatedImages[imageIndex],
-  url: uploadedUrl,
-  uploaded: true,
-  preview: uploadedUrl   // 👈 show the actual uploaded file
-};
-        
-        setImages([...updatedImages]);
-      }
-
-    } catch (error) {
-      console.error('Upload error:', error);
-      setImageUploadError(`Ошибка при загрузке изображения: ${error.message}`);
-      
-      // Remove failed uploads
-      setImages(prev => prev.filter(img => img.uploaded));
-    } finally {
-      setUploading(false);
-    }
-  };
-
-
-const uploadToImageKit = async (file) => {
-  try {
-    console.log("📤 Starting ImageKit upload for file:", file.name);
-
-    // 1. Get authentication parameters from your Vercel serverless function
-    const authResponse = await fetch("/api/auth"); 
-    // ✅ On localhost → http://localhost:3000/api/auth
-    // ✅ On Vercel → https://your-app.vercel.app/api/auth
-
-    if (!authResponse.ok) {
-      throw new Error(`Auth server error: ${authResponse.status} - ${authResponse.statusText}`);
-    }
-
-    const authParams = await authResponse.json();
-    console.log("🔑 Auth parameters received:", {
-      hasSignature: !!authParams.signature,
-      hasToken: !!authParams.token,
-      hasExpire: !!authParams.expire,
-      hasPublicKey: !!authParams.publicKey,
-    });
-
-    // 2. Prepare form data
-    const uniqueFileName = `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("fileName", uniqueFileName);
-    formData.append("folder", "/clients");
-
-    // Required authentication parameters
-    formData.append("signature", authParams.signature);
-    formData.append("expire", authParams.expire.toString());
-    formData.append("token", authParams.token);
-    formData.append("publicKey", authParams.publicKey);
-
-    // Keep filenames deterministic since we provide fileName
-    formData.append("useUniqueFileName", "false");
-
-    console.log("📦 Upload parameters:", {
-      fileName: uniqueFileName,
-      folder: "/clients",
-      fileSize: file.size,
-      fileType: file.type,
-      publicKey: authParams.publicKey.substring(0, 10) + "...",
-    });
-
-    // 3. Upload to ImageKit
-    const uploadResponse = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
-      method: "POST",
-      body: formData,
-    });
-
-    console.log("📡 ImageKit response status:", uploadResponse.status);
-
-    if (!uploadResponse.ok) {
-      let errorMessage = `Upload failed: ${uploadResponse.status}`;
-      try {
-        const errorData = await uploadResponse.json();
-        console.error("❌ ImageKit error response:", errorData);
-        errorMessage += ` - ${errorData.message || JSON.stringify(errorData)}`;
-      } catch {
-        const rawText = await uploadResponse.text();
-        console.error("❌ Non-JSON error response:", rawText);
-        errorMessage += " - " + rawText.substring(0, 200);
-      }
-      throw new Error(errorMessage);
-    }
-
-    // 4. Parse success
-    const data = await uploadResponse.json();
-    console.log("✅ ImageKit upload successful:", data);
-
-    if (data.url) {
-      return data.url;
-    } else {
-      throw new Error("Upload failed: No URL returned by ImageKit");
-    }
-  } catch (error) {
-    console.error("🔥 ImageKit upload error:", error);
-    throw error;
-  }
-};
-
-
-
-  const handleRemoveImage = (imageId) => {
-    const imageToRemove = images.find(img => img.id === imageId);
-    
-    // Revoke object URL to prevent memory leaks
-    if (imageToRemove && imageToRemove.preview && imageToRemove.preview.startsWith('blob:')) {
-      URL.revokeObjectURL(imageToRemove.preview);
-    }
-    
-    setImages(prev => prev.filter(img => img.id !== imageId));
-  };
-
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -339,10 +155,10 @@ const uploadToImageKit = async (file) => {
     if (!formData.geoPoint.trim()) errors.push("Координаты обязательны");
     if (!formData.designType) errors.push("Тип дизайна обязателен");
 
-    // Image validation
-   if (!formData.imageURLs || formData.imageURLs.length !== 2) {
-  errors.push("Необходимо загрузить ровно 2 изображения");
-}
+    // Image validation (now using formData.imageURLs)
+    if (!formData.imageURLs || formData.imageURLs.length !== 2) {
+      errors.push("Необходимо загрузить ровно 2 изображения");
+    }
 
     // Product selection validation
     if (!productInputs.type || !productInputs.packaging || !productInputs.gramm) {
@@ -496,10 +312,8 @@ const uploadToImageKit = async (file) => {
       // Parse coordinates
       const [latitude, longitude] = formData.geoPoint.split(',').map(coord => parseFloat(coord.trim()));
       
-      // Get uploaded image URLs
-      const uploadedImages = images.filter(img => img.uploaded && img.url);
-      const imageURL1 = uploadedImages[0]?.url || null;
-      const imageURL2 = uploadedImages[1]?.url || null;
+      const imageURL1 = formData.imageURLs[0] || null;
+      const imageURL2 = formData.imageURLs[1] || null;
       
       // Build client data based on design type
       const baseClientData = {
@@ -597,7 +411,8 @@ const uploadToImageKit = async (file) => {
         designType: "unique",
         shellNum: "",
         notifyWhen: "",
-        comment: ""
+        comment: "",
+        imageURLs: []
       });
 
       setProductInputs({
@@ -607,15 +422,6 @@ const uploadToImageKit = async (file) => {
       });
 
       setPaperRolls([{ id: 1, paperRemaining: "" }]);
-      
-      // Reset images and cleanup
-      images.forEach(img => {
-        if (img.preview && img.preview.startsWith('blob:')) {
-          URL.revokeObjectURL(img.preview);
-        }
-      });
-      setImages([]);
-      setImageUploadError('');
 
       if (onClientAdded) {
         setTimeout(() => {
@@ -648,7 +454,6 @@ const uploadToImageKit = async (file) => {
   };
 
   const isStandardDesign = formData.designType === "standart";
-  const canAddMoreImages = images.length < 2 && !loading;
 
   return (
     <>
@@ -692,9 +497,6 @@ const uploadToImageKit = async (file) => {
           >
             <CloseIcon />
           </IconButton>
-          <ImageUploadComponent
-  onImagesChange={(urls) => setFormData(prev => ({ ...prev, imageURLs: urls }))}
-/>
 
           {/* Title */}
           <Typography
@@ -956,153 +758,10 @@ const uploadToImageKit = async (file) => {
 
               {/* --- Image Upload Section --- */}
               <Grid item xs={12}>
-                <Paper 
-                  variant="outlined" 
-                  sx={{ 
-                    p: 3, 
-                    backgroundColor: 'grey.50',
-                    border: '1px solid',
-                    borderColor: 'grey.200'
-                  }}
-                >
-                  <Typography
-                    variant="subtitle1"
-                    sx={{
-                      fontWeight: 600,
-                      mb: 2,
-                      color: 'text.primary',
-                      fontSize: '1.15em'
-                    }}
-                  >
-                    Изображения клиента *
-                  </Typography>
-
-                  {imageUploadError && (
-                    <Alert severity="error" sx={{ mb: 2 }}>
-                      {imageUploadError}
-                    </Alert>
-                  )}
-
-                  <Grid container spacing={2}>
-                    {/* Display current images */}
-                    {images.map((image, index) => (
-                      <Grid item xs={12} sm={6} key={image.id}>
-                        <Card variant="outlined" sx={{ position: 'relative' }}>
-                          <CardMedia
-                            component="img"
-                            height="200"
-                            image={image.preview}
-                            alt={`Client image ${index + 1}`}
-                            sx={{ objectFit: 'cover' }}
-                          />
-                          
-                          {!image.uploaded && (
-                            <Box
-                              sx={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: 'rgba(0,0,0,0.5)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'white'
-                              }}
-                            >
-                              <CircularProgress color="inherit" />
-                              <Typography sx={{ ml: 1 }}>Загрузка...</Typography>
-                            </Box>
-                          )}
-
-                          <IconButton
-                            onClick={() => handleRemoveImage(image.id)}
-                            sx={{
-                              position: 'absolute',
-                              top: 8,
-                              right: 8,
-                              backgroundColor: 'rgba(255,255,255,0.8)',
-                              color: 'error.main',
-                              '&:hover': {
-                                backgroundColor: 'rgba(255,255,255,0.9)'
-                              }
-                            }}
-                            size="small"
-                            disabled={uploading}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                          
-                          <Box sx={{ p: 1, textAlign: 'center' }}>
-                            <Typography variant="caption">
-                              {image.uploaded ? 'Загружено' : 'Загружается...'}
-                            </Typography>
-                          </Box>
-                        </Card>
-                      </Grid>
-                    ))}
-
-                    {/* Add new image button */}
-                    {canAddMoreImages && (
-                      <Grid item xs={12} sm={6}>
-                        <Card 
-                          variant="outlined" 
-                          sx={{ 
-                            height: 200,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            border: '2px dashed',
-                            borderColor: 'primary.main',
-                            backgroundColor: 'primary.50',
-                            '&:hover': {
-                              backgroundColor: 'primary.100'
-                            }
-                          }}
-                        >
-                          <Stack alignItems="center" spacing={1}>
-                            <input
-                              accept="image/jpeg,image/jpg,image/png"
-                              style={{ display: 'none' }}
-                              id={`image-upload-${images.length}`}
-                              multiple={images.length === 0}
-                              type="file"
-                              onChange={handleImageSelect}
-                              disabled={uploading || loading}
-                            />
-                            <label htmlFor={`image-upload-${images.length}`}>
-                              <Button
-                                variant="contained"
-                                component="span"
-                                startIcon={<CloudUploadIcon />}
-                                disabled={uploading || loading}
-                              >
-                                Добавить изображение
-                              </Button>
-                            </label>
-                            <Typography variant="caption" color="text.secondary">
-                              JPG, PNG (макс. 3MB)
-                            </Typography>
-                          </Stack>
-                        </Card>
-                      </Grid>
-                    )}
-                  </Grid>
-
-                  {images.length === 0 && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                      Добавьте 2 изображения клиента (обязательно)
-                    </Typography>
-                  )}
-                  
-                  {images.length > 0 && images.length < 2 && (
-                    <Typography variant="body2" color="warning.main" sx={{ mt: 2 }}>
-                      Добавьте еще {2 - images.length} изображение(й)
-                    </Typography>
-                  )}
-                </Paper>
+                <ImageUploadComponent
+                  onImagesChange={(urls) => setFormData(prev => ({ ...prev, imageURLs: urls }))}
+                  disabled={loading}
+                />
               </Grid>
 
               {/* --- Product Section --- */}
@@ -1224,18 +883,13 @@ const uploadToImageKit = async (file) => {
                       type="submit" 
                       variant="contained" 
                       size="medium" 
-                      disabled={loading || uploading}
+                      disabled={loading}
                       sx={{ fontSize: '1.15em' }}
                     >
                       {loading ? (
                         <>
                           <CircularProgress size={20} sx={{ mr: 1 }} />
                           Сохранение...
-                        </>
-                      ) : uploading ? (
-                        <>
-                          <CircularProgress size={20} sx={{ mr: 1 }} />
-                          Загрузка изображений...
                         </>
                       ) : (
                         'Сохранить'
