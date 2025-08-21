@@ -35,6 +35,8 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { checkAndNotifyLowPaper } from './notificationService';
+import ImageUploadComponent from "./components/ImageUploadComponent";
+
 
 export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
   const [products, setProducts] = useState([]);
