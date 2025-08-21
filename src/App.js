@@ -17,6 +17,7 @@ function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      
       if (firebaseUser) {
         try {
           const q = query(
@@ -108,7 +109,7 @@ function App() {
     );
   }
 
-  // Default dashboard view
+  // Default dashboard vw
   return (
     <Dashboard 
       user={user}
