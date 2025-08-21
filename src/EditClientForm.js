@@ -179,7 +179,7 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
     notifyWhen: "",
     comment: "",
     imageURL1: DEFAULT_PLACEHOLDER_URL,
-    imageURL2: DEFAULT_PLACEHOLDER_URL
+    
   });
   const [productInputs, setProductInputs] = useState({
     type: "",
@@ -219,7 +219,7 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
             notifyWhen: data.notifyWhen || "",
             comment: data.comment || "",
             imageURL1: data.imageURL1 || DEFAULT_PLACEHOLDER_URL,
-            imageURL2: data.imageURL2 || DEFAULT_PLACEHOLDER_URL
+            
           });
 
           const matchedProduct = productList.find(
@@ -269,7 +269,7 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
         notifyWhen: parseFloat(formData.notifyWhen),
         comment: formData.comment,
         imageURL1: formData.imageURL1 || DEFAULT_PLACEHOLDER_URL,
-        imageURL2: formData.imageURL2 || DEFAULT_PLACEHOLDER_URL,
+       
         updatedAt: Timestamp.now()
       };
 
@@ -506,16 +506,7 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
                     disabled={saving}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
-                  <EditableImageSlot
-                    label="Изображение 2"
-                    imageUrl={formData.imageURL2 || DEFAULT_PLACEHOLDER_URL}
-                    onImageChange={(url) =>
-                      setFormData((prev) => ({ ...prev, imageURL2: url }))
-                    }
-                    disabled={saving}
-                  />
-                </Grid>
+            
               </Grid>
             </Grid>
           </Grid>

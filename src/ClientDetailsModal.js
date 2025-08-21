@@ -770,7 +770,7 @@ const handleSendViaTelegram = async () => {
                   </Typography>
 
 {/* --- New Image Block --- */}
-  {(client.imageURL1 || client.imageURL2) && (
+  {(client.imageURL1) && (
     <PhotoProvider>
       <Box display="flex" gap={1}>
         {client.imageURL1 && (
@@ -790,23 +790,7 @@ const handleSendViaTelegram = async () => {
             />
           </PhotoView>
         )}
-        {client.imageURL2 && (
-          <PhotoView src={client.imageURL2}>
-            <Box
-              component="img"
-              src={client.imageURL2}
-              alt="Client Image 2"
-              sx={{
-                width: 64,
-                height: 64,
-                objectFit: 'cover',
-                borderRadius: 1,
-                cursor: 'pointer',
-                border: '1px solid #ddd',
-              }}
-            />
-          </PhotoView>
-        )}
+        
       </Box>
     </PhotoProvider>
   )}
