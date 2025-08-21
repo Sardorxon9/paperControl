@@ -191,11 +191,12 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
         // Upload to ImageKit
         const uploadedUrl = await uploadToImageKit(imageObj.file);
         
-        updatedImages[imageIndex] = {
-          ...updatedImages[imageIndex],
-          url: uploadedUrl,
-          uploaded: true
-        };
+updatedImages[imageIndex] = {
+  ...updatedImages[imageIndex],
+  url: uploadedUrl,
+  uploaded: true,
+  preview: uploadedUrl   // 👈 show the actual uploaded file
+};
         
         setImages([...updatedImages]);
       }
@@ -337,10 +338,9 @@ const uploadToImageKit = async (file) => {
     if (!formData.designType) errors.push("Тип дизайна обязателен");
 
     // Image validation
-    const uploadedImages = images.filter(img => img.uploaded && img.url);
-    if (uploadedImages.length !== 2) {
-      errors.push("Необходимо загрузить ровно 2 изображения");
-    }
+   if (!formData.imageURLs || formData.imageURLs.length !== 2) {
+  errors.push("Необходимо загрузить ровно 2 изображения");
+}
 
     // Product selection validation
     if (!productInputs.type || !productInputs.packaging || !productInputs.gramm) {
@@ -690,6 +690,9 @@ const uploadToImageKit = async (file) => {
           >
             <CloseIcon />
           </IconButton>
+          <ImageUploadComponent
+  onImagesChange={(urls) => setFormData(prev => ({ ...prev, imageURLs: urls }))}
+/>
 
           {/* Title */}
           <Typography
