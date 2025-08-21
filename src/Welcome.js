@@ -116,11 +116,11 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
           const paperInfoQuery = await getDocs(collection(db, "productTypes", productId, "paperInfo"));
           if (!paperInfoQuery.empty) {
             const paperInfoData = paperInfoQuery.docs[0].data();
-            return {
-              packaging,
-              shellNum: paperInfoData.shellNum || '',
-              paperRemaining: paperInfoData.paperRemaining || ''
-            };
+          return {
+  packaging,
+  shellNum: paperInfoData.shellNum || '',
+  paperRemaining: Number(paperInfoData.paperRemaining) || 0
+};
           }
         } catch (error) {
           console.error("Error fetching paperInfo for standard design:", error);
@@ -174,7 +174,9 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
               // For standard design type, use shellNum and paperRemaining from productTypes
               // For unique design type, use the client's own shellNum and paperRemaining
               shellNum: data.designType === "standart" ? productTypeData.shellNum : (data.shellNum || ''),
-              paperRemaining: data.designType === "standart" ? productTypeData.paperRemaining : (data.paperRemaining || ''),
+              paperRemaining: data.designType === "standart"
+  ? Number(productTypeData.paperRemaining) || 0
+  : Number(data.paperRemaining) || 0,
               // Add orgName from client data
               orgName: data.orgName || data.organization || '-',
               // NEW: total number of small rolls
@@ -238,7 +240,7 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                 const paperInfoDoc = paperInfoQuery.docs[0];
                 const paperInfoData = paperInfoDoc.data();
                 shellNum = paperInfoData.shellNum || '-';
-                paperRemaining = paperInfoData.paperRemaining || 0;
+             paperRemaining = Number(paperInfoData.paperRemaining) || 0;
                 
                 // Count individual rolls
                 const rollsQuery = await getDocs(
