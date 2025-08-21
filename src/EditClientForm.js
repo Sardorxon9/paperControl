@@ -20,6 +20,7 @@ import {
   Radio
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import EditIcon from "@mui/icons-material/Edit";
 import {
   doc,
   getDoc,
@@ -31,6 +32,141 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 
+// 🔗 Default placeholder
+const DEFAULT_PLACEHOLDER_URL =
+  "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg?updatedAt=1755710788958";
+
+// 🔧 Upload function (same as in ImageUploadComponent)
+const uploadToImageKit = async (file) => {
+  try {
+    const authResponse = await fetch("/api/auth");
+    if (!authResponse.ok) {
+      throw new Error("Failed to get auth parameters from server.");
+    }
+    const authParams = await authResponse.json();
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("publicKey", authParams.publicKey);
+    formData.append("signature", authParams.signature);
+    formData.append("token", authParams.token);
+    formData.append("expire", authParams.expire);
+    formData.append("fileName", file.name);
+
+    const uploadResponse = await fetch(
+      "https://upload.imagekit.io/api/v1/files/upload",
+      {
+        method: "POST",
+        body: formData
+      }
+    );
+
+    if (!uploadResponse.ok) {
+      const errorData = await uploadResponse.json();
+      throw new Error(errorData.message || "Image upload failed");
+    }
+
+    const result = await uploadResponse.json();
+    return result.url;
+  } catch (err) {
+    throw new Error(`Upload failed: ${err.message}`);
+  }
+};
+
+// 🖼️ Editable single-slot component
+const EditableImageSlot = ({ label, imageUrl, onImageChange, disabled }) => {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  const validateFile = (file) => {
+    const allowed = ["image/jpeg", "image/jpg", "image/png"];
+    const maxSize = 3 * 1024 * 1024;
+    if (!allowed.includes(file.type)) {
+      setError("Недопустимый тип файла. Только JPG и PNG.");
+      return false;
+    }
+    if (file.size > maxSize) {
+      setError("Файл превышает 3 МБ.");
+      return false;
+    }
+    setError("");
+    return true;
+  };
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!validateFile(file)) return;
+
+    setUploading(true);
+    try {
+      const url = await uploadToImageKit(file);
+      onImageChange(url);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <Box sx={{ textAlign: "center" }}>
+      <Typography variant="body2" sx={{ mb: 1 }}>
+        {label}
+      </Typography>
+      <Box sx={{ position: "relative", width: 160, height: 160, mx: "auto" }}>
+        <img
+          src={imageUrl}
+          alt="client"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            borderRadius: 8,
+            border: "1px solid #ddd"
+          }}
+        />
+        <input
+          type="file"
+          accept="image/jpeg,image/jpg,image/png"
+          id={`file-input-${label}`}
+          style={{ display: "none" }}
+          onChange={handleFileSelect}
+          disabled={uploading || disabled}
+        />
+        <label htmlFor={`file-input-${label}`}>
+          <IconButton
+            component="span"
+            size="small"
+            sx={{
+              position: "absolute",
+              bottom: 8,
+              right: 8,
+              bgcolor: "white",
+              boxShadow: 1,
+              "&:hover": { bgcolor: "white" }
+            }}
+            disabled={uploading || disabled}
+          >
+            <EditIcon />
+          </IconButton>
+        </label>
+        {uploading && (
+          <CircularProgress
+            size={32}
+            sx={{ position: "absolute", top: "40%", left: "40%" }}
+          />
+        )}
+      </Box>
+      {error && (
+        <Alert severity="error" sx={{ mt: 1, fontSize: 12 }}>
+          {error}
+        </Alert>
+      )}
+    </Box>
+  );
+};
+
 export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
   const [products, setProducts] = useState([]);
   const [formData, setFormData] = useState({
@@ -41,7 +177,9 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
     designType: "unique",
     shellNum: "",
     notifyWhen: "",
-    comment: ""
+    comment: "",
+    imageURL1: DEFAULT_PLACEHOLDER_URL,
+    imageURL2: DEFAULT_PLACEHOLDER_URL
   });
   const [productInputs, setProductInputs] = useState({
     type: "",
@@ -58,15 +196,13 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Load productTypes
         const prodSnap = await getDocs(collection(db, "productTypes"));
-        const productList = prodSnap.docs.map(doc => ({
+        const productList = prodSnap.docs.map((doc) => ({
           id: doc.id,
           ...doc.data()
         }));
         setProducts(productList);
 
-        // Load client
         const clientRef = doc(db, "clients", clientId);
         const clientSnap = await getDoc(clientRef);
         if (clientSnap.exists()) {
@@ -81,12 +217,13 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
             designType: data.designType || "unique",
             shellNum: data.shellNum || "",
             notifyWhen: data.notifyWhen || "",
-            comment: data.comment || ""
+            comment: data.comment || "",
+            imageURL1: data.imageURL1 || DEFAULT_PLACEHOLDER_URL,
+            imageURL2: data.imageURL2 || DEFAULT_PLACEHOLDER_URL
           });
 
-          // Pre-fill product fields
           const matchedProduct = productList.find(
-            p => p.productId === data.productId
+            (p) => p.productId === data.productId
           );
           if (matchedProduct) {
             setProductInputs({
@@ -107,11 +244,11 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
   }, [clientId]);
 
   // Input handlers
-  const handleInputChange = field => e =>
-    setFormData(prev => ({ ...prev, [field]: e.target.value }));
+  const handleInputChange = (field) => (e) =>
+    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
 
   // Update client
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
 
@@ -120,7 +257,7 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
 
       const [lat, lng] = formData.geoPoint
         .split(",")
-        .map(coord => parseFloat(coord.trim()));
+        .map((coord) => parseFloat(coord.trim()));
 
       const updateData = {
         name: formData.name,
@@ -131,6 +268,8 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
         shellNum: formData.shellNum,
         notifyWhen: parseFloat(formData.notifyWhen),
         comment: formData.comment,
+        imageURL1: formData.imageURL1 || DEFAULT_PLACEHOLDER_URL,
+        imageURL2: formData.imageURL2 || DEFAULT_PLACEHOLDER_URL,
         updatedAt: Timestamp.now()
       };
 
@@ -149,13 +288,13 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
 
   if (loading) return <div>Загрузка...</div>;
 
-  // Helpers for dropdowns
+  // Helpers
   const getUniqueTypes = () =>
-    [...new Set(products.map(p => p.type))].filter(Boolean);
+    [...new Set(products.map((p) => p.type))].filter(Boolean);
   const getUniquePackaging = () =>
-    [...new Set(products.map(p => p.packaging))].filter(Boolean);
+    [...new Set(products.map((p) => p.packaging))].filter(Boolean);
   const getUniqueGramms = () =>
-    [...new Set(products.map(p => p.gramm))].filter(Boolean);
+    [...new Set(products.map((p) => p.gramm))].filter(Boolean);
 
   return (
     <Box
@@ -225,15 +364,15 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
                   value={formData.designType}
                   onChange={handleInputChange("designType")}
                 >
-                  <FormControlLabel 
-                    value="unique" 
-                    control={<Radio />} 
-                    label="Уникальный" 
+                  <FormControlLabel
+                    value="unique"
+                    control={<Radio />}
+                    label="Уникальный"
                   />
-                  <FormControlLabel 
-                    value="standart" 
-                    control={<Radio />} 
-                    label="Стандартный" 
+                  <FormControlLabel
+                    value="standart"
+                    control={<Radio />}
+                    label="Стандартный"
                   />
                 </RadioGroup>
               </FormControl>
@@ -291,11 +430,11 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
                     fullWidth
                     label="Тип"
                     value={productInputs.type}
-                    onChange={e =>
-                      setProductInputs(p => ({ ...p, type: e.target.value }))
+                    onChange={(e) =>
+                      setProductInputs((p) => ({ ...p, type: e.target.value }))
                     }
                   >
-                    {getUniqueTypes().map(t => (
+                    {getUniqueTypes().map((t) => (
                       <MenuItem key={t} value={t}>
                         {t}
                       </MenuItem>
@@ -308,11 +447,11 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
                     fullWidth
                     label="Упаковка"
                     value={productInputs.packaging}
-                    onChange={e =>
-                      setProductInputs(p => ({ ...p, packaging: e.target.value }))
+                    onChange={(e) =>
+                      setProductInputs((p) => ({ ...p, packaging: e.target.value }))
                     }
                   >
-                    {getUniquePackaging().map(p => (
+                    {getUniquePackaging().map((p) => (
                       <MenuItem key={p} value={p}>
                         {p}
                       </MenuItem>
@@ -325,11 +464,11 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
                     fullWidth
                     label="Граммаж"
                     value={productInputs.gramm}
-                    onChange={e =>
-                      setProductInputs(p => ({ ...p, gramm: e.target.value }))
+                    onChange={(e) =>
+                      setProductInputs((p) => ({ ...p, gramm: e.target.value }))
                     }
                   >
-                    {getUniqueGramms().map(g => (
+                    {getUniqueGramms().map((g) => (
                       <MenuItem key={g} value={g}>
                         {g} г
                       </MenuItem>
@@ -350,9 +489,43 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
                 onChange={handleInputChange("comment")}
               />
             </Grid>
+
+            {/* Images */}
+            <Grid item xs={12}>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                Изображения клиента
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <EditableImageSlot
+                    label="Изображение 1"
+                    imageUrl={formData.imageURL1 || DEFAULT_PLACEHOLDER_URL}
+                    onImageChange={(url) =>
+                      setFormData((prev) => ({ ...prev, imageURL1: url }))
+                    }
+                    disabled={saving}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <EditableImageSlot
+                    label="Изображение 2"
+                    imageUrl={formData.imageURL2 || DEFAULT_PLACEHOLDER_URL}
+                    onImageChange={(url) =>
+                      setFormData((prev) => ({ ...prev, imageURL2: url }))
+                    }
+                    disabled={saving}
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
           </Grid>
 
-          <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 3 }}>
+          <Stack
+            direction="row"
+            spacing={2}
+            justifyContent="flex-end"
+            sx={{ mt: 3 }}
+          >
             <Button variant="outlined" onClick={onClose} disabled={saving}>
               Отмена
             </Button>
