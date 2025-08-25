@@ -162,6 +162,15 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
             try {
               const paperRollsQuery = await getDocs(collection(db, "clients", docSnap.id, "paperRolls"));
               rollCount = paperRollsQuery.size || paperRollsQuery.docs.length;
+
+              const availableRolls = paperRollsQuery.docs.filter(rollDoc => {
+  const rollData = rollDoc.data();
+  const weight = Number(rollData.paperRemaining) || 0;
+  return weight > 0;
+});
+
+rollCount = availableRolls.length;
+
             } catch (error) {
               console.error("Error fetching paper rolls count for client", docSnap.id, error);
               rollCount = 0;
