@@ -37,8 +37,11 @@ import ClientDetailsModal from './ClientDetailsModal';
 import ProductDetailsModal from './ProductDetailsModal'; // Import the extracted component
 import ReportGmailerrorredIcon from '@mui/icons-material/ReportGmailerrorred';
 import LogoutIcon from '@mui/icons-material/Logout';
-
 import AddStandardDesignModal from "./AddStandardDesignModal";
+import UnfoldMoreRoundedIcon from '@mui/icons-material/UnfoldMoreRounded';
+import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
+import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
+
 
 const getHiddenColumns = (userRole) => {
   if (userRole === 'admin') {
@@ -95,9 +98,21 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
   const [addClientModalOpen, setAddClientModalOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
   const [showAddStandardDesignModal, setShowAddStandardDesignModal] = useState(false);
-
+  const [sortByProduct, setSortByProduct] = useState('type');
+  const [sortDirectionProduct, setSortDirectionProduct] = useState('asc');
   const [sortBy, setSortBy] = useState('name');   
   const [sortDirection, setSortDirection] = useState('asc'); 
+
+
+  const SortIcon = ({ column, activeColumn, direction }) => {
+    if (column !== activeColumn) {
+      return <UnfoldMoreRoundedIcon sx={{ fontSize: 18, opacity: 0.5 }} />;
+    }
+    if (direction === 'asc') {
+      return <ArrowUpwardRoundedIcon sx={{ fontSize: 18 }} />;
+    }
+    return <ArrowDownwardRoundedIcon sx={{ fontSize: 18 }} />;
+  };
 
   const hiddenColumns = getHiddenColumns(userRole);
 
@@ -162,15 +177,6 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
             try {
               const paperRollsQuery = await getDocs(collection(db, "clients", docSnap.id, "paperRolls"));
               rollCount = paperRollsQuery.size || paperRollsQuery.docs.length;
-
-              const availableRolls = paperRollsQuery.docs.filter(rollDoc => {
-  const rollData = rollDoc.data();
-  const weight = Number(rollData.paperRemaining) || 0;
-  return weight > 0;
-});
-
-rollCount = availableRolls.length;
-
             } catch (error) {
               console.error("Error fetching paper rolls count for client", docSnap.id, error);
               rollCount = 0;
@@ -408,8 +414,7 @@ rollCount = availableRolls.length;
     return nameA.localeCompare(nameB);
   });
 
-  // 3) apply paperRemaining sort if arrows are clicked
-  const sortedClients = [...visibleClients].sort((a, b) => {
+ const sortedClients = [...visibleClients].sort((a, b) => {
     if (!a || !b) return 0;
     
     if (sortBy === 'name') {
@@ -422,14 +427,46 @@ rollCount = availableRolls.length;
       return sortDirection === 'asc'
         ? (a.paperRemaining || 0) - (b.paperRemaining || 0)
         : (b.paperRemaining || 0) - (a.paperRemaining || 0);
+    } else if (sortBy === 'shellNum') {
+      const shellNumA = (a.shellNum || '').toString().toLowerCase();
+      const shellNumB = (b.shellNum || '').toString().toLowerCase();
+      return sortDirection === 'asc'
+        ? shellNumA.localeCompare(shellNumB)
+        : shellNumB.localeCompare(shellNumA);
     }
     return 0;
   });
 
+  // Add sorting for product types table
+  const sortedProductTypes = [...productTypesData].sort((a, b) => {
+    if (!a || !b) return 0;
+    
+    if (sortByProduct === 'type') {
+      const typeA = (a.type || '').toLowerCase();
+      const typeB = (b.type || '').toLowerCase();
+      return sortDirectionProduct === 'asc'
+        ? typeA.localeCompare(typeB)
+        : typeB.localeCompare(typeA);
+    } else if (sortByProduct === 'paperRemaining') {
+      return sortDirectionProduct === 'asc'
+        ? (a.paperRemaining || 0) - (b.paperRemaining || 0)
+        : (b.paperRemaining || 0) - (a.paperRemaining || 0);
+    } else if (sortByProduct === 'shellNum') {
+      const shellNumA = (a.shellNum || '').toString().toLowerCase();
+      const shellNumB = (b.shellNum || '').toString().toLowerCase();
+      return sortDirectionProduct === 'asc'
+        ? shellNumA.localeCompare(shellNumB)
+        : shellNumB.localeCompare(shellNumA);
+    }
+    return 0;
+  });
+
+
+
   const ClientsTable = () => (
     <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
       <Table sx={{ minWidth: 650 }}>
-        <TableHead>
+       <TableHead>
           <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
             {columnHeaders
               .filter((h) => !hiddenColumns.includes(h))
@@ -441,46 +478,54 @@ rollCount = availableRolls.length;
                     fontWeight: 'bold',
                     fontSize: '1.1rem',
                     padding: '16px',
-                    ...((h === 'paperRemaining' || h === 'name') && {
-                      cursor: 'pointer',
-                      userSelect: 'none'
-                    })
+                    cursor: 'pointer',
+                    userSelect: 'none'
                   }}
                   onClick={() => {
-                    if (h === 'name') {
-                      setSortBy('name');
-                      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-                    } else if (h === 'paperRemaining') {
-                      setSortBy('paperRemaining');
-                      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                    if (h === 'name' || h === 'paperRemaining' || h === 'shellNum') {
+                      const newSortBy = h === 'name' ? 'name' : 
+                                      h === 'paperRemaining' ? 'paperRemaining' : 'shellNum';
+                      
+                      if (sortBy === newSortBy) {
+                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortBy(newSortBy);
+                        setSortDirection('asc');
+                      }
                     }
                   }}
                 >
-                  {h === '№' ? (
-                    '№'
-                  ) : h === 'name' ? (
-                    <>
-                      Название ресторана{' '}
-                      {sortBy === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
-                    </>
-                  ) : h === 'shellNum' ? (
-                    'Номер полки'
-                  ) : h === 'packaging' ? (
-                    'Упаковка'
-                  ) : h === 'orgName' ? (
-                    'Организация'
-                  ) : h === 'totalRolls' ? (
-                    'Всего рулонов'
-                  ) : h === 'paperRemaining' ? (
-                    <>
-                      Остаток бумаги{' '}
-                      {sortBy === 'paperRemaining' && (sortDirection === 'asc' ? '↑' : '↓')}
-                    </>
-                  ) : h === 'Actions' ? (
-                    'Действия'
-                  ) : (
-                    h
-                  )}
+                  <Box display="flex" alignItems="center">
+                    {h === '№' ? (
+                      '№'
+                    ) : h === 'name' ? (
+                      'Название ресторана'
+                    ) : h === 'shellNum' ? (
+                      'Номер полки'
+                    ) : h === 'packaging' ? (
+                      'Упаковка'
+                    ) : h === 'orgName' ? (
+                      'Организация'
+                    ) : h === 'totalRolls' ? (
+                      'Всего рулонов'
+                    ) : h === 'paperRemaining' ? (
+                      'Остаток бумаги'
+                    ) : h === 'Actions' ? (
+                      'Действия'
+                    ) : (
+                      h
+                    )}
+                    
+                    {(h === 'name' || h === 'paperRemaining' || h === 'shellNum') && (
+                      <Box ml={1} display="flex">
+                        <SortIcon 
+                          column={h} 
+                          activeColumn={sortBy} 
+                          direction={sortDirection} 
+                        />
+                      </Box>
+                    )}
+                  </Box>
                 </TableCell>
               ))}
           </TableRow>
@@ -570,40 +615,62 @@ rollCount = availableRolls.length;
     </TableContainer>
   );
 
+
   const ProductTypesTable = () => (
     <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
       <Table sx={{ minWidth: 650 }}>
-        <TableHead>
+         <TableHead>
           <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
-            <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
-              №
-            </TableCell>
-            <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
-              Тип продукта
-            </TableCell>
-            <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
-              Упаковка
-            </TableCell>
-            <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
-              Граммовка
-            </TableCell>
-            <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
-              Количество рулонов
-            </TableCell>
-            <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
-              Остаток (кг)
-            </TableCell>
-            <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
-              Номер полки
-            </TableCell>
-            <TableCell sx={{ color: '#fff', fontWeight: 'bold', fontSize: '1.1rem', padding: '16px' }}>
-              Подробно
-            </TableCell>
+            {[
+              { id: 'index', label: '№' },
+              { id: 'type', label: 'Тип продукта' },
+              { id: 'packaging', label: 'Упаковка' },
+              { id: 'gramm', label: 'Граммовка' },
+              { id: 'totalRolls', label: 'Количество рулонов' },
+              { id: 'paperRemaining', label: 'Остаток (кг)' },
+              { id: 'shellNum', label: 'Номер полки' },
+              { id: 'actions', label: 'Подробно' }
+            ].map((column) => (
+              <TableCell
+                key={column.id}
+                sx={{
+                  color: '#fff',
+                  fontWeight: 'bold',
+                  fontSize: '1.1rem',
+                  padding: '16px',
+                  cursor: column.id === 'type' || column.id === 'paperRemaining' || column.id === 'shellNum' ? 'pointer' : 'default',
+                  userSelect: 'none'
+                }}
+                onClick={() => {
+                  if (column.id === 'type' || column.id === 'paperRemaining' || column.id === 'shellNum') {
+                    if (sortByProduct === column.id) {
+                      setSortDirectionProduct(sortDirectionProduct === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortByProduct(column.id);
+                      setSortDirectionProduct('asc');
+                    }
+                  }
+                }}
+              >
+                <Box display="flex" alignItems="center">
+                  {column.label}
+                  {(column.id === 'type' || column.id === 'paperRemaining' || column.id === 'shellNum') && (
+                    <Box ml={1} display="flex">
+                      <SortIcon 
+                        column={column.id} 
+                        activeColumn={sortByProduct} 
+                        direction={sortDirectionProduct} 
+                      />
+                    </Box>
+                  )}
+                </Box>
+              </TableCell>
+            ))}
           </TableRow>
         </TableHead>
 
         <TableBody>
-          {(productTypesData || []).map((product, index) => {
+        {sortedProductTypes.map((product, index) => {
             if (!product || !product.id) return null;
 
             return (
@@ -675,6 +742,7 @@ rollCount = availableRolls.length;
       </Table>
     </TableContainer>
   );
+
 
 return (
   <>
