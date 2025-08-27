@@ -27,37 +27,37 @@ import {
   Stack,
   Tabs,
   Tab,
-  IconButton
+  IconButton,
+  InputAdornment
 } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
 import Shield from '@mui/icons-material/Shield';
 import Work from '@mui/icons-material/Work';
 import AddClientForm from './addClientForm';
 import ClientDetailsModal from './ClientDetailsModal';
-import ProductDetailsModal from './ProductDetailsModal'; // Import the extracted component
+import ProductDetailsModal from './ProductDetailsModal';
 import ReportGmailerrorredIcon from '@mui/icons-material/ReportGmailerrorred';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AddStandardDesignModal from "./AddStandardDesignModal";
 import UnfoldMoreRoundedIcon from '@mui/icons-material/UnfoldMoreRounded';
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
-
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import CancelRoundedIcon from '@mui/icons-material/CancelRounded';
 
 const getHiddenColumns = (userRole) => {
   if (userRole === 'admin') {
-    // Admin can see all columns
     return [];
   } else {
-    // Workers can't see these columns
     return ["totalKg", "orgName"];
   }
 };
 
-// Update your column headers to include orgName
 const getColumnHeaders = (userRole) => {
   const baseHeaders = [
     "№",
     "name",
+    "productTypeName",
     "packaging",
     "shellNum",
     "totalRolls",
@@ -70,6 +70,7 @@ const getColumnHeaders = (userRole) => {
       "№",
       "name",
       "orgName",
+      "productTypeName",
       "packaging",
       "shellNum",
       "totalRolls",
@@ -77,9 +78,7 @@ const getColumnHeaders = (userRole) => {
       "Actions"
     ];
   } else {
-    return [
-      ...baseHeaders,
-    ];
+    return baseHeaders;
   }
 };
 
@@ -103,7 +102,6 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
   const [sortBy, setSortBy] = useState('name');   
   const [sortDirection, setSortDirection] = useState('asc'); 
 
-
   const SortIcon = ({ column, activeColumn, direction }) => {
     if (column !== activeColumn) {
       return <UnfoldMoreRoundedIcon sx={{ fontSize: 18, opacity: 0.5 }} />;
@@ -117,43 +115,42 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
   const hiddenColumns = getHiddenColumns(userRole);
 
   const fetchProductTypeData = async (productId, designType) => {
-    if (!productId) return { packaging: '', shellNum: '', paperRemaining: '' };
+    if (!productId) return { packaging: '', shellNum: '', paperRemaining: '', type: '' };
     
     try {
-      // Get packaging from productTypes
       const productRef = doc(db, "productTypes", productId);
       const productSnap = await getDoc(productRef);
-      const packaging = productSnap.exists() ? productSnap.data().packaging : '';
+      const productData = productSnap.exists() ? productSnap.data() : {};
+      const packaging = productData.packaging || '';
+      const type = productData.type || '';
       
-      // For standard design type, get shellNum and paperRemaining from productTypes -> paperInfo
       if (designType === "standart") {
         try {
           const paperInfoQuery = await getDocs(collection(db, "productTypes", productId, "paperInfo"));
           if (!paperInfoQuery.empty) {
             const paperInfoData = paperInfoQuery.docs[0].data();
-          return {
-  packaging,
-  shellNum: paperInfoData.shellNum || '',
-  paperRemaining: Number(paperInfoData.paperRemaining) || 0
-};
+            return {
+              packaging,
+              type,
+              shellNum: paperInfoData.shellNum || '',
+              paperRemaining: Number(paperInfoData.paperRemaining) || 0
+            };
           }
         } catch (error) {
           console.error("Error fetching paperInfo for standard design:", error);
         }
       }
       
-      return { packaging, shellNum: '', paperRemaining: '' };
+      return { packaging, type, shellNum: '', paperRemaining: '' };
     } catch (error) {
       console.error("Error fetching product type data:", error);
-      return { packaging: '', shellNum: '', paperRemaining: '' };
+      return { packaging: '', type: '', shellNum: '', paperRemaining: '' };
     }
   };
 
   const fetchClientData = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "clients"));
-
-      // Filter out any undefined documents and ensure each doc has an id
       const validDocs = querySnapshot.docs.filter(docSnap => 
         docSnap && docSnap.id && docSnap.exists()
       );
@@ -163,20 +160,22 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
           try {
             const data = docSnap.data();
             
-            // Ensure we have minimum required data
             if (!data) {
               console.warn("Document has no data:", docSnap.id);
               return null;
             }
             
-            // Fetch product type data (packaging, shellNum, paperRemaining based on designType)
             const productTypeData = await fetchProductTypeData(data.productId, data.designType);
             
-            // Count paper rolls in clients/{id}/paperRolls
             let rollCount = 0;
             try {
               const paperRollsQuery = await getDocs(collection(db, "clients", docSnap.id, "paperRolls"));
-              rollCount = paperRollsQuery.size || paperRollsQuery.docs.length;
+              const availableRolls = paperRollsQuery.docs.filter(rollDoc => {
+                const rollData = rollDoc.data();
+                const weight = Number(rollData.paperRemaining) || 0;
+                return weight > 0;
+              });
+              rollCount = availableRolls.length;
             } catch (error) {
               console.error("Error fetching paper rolls count for client", docSnap.id, error);
               rollCount = 0;
@@ -186,15 +185,12 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
               id: docSnap.id, 
               ...data, 
               packaging: productTypeData.packaging,
-              // For standard design type, use shellNum and paperRemaining from productTypes
-              // For unique design type, use the client's own shellNum and paperRemaining
+              productTypeName: productTypeData.type,
               shellNum: data.designType === "standart" ? productTypeData.shellNum : (data.shellNum || ''),
               paperRemaining: data.designType === "standart"
-  ? Number(productTypeData.paperRemaining) || 0
-  : Number(data.paperRemaining) || 0,
-              // Add orgName from client data
+                ? Number(productTypeData.paperRemaining) || 0
+                : Number(data.paperRemaining) || 0,
               orgName: data.orgName || data.organization || '-',
-              // NEW: total number of small rolls
               totalRolls: rollCount
             };
           } catch (error) {
@@ -204,10 +200,7 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
         })
       );
 
-      // Filter out any null results from failed processing
       const validClients = clientsArray.filter(client => client !== null && client.id);
-
-      console.log("Parsed clients array:", validClients);
       setClientData(validClients);
 
       if (validClients.length > 0) {
@@ -228,7 +221,6 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
     try {
       const querySnapshot = await getDocs(collection(db, "productTypes"));
       
-      // Filter out any undefined documents and ensure each doc has an id
       const validDocs = querySnapshot.docs.filter(docSnap => 
         docSnap && docSnap.id && docSnap.exists()
       );
@@ -238,13 +230,11 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
           try {
             const data = docSnap.data();
             
-            // Ensure we have minimum required data
             if (!data) {
               console.warn("Product document has no data:", docSnap.id);
               return null;
             }
             
-            // Get shellNum and paperRemaining from paperInfo subcollection
             let shellNum = '-';
             let paperRemaining = 0;
             let totalRolls = 0;
@@ -255,9 +245,8 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                 const paperInfoDoc = paperInfoQuery.docs[0];
                 const paperInfoData = paperInfoDoc.data();
                 shellNum = paperInfoData.shellNum || '-';
-             paperRemaining = Number(paperInfoData.paperRemaining) || 0;
+                paperRemaining = Number(paperInfoData.paperRemaining) || 0;
                 
-                // Count individual rolls
                 const rollsQuery = await getDocs(
                   collection(db, "productTypes", docSnap.id, "paperInfo", paperInfoDoc.id, "individualRolls")
                 );
@@ -283,7 +272,6 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
         })
       );
 
-      // Filter out any null results
       const validProducts = productTypesArray.filter(product => product !== null && product.id);
       setProductTypesData(validProducts);
     } catch (error) {
@@ -323,7 +311,6 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
         setSelectedClientProduct(null);
       }
 
-      // ✅ Always open the unified modal
       setModalOpen(true);
     };
 
@@ -353,20 +340,16 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
 
   const handleClientUpdate = (updatedClient) => {
     setClientData(prevData => {
-      // Guard against undefined prevData
       if (!prevData || !Array.isArray(prevData)) {
-        console.warn("prevData is not an array:", prevData);
         return updatedClient ? [updatedClient] : [];
       }
       
-      // Ensure updatedClient has an id
       if (!updatedClient || !updatedClient.id) {
-        console.warn("updatedClient is invalid:", updatedClient);
         return prevData;
       }
       
       return prevData
-        .filter(client => client && client.id) // Remove undefined/null clients
+        .filter(client => client && client.id)
         .map(client =>
           client.id === updatedClient.id ? updatedClient : client
         );
@@ -391,14 +374,6 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
     setCurrentTab(newValue);
   };
 
-  // Safe filtering with null checks
-  const filteredClients = (clientData || []).filter((client) =>
-    client && 
-    (client.restaurant || client.name || "")
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase())
-  );
-
   const visibleClients = (clientData || []).filter((client) =>
     client &&
     (client.restaurant || client.name || '')
@@ -406,15 +381,7 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
       .includes(searchQuery.toLowerCase())
   );
 
-  // 2) default alphabetical sort by restaurant
-  visibleClients.sort((a, b) => {
-    if (!a || !b) return 0;
-    const nameA = (a.restaurant || a.name || "").toLowerCase();
-    const nameB = (b.restaurant || b.name || "").toLowerCase();
-    return nameA.localeCompare(nameB);
-  });
-
- const sortedClients = [...visibleClients].sort((a, b) => {
+  const sortedClients = [...visibleClients].sort((a, b) => {
     if (!a || !b) return 0;
     
     if (sortBy === 'name') {
@@ -437,7 +404,6 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
     return 0;
   });
 
-  // Add sorting for product types table
   const sortedProductTypes = [...productTypesData].sort((a, b) => {
     if (!a || !b) return 0;
     
@@ -461,12 +427,10 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
     return 0;
   });
 
-
-
   const ClientsTable = () => (
     <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
       <Table sx={{ minWidth: 650 }}>
-       <TableHead>
+        <TableHead>
           <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
             {columnHeaders
               .filter((h) => !hiddenColumns.includes(h))
@@ -479,7 +443,8 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                     fontSize: '1.1rem',
                     padding: '16px',
                     cursor: 'pointer',
-                    userSelect: 'none'
+                    userSelect: 'none',
+                    backgroundColor: (sortBy === h) ? '#2c5c57' : '#3c7570ff',
                   }}
                   onClick={() => {
                     if (h === 'name' || h === 'paperRemaining' || h === 'shellNum') {
@@ -506,6 +471,8 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                       'Упаковка'
                     ) : h === 'orgName' ? (
                       'Организация'
+                    ) : h === 'productTypeName' ? (
+                      'Продукт'
                     ) : h === 'totalRolls' ? (
                       'Всего рулонов'
                     ) : h === 'paperRemaining' ? (
@@ -594,6 +561,10 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                         <Typography variant="body2" fontWeight={500}>
                           {client.orgName || '-'}
                         </Typography>
+                      ) : f === 'productTypeName' ? (
+                        <Typography variant="body2" fontWeight={500}>
+                          {client.productTypeName || '-'}
+                        </Typography>
                       ) : f === 'totalRolls' ? (
                         <Typography variant="body2" fontWeight={600} color="primary">
                           {client.totalRolls ?? 0}
@@ -615,11 +586,10 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
     </TableContainer>
   );
 
-
   const ProductTypesTable = () => (
     <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
       <Table sx={{ minWidth: 650 }}>
-         <TableHead>
+        <TableHead>
           <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
             {[
               { id: 'index', label: '№' },
@@ -639,7 +609,8 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                   fontSize: '1.1rem',
                   padding: '16px',
                   cursor: column.id === 'type' || column.id === 'paperRemaining' || column.id === 'shellNum' ? 'pointer' : 'default',
-                  userSelect: 'none'
+                  userSelect: 'none',
+                  backgroundColor: (sortByProduct === column.id) ? '#2c5c57' : '#3c7570ff',
                 }}
                 onClick={() => {
                   if (column.id === 'type' || column.id === 'paperRemaining' || column.id === 'shellNum') {
@@ -670,7 +641,7 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
         </TableHead>
 
         <TableBody>
-        {sortedProductTypes.map((product, index) => {
+          {sortedProductTypes.map((product, index) => {
             if (!product || !product.id) return null;
 
             return (
@@ -681,42 +652,34 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                   '&:hover': { backgroundColor: '#e3f2fd' }
                 }}
               >
-                {/* 1. № */}
                 <TableCell sx={{ padding: '16px' }}>
                   {index + 1}
                 </TableCell>
                 
-                {/* 2. Тип продукта */}
                 <TableCell sx={{ padding: '16px' }}>
                   {product.type}
                 </TableCell>
                 
-                {/* 3. Упаковка */}
                 <TableCell sx={{ padding: '16px' }}>
                   {product.packaging}
                 </TableCell>
                 
-                {/* 4. Граммовка */}
                 <TableCell sx={{ padding: '16px' }}>
                   {product.gramm}
                 </TableCell>
                 
-                {/* 5. Количество рулонов */}
                 <TableCell sx={{ padding: '16px' }}>
                   {product.totalRolls || 0}
                 </TableCell>
                 
-                {/* 6. Остаток (кг) */}
                 <TableCell sx={{ padding: '16px' }}>
                   {product.paperRemaining != null ? `${product.paperRemaining.toFixed(2)} кг` : 'N/A'}
                 </TableCell>
                 
-                {/* 7. Номер полки */}
                 <TableCell sx={{ padding: '16px' }}>
                   {product.shellNum}
                 </TableCell>
                 
-                {/* 8. Подробно */}
                 <TableCell sx={{ padding: '16px' }}>
                   <Button
                     variant="outlined"
@@ -743,248 +706,258 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
     </TableContainer>
   );
 
-
-return (
-  <>
-    {/* Header */}
-    <Box
-      sx={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 1100,
-        bgcolor: '#fff',
-        boxShadow: '0 2px 8px -2px rgba(0,0,0,.12)',
-        px: { xs: 2, sm: 4, md: 6 },
-        py: 1.5,
-        mb: 3,
-      }}
-    >
-      <Container maxWidth={false} sx={{ maxWidth: "1400px" }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          
-          {/* Logo */}
-          <Box
-            sx={{
-              cursor: 'pointer',
-              "&:hover": { opacity: 0.8 }
-            }}
-            onClick={onBackToDashboard}
-          >
-            <img
-              src="https://whiteray.uz/images/whiteray_1200px_logo_green.png"
-              alt="WhiteRay"
-              style={{ height: 34, objectFit: 'contain' }}
-            />
-          </Box>
-
-          {/* Center Section - Search + Buttons */}
-          {currentTab === 0 && (
-            <Stack direction="row" alignItems="center" spacing={1.5}>
-              <TextField
-                size="small"
-                variant="outlined"
-                placeholder="Поиск по названию"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                sx={{ minWidth: 240 }}
+  return (
+    <>
+      <Box
+        sx={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 1100,
+          bgcolor: '#fff',
+          boxShadow: '0 2px 8px -2px rgba(0,0,0,.12)',
+          px: { xs: 2, sm: 4, md: 6 },
+          py: 1.5,
+          mb: 3,
+        }}
+      >
+        <Container maxWidth={false} sx={{ maxWidth: "1400px" }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            
+            <Box
+              sx={{
+                cursor: 'pointer',
+                "&:hover": { opacity: 0.8 }
+              }}
+              onClick={onBackToDashboard}
+            >
+              <img
+                src="https://whiteray.uz/images/whiteray_1200px_logo_green.png"
+                alt="WhiteRay"
+                style={{ height: 34, objectFit: 'contain' }}
               />
+            </Box>
+
+            {currentTab === 0 && (
+              <Stack direction="row" alignItems="center" spacing={1.5}>
+                <TextField
+                  size="small"
+                  variant="outlined"
+                  placeholder="Поиск по названию"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  sx={{ minWidth: 240 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchRoundedIcon color="action" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: searchQuery && (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="clear search"
+                          onClick={() => setSearchQuery('')}
+                          edge="end"
+                          size="small"
+                        >
+                          <CancelRoundedIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+
+                {userRole === 'admin' && (
+                  <>
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={handleOpenAddClientModal}
+                      sx={{
+                        backgroundColor: '#0F9D8C',
+                        '&:hover': { backgroundColor: '#0c7a6e' },
+                        fontSize: '0.85rem',
+                        px: 2.5,
+                        py: 0.8,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        whiteSpace: "nowrap"
+                      }}
+                    >
+                      Добавить клиента
+                    </Button>
+
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={() => setShowAddStandardDesignModal(true)}
+                      sx={{
+                        backgroundColor: '#0F9D8C',
+                        '&:hover': { backgroundColor: '#0c7a6e' },
+                        fontSize: '0.85rem',
+                        px: 2.5,
+                        py: 0.8,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        whiteSpace: "nowrap"
+                      }}
+                    >
+                      Добавить стандартный дизайн
+                    </Button>
+                  </>
+                )}
+              </Stack>
+            )}
+
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Box
+                display="flex"
+                alignItems="center"
+                gap={1}
+                px={2}
+                py={0.8}
+                bgcolor="#f5f5f5"
+                borderRadius={2}
+              >
+                {userRole === 'admin' ? <Shield color="primary" /> : <Work color="success" />}
+                <Box>
+                  <Typography variant="body2" fontWeight={600}>
+                    {user?.name || 'Пользователь'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {userRole === 'admin' ? 'Администратор' : 'Сотрудник'}
+                  </Typography>
+                </Box>
+              </Box>
 
               <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleOpenAddClientModal}
+                variant="outlined"
+                color="error"
+                startIcon={<LogoutIcon />}
+                onClick={onLogout}
                 sx={{
-                  backgroundColor: '#0F9D8C',
-                  '&:hover': { backgroundColor: '#0c7a6e' },
-                  fontSize: '0.85rem',
-                  px: 2.5,
-                  py: 0.8,
-                  borderRadius: 2,
+                  fontSize: '0.8rem',
+                  px: 2,
+                  py: 0.6,
                   textTransform: 'none',
-                  whiteSpace: "nowrap"
+                  borderRadius: 2
                 }}
               >
-                Добавить клиента
-              </Button>
-
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setShowAddStandardDesignModal(true)}
-                sx={{
-                  backgroundColor: '#0F9D8C',
-                  '&:hover': { backgroundColor: '#0c7a6e' },
-                  fontSize: '0.85rem',
-                  px: 2.5,
-                  py: 0.8,
-                  borderRadius: 2,
-                  textTransform: 'none',
-                  whiteSpace: "nowrap"
-                }}
-              >
-                Добавить стандартный дизайн
+                Выйти
               </Button>
             </Stack>
-          )}
-
-          {/* User Info Section */}
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Box
-              display="flex"
-              alignItems="center"
-              gap={1}
-              px={2}
-              py={0.8}
-              bgcolor="#f5f5f5"
-              borderRadius={2}
-            >
-              {userRole === 'admin' ? <Shield color="primary" /> : <Work color="success" />}
-              <Box>
-                <Typography variant="body2" fontWeight={600}>
-                  {user?.name || 'Пользователь'}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {userRole === 'admin' ? 'Администратор' : 'Сотрудник'}
-                </Typography>
-              </Box>
-            </Box>
-
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<LogoutIcon />}
-              onClick={onLogout}
-              sx={{
-                fontSize: '0.8rem',
-                px: 2,
-                py: 0.6,
-                textTransform: 'none',
-                borderRadius: 2
-              }}
-            >
-              Выйти
-            </Button>
           </Stack>
-        </Stack>
-      </Container>
-    </Box>
-
-    {/* Main Content with Tabs */}
-    <Container maxWidth="lg" sx={{ pt: 1, pb: 6 }}>
-      {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs
-          value={currentTab}
-          onChange={handleTabChange}
-          sx={{
-            '& .MuiTab-root.Mui-selected': {
-              color: '#0F9D8C',
-            },
-            '& .MuiTabs-indicator': {
-              backgroundColor: '#0F9D8C',
-              fontWeight: '700',
-            },
-          }}
-        >
-          <Tab label="Клиенты и этикетки" />
-          <Tab label="Стандартные рулоны" />
-        </Tabs>
+        </Container>
       </Box>
 
-      {/* Tab Content */}
-      {currentTab === 0 && (
-        <>
-          {loading ? (
-            <Box display="flex" justifyContent="center" mt={4}>
-              <CircularProgress />
+      <Container maxWidth="lg" sx={{ pt: 1, pb: 6 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs
+            value={currentTab}
+            onChange={handleTabChange}
+            sx={{
+              '& .MuiTab-root.Mui-selected': {
+                color: '#0F9D8C',
+              },
+              '& .MuiTabs-indicator': {
+                backgroundColor: '#0F9D8C',
+                fontWeight: '700',
+              },
+            }}
+          >
+            <Tab label="Клиенты и этикетки" />
+            <Tab label="Стандартные рулоны" />
+          </Tabs>
+        </Box>
+
+        {currentTab === 0 && (
+          <>
+            {loading ? (
+              <Box display="flex" justifyContent="center" mt={4}>
+                <CircularProgress />
+              </Box>
+            ) : clientData.length === 0 ? (
+              <Typography variant="h6" color="text.secondary">
+                Данные клиентов не найдены.
+              </Typography>
+            ) : (
+              <ClientsTable />
+            )}
+          </>
+        )}
+
+        {currentTab === 1 && (
+          <>
+            {productTypesLoading ? (
+              <Box display="flex" justifyContent="center" mt={4}>
+                <CircularProgress />
+              </Box>
+            ) : productTypesData.length === 0 ? (
+              <Typography variant="h6" color="text.secondary">
+                Данные стандартных рулонов не найдены.
+              </Typography>
+            ) : (
+              <ProductTypesTable />
+            )}
+          </>
+        )}
+
+        {addClientModalOpen && (
+          <Modal
+            open={addClientModalOpen}
+            onClose={handleCloseAddClientModal}
+            aria-labelledby="add-client-modal"
+            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Box>
+              <AddClientForm
+                onClose={handleCloseAddClientModal}
+                onClientAdded={handleClientAdded}
+              />
             </Box>
-          ) : clientData.length === 0 ? (
-            <Typography variant="h6" color="text.secondary">
-              Данные клиентов не найдены.
-            </Typography>
-          ) : (
-            <ClientsTable />
-          )}
-        </>
-      )}
+          </Modal>
+        )}
 
-      {currentTab === 1 && (
-        <>
-          {productTypesLoading ? (
-            <Box display="flex" justifyContent="center" mt={4}>
-              <CircularProgress />
+        {productModalOpen && selectedProduct && (
+          <ProductDetailsModal
+            open={productModalOpen}
+            onClose={handleCloseProductModal}
+            product={selectedProduct}
+            currentUser={user}
+          />
+        )}
+
+        {showAddStandardDesignModal && (
+          <Modal
+            open={showAddStandardDesignModal}
+            onClose={() => setShowAddStandardDesignModal(false)}
+            aria-labelledby="add-standard-design-modal"
+            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Box>
+              <AddStandardDesignModal
+                open={showAddStandardDesignModal}
+                onClose={() => setShowAddStandardDesignModal(false)}
+                onDesignAdded={() => {
+                  setShowAddStandardDesignModal(false);
+                  fetchProductTypesData();
+                }}
+                currentUser={user}
+              />
             </Box>
-          ) : productTypesData.length === 0 ? (
-            <Typography variant="h6" color="text.secondary">
-              Данные стандартных рулонов не найдены.
-            </Typography>
-          ) : (
-            <ProductTypesTable />
-          )}
-        </>
-      )}
+          </Modal>
+        )}
 
-      {/* Add Client Modal */}
-      {addClientModalOpen && (
-        <Modal
-          open={addClientModalOpen}
-          onClose={handleCloseAddClientModal}
-          aria-labelledby="add-client-modal"
-          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <Box>
-            <AddClientForm
-              onClose={handleCloseAddClientModal}
-              onClientAdded={handleClientAdded}
-            />
-          </Box>
-        </Modal>
-      )}
-
-      {/* Product Details Modal */}
-      {productModalOpen && selectedProduct && (
-        <ProductDetailsModal
-          open={productModalOpen}
-          onClose={handleCloseProductModal}
-          product={selectedProduct}
-          currentUser={user}
-        />
-      )}
-
-      {/* Add Standard Design Modal */}
-      {showAddStandardDesignModal && (
-        <Modal
-          open={showAddStandardDesignModal}
-          onClose={() => setShowAddStandardDesignModal(false)}
-          aria-labelledby="add-standard-design-modal"
-          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <Box>
-            <AddStandardDesignModal
-              open={showAddStandardDesignModal}
-              onClose={() => setShowAddStandardDesignModal(false)}
-              onDesignAdded={() => {
-                setShowAddStandardDesignModal(false);
-                fetchProductTypesData();
-              }}
-              currentUser={user}
-            />
-          </Box>
-        </Modal>
-      )}
-
-      {/* Full Client Details Modal */}
-      {modalOpen && selectedClient && (
-        <ClientDetailsModal
-          open={modalOpen}
-          onClose={handleCloseModal}
-          client={selectedClient}
-          onClientUpdate={handleClientUpdate}
-          currentUser={user}
-        />
-      )}
-    </Container>
-  </>
-);
-
+        {modalOpen && selectedClient && (
+          <ClientDetailsModal
+            open={modalOpen}
+            onClose={handleCloseModal}
+            client={selectedClient}
+            onClientUpdate={handleClientUpdate}
+            currentUser={user}
+          />
+        )}
+      </Container>
+    </>
+  );
 }
