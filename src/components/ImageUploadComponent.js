@@ -29,11 +29,33 @@ const uploadToImageKit = async (file) => {
     formData.append("publicKey", authParams.publicKey);
     formData.append("signature", authParams.signature);
     formData.append("token", authParams.token);
-    // Ensure the expire parameter is sent as a number
-    formData.append("expire", authParams.expire);
+    
+    // Ensure the expire parameter is sent as a Unix timestamp (number, not string)
+    // and validate it's within 1 hour from now
+    let expireTimestamp = authParams.expire;
+    
+    // If expire is a string, convert to number
+    if (typeof expireTimestamp === 'string') {
+      expireTimestamp = parseInt(expireTimestamp, 10);
+    }
+    
+    // Validate expire timestamp is within 1 hour from now
+    const now = Math.floor(Date.now() / 1000); // Current Unix timestamp
+    const oneHourFromNow = now + 3600; // 1 hour = 3600 seconds
+    
+    if (expireTimestamp > oneHourFromNow) {
+      // If server-provided expire is too far in future, set it to 30 minutes from now
+      expireTimestamp = now + 1800; // 30 minutes = 1800 seconds
+    }
+    
+    // Ensure it's not in the past
+    if (expireTimestamp <= now) {
+      expireTimestamp = now + 1800; // 30 minutes from now
+    }
+    
+    formData.append("expire", expireTimestamp.toString());
     formData.append("fileName", file.name);
     formData.append("folder", "/Clients");
-
 
     const uploadResponse = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
       method: 'POST',
