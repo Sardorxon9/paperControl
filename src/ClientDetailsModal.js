@@ -771,29 +771,154 @@ const handleSendViaTelegram = async () => {
 
 {/* --- New Image Block --- */}
   {(client.imageURL1) && (
-    <PhotoProvider>
-      <Box display="flex" gap={1}>
-        {client.imageURL1 && (
-          <PhotoView src={client.imageURL1}>
-            <Box
-              component="img"
-              src={client.imageURL1}
-              alt="Client Image 1"
-              sx={{
-                width: 64,
-                height: 64,
-                objectFit: 'cover',
-                borderRadius: 1,
-                cursor: 'pointer',
-                border: '1px solid #ddd',
-              }}
-            />
-          </PhotoView>
-        )}
-        
-      </Box>
-    </PhotoProvider>
-  )}
+  <PhotoProvider
+    toolbarRender={({ rotate, onRotate, scale, onScale, onClose, index, images }) => {
+      return (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '8px',
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          background: 'rgba(0, 0, 0, 0.6)',
+          borderRadius: '8px',
+          zIndex: 1000
+        }}>
+          {/* Rotation button */}
+          <button
+            onClick={() => onRotate(rotate + 90)}
+            style={{
+              padding: '8px',
+              background: 'transparent',
+              border: 'none',
+              color: 'white',
+              cursor: 'pointer',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            title="Rotate 90°"
+            onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
+            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+              <path d="M21 3v5h-5" />
+            </svg>
+          </button>
+          
+          {/* Zoom out button */}
+          <button
+            onClick={() => onScale(scale - 0.5)}
+            style={{
+              padding: '8px',
+              background: 'transparent',
+              border: 'none',
+              color: 'white',
+              cursor: 'pointer',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            title="Zoom Out"
+            onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
+            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+              <line x1="8" y1="11" x2="14" y2="11" />
+            </svg>
+          </button>
+          
+          {/* Zoom in button */}
+          <button
+            onClick={() => onScale(scale + 0.5)}
+            style={{
+              padding: '8px',
+              background: 'transparent',
+              border: 'none',
+              color: 'white',
+              cursor: 'pointer',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            title="Zoom In"
+            onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
+            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+              <line x1="11" y1="8" x2="11" y2="14" />
+              <line x1="8" y1="11" x2="14" y2="11" />
+            </svg>
+          </button>
+          
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            style={{
+              padding: '8px',
+              background: 'transparent',
+              border: 'none',
+              color: 'white',
+              cursor: 'pointer',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginLeft: '8px'
+            }}
+            title="Close"
+            onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
+            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      );
+    }}
+    // Smooth animation settings
+    speed={() => 400}
+    easing={(type) => 
+      type === 2 ? 'cubic-bezier(0.36, 0, 0.66, -0.56)' : 'cubic-bezier(0.34, 1.56, 0.64, 1)'
+    }
+  >
+    <Box display="flex" gap={1}>
+      {client.imageURL1 && (
+        <PhotoView src={client.imageURL1}>
+          <Box
+            component="img"
+            src={client.imageURL1}
+            alt="Client Image 1"
+            sx={{
+              width: 64,
+              height: 64,
+              objectFit: 'cover',
+              borderRadius: 1,
+              cursor: 'pointer',
+              border: '1px solid #ddd',
+              transition: 'opacity 0.2s ease',
+              '&:hover': {
+                opacity: 0.8
+              }
+            }}
+          />
+        </PhotoView>
+      )}
+    </Box>
+  </PhotoProvider>
+)}
   {/* --- End of Image Block --- */}
 
                 </Box>
