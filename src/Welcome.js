@@ -1,4 +1,4 @@
-// Welcome.js
+// Welcome.js - Fixed version with proper productID_2 usage
 
 import { useEffect, useState } from "react";
 import {
@@ -114,19 +114,96 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
 
   const hiddenColumns = getHiddenColumns(userRole);
 
-  const fetchProductTypeData = async (productId, designType) => {
-    if (!productId) return { packaging: '', shellNum: '', paperRemaining: '', type: '' };
+  // Updated function to fetch product name from "products" collection using productID_2
+  const fetchProductName = async (productID_2) => {
+    try {
+      if (!productID_2) return null;
+      const productRef = doc(db, "products", productID_2);
+      const productSnap = await getDoc(productRef);
+      if (productSnap.exists()) {
+        return productSnap.data().productName || null;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching product name:", error);
+      return null;
+    }
+  };
+
+  // Fetch package type function
+  const fetchPackageType = async (packageID) => {
+    try {
+      if (!packageID) return null;
+      const packageRef = doc(db, "packageTypes", packageID);
+      const packageSnap = await getDoc(packageRef);
+      if (packageSnap.exists()) {
+        return packageSnap.data().type || null;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching package type:", error);
+      return null;
+    }
+  };
+
+  // Updated function to get product and package info for client
+  const fetchClientProductInfo = async (client) => {
+    try {
+      const productName = client.productID_2 ? await fetchProductName(client.productID_2) : null;
+      const packageType = client.packageID ? await fetchPackageType(client.packageID) : null;
+      
+      return {
+        productName,
+        packageType
+      };
+    } catch (error) {
+      console.error('Error fetching client product info:', error);
+      return { productName: null, packageType: null };
+    }
+  };
+
+  // Updated function to find productType document by productID_2 and packageID
+  const findProductTypeByIds = async (productID_2, packageID) => {
+    try {
+      if (!productID_2 && !packageID) return null;
+      
+      const querySnapshot = await getDocs(collection(db, "productTypes"));
+      
+      for (const docSnap of querySnapshot.docs) {
+        const data = docSnap.data();
+        const matchesProduct = !productID_2 || data.productID_2 === productID_2;
+        const matchesPackage = !packageID || data.packageID === packageID;
+        
+        if (matchesProduct && matchesPackage) {
+          return { id: docSnap.id, data };
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Error finding productType by IDs:", error);
+      return null;
+    }
+  };
+
+  // Updated fetchProductTypeData function - now uses productID_2 and packageID
+  const fetchProductTypeData = async (productID_2, packageID, designType) => {
+    if (!productID_2 && !packageID) return { packaging: '', shellNum: '', paperRemaining: '', type: '' };
     
     try {
-      const productRef = doc(db, "productTypes", productId);
-      const productSnap = await getDoc(productRef);
-      const productData = productSnap.exists() ? productSnap.data() : {};
+      const productTypeMatch = await findProductTypeByIds(productID_2, packageID);
+      
+      if (!productTypeMatch) {
+        return { packaging: '', shellNum: '', paperRemaining: '', type: '' };
+      }
+      
+      const { id: productTypeId, data: productData } = productTypeMatch;
       const packaging = productData.packaging || '';
       const type = productData.type || '';
       
       if (designType === "standart") {
         try {
-          const paperInfoQuery = await getDocs(collection(db, "productTypes", productId, "paperInfo"));
+          const paperInfoQuery = await getDocs(collection(db, "productTypes", productTypeId, "paperInfo"));
           if (!paperInfoQuery.empty) {
             const paperInfoData = paperInfoQuery.docs[0].data();
             return {
@@ -165,7 +242,13 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
               return null;
             }
             
-            const productTypeData = await fetchProductTypeData(data.productId, data.designType);
+            // Fetch product and package info using new fields
+            const { productName, packageType } = await fetchClientProductInfo(data);
+            
+            // For standard designs, still need product type data for paper info
+            const productTypeData = data.designType === "standart" && (data.productID_2 || data.packageID)
+              ? await fetchProductTypeData(data.productID_2, data.packageID, data.designType)
+              : { packaging: '', type: '', shellNum: '', paperRemaining: 0 };
             
             let rollCount = 0;
             try {
@@ -183,9 +266,14 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
 
             return { 
               id: docSnap.id, 
-              ...data, 
-              packaging: productTypeData.packaging,
-              productTypeName: productTypeData.type,
+              ...data,
+              // Store the fetched product info
+              fetchedProductName: productName,
+              fetchedPackageType: packageType,
+              // For packaging, use packageType if available, otherwise fall back to productType packaging
+              packaging: packageType || productTypeData.packaging || '',
+              // For product display, use productName primarily
+              productTypeName: productName || productTypeData.type || '',
               shellNum: data.designType === "standart" ? productTypeData.shellNum : (data.shellNum || ''),
               paperRemaining: data.designType === "standart"
                 ? Number(productTypeData.paperRemaining) || 0
@@ -293,9 +381,10 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
     setSelectedClient(client);
 
     const fetchProductData = async () => {
-      if (client.productId) {
+      // Updated to use productID_2 instead of productId
+      if (client.productID_2) {
         try {
-          const productRef = doc(db, "productTypes", client.productId);
+          const productRef = doc(db, "products", client.productID_2);
           const productSnap = await getDoc(productRef);
           if (productSnap.exists()) {
             setSelectedClientProduct(productSnap.data());
@@ -427,6 +516,7 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
     return 0;
   });
 
+  // Updated ClientsTable component
   const ClientsTable = () => (
     <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
       <Table sx={{ minWidth: 650 }}>
@@ -507,6 +597,20 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
               client.notifyWhen !== undefined &&
               client.paperRemaining <= client.notifyWhen;
 
+            // Create display string for product info
+            const displayProductInfo = (() => {
+              const parts = [];
+              if (client.fetchedPackageType) parts.push(client.fetchedPackageType);
+              if (client.fetchedProductName) parts.push(client.fetchedProductName);
+              
+              if (parts.length > 0) {
+                return parts.join(', ');
+              }
+              
+              // Fallback to old productType field if no new data
+              return client.productType || client.productTypeName || '-';
+            })();
+
             return (
               <TableRow
                 key={client.id}
@@ -532,7 +636,7 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                               {client.name || '-'}
                             </Typography>
                             <Typography variant="body2" color="#0F9D8C">
-                              {client.productType || ''}
+                              {displayProductInfo}
                             </Typography>
                           </Box>
                         </Box>
@@ -563,7 +667,7 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                         </Typography>
                       ) : f === 'productTypeName' ? (
                         <Typography variant="body2" fontWeight={500}>
-                          {client.productTypeName || '-'}
+                          {displayProductInfo}
                         </Typography>
                       ) : f === 'totalRolls' ? (
                         <Typography variant="body2" fontWeight={600} color="primary">

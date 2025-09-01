@@ -100,6 +100,9 @@ const [showFtulkaModal, setShowFtulkaModal] = useState(false);
 const [ftulkaWeight, setFtulkaWeight] = useState("");
 const [rollToDelete, setRollToDelete] = useState(null);
 
+const [productName, setProductName] = useState(null);
+const [packageType, setPackageType] = useState(null);
+
 
 const [openEdit, setOpenEdit] = useState(false);
 
@@ -125,9 +128,24 @@ const [openEdit, setOpenEdit] = useState(false);
       fetchPaperRolls();
     }
     
-    // Fetch product type data
-    if (client.productId) {
-      fetchProductType(client.productId).then(setProductType);
+    // NEW: Fetch product name and package type data in parallel
+    const fetchProductDetails = async () => {
+      // Use Promise.all to fetch both pieces of data at the same time
+      const [nameResult, typeResult] = await Promise.all([
+        fetchProductName(client.productID_2),
+        fetchPackageType(client.packageID)
+      ]);
+      
+      setProductName(nameResult);
+      setPackageType(typeResult);
+    };
+
+    if (client.productID_2 || client.packageID) {
+      fetchProductDetails();
+    } else {
+      // If no IDs are present, set states to null
+      setProductName(null);
+      setPackageType(null);
     }
   }
 }, [client, hasTracking]);
@@ -183,20 +201,35 @@ const [openEdit, setOpenEdit] = useState(false);
     }
   };
 
-  const fetchProductType = async (productId) => {
-    try {
-      if (!productId) return null;
-      const productRef = doc(db, "productTypes", productId);
-      const productSnap = await getDoc(productRef);
-      if (productSnap.exists()) {
-        return productSnap.data();
-      }
-      return null;
-    } catch (error) {
-      console.error("Error fetching product type:", error);
-      return null;
+const fetchProductName = async (productID_2) => {
+  try {
+    if (!productID_2) return null;
+    const productRef = doc(db, "products", productID_2); // Note the collection name change
+    const productSnap = await getDoc(productRef);
+    if (productSnap.exists()) {
+      return productSnap.data().productName; // Return the specific field
     }
-  };
+    return null;
+  } catch (error) {
+    console.error("Error fetching product name:", error);
+    return null;
+  }
+};
+
+const fetchPackageType = async (packageID) => {
+  try {
+    if (!packageID) return null;
+    const packageRef = doc(db, "packageTypes", packageID); // Note the collection name
+    const packageSnap = await getDoc(packageRef);
+    if (packageSnap.exists()) {
+      return packageSnap.data().type; // Return the specific field
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching package type:", error);
+    return null;
+  }
+};
 
   
 
@@ -763,11 +796,12 @@ const handleSendViaTelegram = async () => {
                   <Typography variant="h4" fontWeight="bold" mb={1} sx={{ fontSize: '1.6rem' }}>
                     {client.restaurant || client.name}
                   </Typography>
-                  <Typography variant="h6" color="#0F9D8C" mb={2} sx={{ fontSize: '1.2rem' }}>
-                    {productType
-                      ? `${productType.packaging}, ${productType.type}, ${productType.gramm}г`
-                      : 'Загрузка...'}
-                  </Typography>
+              <Typography variant="h6" color="#0F9D8C" mb={2} sx={{ fontSize: '1.2rem' }}>
+  {packageType || productName 
+    ? `${packageType || ''}${packageType && productName ? ', ' : ''}${productName || ''}`
+    : 'Загрузка...'
+  }
+</Typography>
 
 {/* --- New Image Block --- */}
   {(client.imageURL1) && (
