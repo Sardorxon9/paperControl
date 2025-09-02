@@ -194,28 +194,53 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
     comment: "",
     imageURL1: DEFAULT_PLACEHOLDER_URL,
   });
-  const [productInputs, setProductInputs] = useState({
-    type: "",
-    packaging: "",
-    gramm: ""
+const [productInputs, setProductInputs] = useState({
+    packageType: "",
+    product: "",
+    gram: "",
+    name: ""
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
+  const [packageTypes, setPackageTypes] = useState([]);
 
+  const [productTypesData, setProductTypesData] = useState([]);
+  const [possibleProducts, setPossibleProducts] = useState([]);
+  const [availableProducts, setAvailableProducts] = useState([]);
+  const [availableGrams, setAvailableGrams] = useState([]);
+  const [availableNames, setAvailableNames] = useState([]);
   const isStandardDesign = formData.designType === "standart";
 
   // Fetch client + productTypes
-  useEffect(() => {
-    const fetchData = async () => {
+ useEffect(() => {
+    const fetchInitialData = async () => {
       try {
-        const prodSnap = await getDocs(collection(db, "productTypes"));
-        const productList = prodSnap.docs.map((doc) => ({
+        // Fetch package types
+        const packageTypesSnapshot = await getDocs(collection(db, "packageTypes"));
+        const packageTypesList = packageTypesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-        setProducts(productList);
+        setPackageTypes(packageTypesList);
 
+        // Fetch products collection
+        const productsSnapshot = await getDocs(collection(db, "products"));
+        const productsList = productsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setProducts(productsList);
+
+        // Fetch productTypes collection
+        const productTypesSnapshot = await getDocs(collection(db, "productTypes"));
+        const productTypesList = productTypesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setProductTypesData(productTypesList);
+
+        // Fetch client data
         const clientRef = doc(db, "clients", clientId);
         const clientSnap = await getDoc(clientRef);
         if (clientSnap.exists()) {
@@ -234,43 +259,149 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
             imageURL1: data.imageURL1 || DEFAULT_PLACEHOLDER_URL,
           });
 
-          const matchedProduct = productList.find(
-            (p) => p.productId === data.productId
-          );
-          if (matchedProduct) {
-            setProductInputs({
-              type: matchedProduct.type || "",
-              packaging: matchedProduct.packaging || "",
-              gramm: matchedProduct.gramm || ""
-            });
+          // Set product inputs from client data
+          setProductInputs({
+            packageType: data.packageID || "",
+            product: data.productID_2 || "",
+            gram: data.gram || "",
+            name: data.name || ""
+          });
+
+          // Load possible products if package is selected
+          if (data.packageID) {
+            await handleProductInputChange('packageType', data.packageID);
           }
         }
       } catch (err) {
-        console.error("Error loading client:", err);
-        setMessage({ type: "error", text: "Ошибка при загрузке клиента" });
+        console.error("Error loading data:", err);
+        setMessage({ type: "error", text: "Ошибка при загрузке данных" });
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    fetchInitialData();
   }, [clientId]);
+
+   // Add product input change handlers from AddClientForm
+  const handleProductInputChange = async (field, value) => {
+    setProductInputs(prev => ({ ...prev, [field]: value }));
+
+    if (formData.designType === "unique") {
+      await handleUniqueDesignChange(field, value);
+    } else {
+      await handleStandardDesignChange(field, value);
+    }
+  };
+
+   const handleUniqueDesignChange = async (field, value) => {
+    if (field === 'packageType') {
+      try {
+        const possibleProductsSnapshot = await getDocs(
+          collection(db, `packageTypes/${value}/possibleProducts`)
+        );
+        
+        const possibleProductIds = possibleProductsSnapshot.docs.map(doc => doc.data().productID);
+        
+        const productsWithNames = await Promise.all(
+          possibleProductIds.map(async (productID) => {
+            const productDoc = await getDoc(doc(db, "products", productID));
+            if (productDoc.exists()) {
+              return {
+                id: productID,
+                productName: productDoc.data().productName,
+                ...productDoc.data()
+              };
+            }
+            return null;
+          })
+        );
+        
+        setPossibleProducts(productsWithNames.filter(p => p !== null));
+        setProductInputs(prev => ({ ...prev, product: "", gram: "" }));
+        
+      } catch (error) {
+        console.error("Error fetching possible products:", error);
+      }
+    }
+  };
+
+  const handleStandardDesignChange = async (field, value) => {
+    if (field === 'packageType') {
+      const filteredProducts = productTypesData.filter(item => item.packageID === value);
+      const uniqueProducts = [...new Set(filteredProducts.map(item => item.productID_2))];
+      
+      const productsWithNames = await Promise.all(
+        uniqueProducts.map(async (productID) => {
+          try {
+            const productDoc = await getDoc(doc(db, "products", productID));
+            if (productDoc.exists()) {
+              return {
+                id: productID,
+                productName: productDoc.data().productName,
+                ...productDoc.data()
+              };
+            }
+            return { id: productID, productName: productID };
+          } catch (error) {
+            console.error(`Error fetching product ${productID}:`, error);
+            return { id: productID, productName: productID };
+          }
+        })
+      );
+      
+      setAvailableProducts(productsWithNames);
+      setProductInputs(prev => ({ ...prev, product: "", gram: "", name: "" }));
+      setAvailableGrams([]);
+      setAvailableNames([]);
+      
+    } else if (field === 'product') {
+      const filteredItems = productTypesData.filter(item => 
+        item.packageID === productInputs.packageType && item.productID_2 === value
+      );
+      const uniqueGrams = [...new Set(filteredItems.map(item => item.gram))].sort((a, b) => a - b);
+      
+      setAvailableGrams(uniqueGrams);
+      setProductInputs(prev => ({ ...prev, gram: "", name: "" }));
+      setAvailableNames([]);
+      
+    } else if (field === 'gram') {
+      const matchingItems = productTypesData.filter(item => 
+        item.packageID === productInputs.packageType && 
+        item.productID_2 === productInputs.product && 
+        item.gram === parseInt(value)
+      );
+      
+      if (matchingItems.length > 1) {
+        const uniqueNames = [...new Set(matchingItems.map(item => item.name))];
+        setAvailableNames(uniqueNames);
+      } else {
+        setAvailableNames([]);
+        if (matchingItems.length === 1 && matchingItems[0].name) {
+          setProductInputs(prev => ({ ...prev, name: matchingItems[0].name }));
+        }
+      }
+    }
+  };
+
+
+
 
   // Input handlers
   const handleInputChange = (field) => (e) =>
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
 
   // Update client
-  const handleSubmit = async (e) => {
+ const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
 
     try {
       const clientRef = doc(db, "clients", clientId);
-
       const [lat, lng] = formData.geoPoint
         .split(",")
         .map((coord) => parseFloat(coord.trim()));
 
+      // Build update data with new product format
       const updateData = {
         name: formData.name,
         orgName: formData.orgName,
@@ -281,7 +412,12 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
         notifyWhen: parseFloat(formData.notifyWhen),
         comment: formData.comment,
         imageURL1: formData.imageURL1 || DEFAULT_PLACEHOLDER_URL,
-        updatedAt: Timestamp.now()
+        updatedAt: Timestamp.now(),
+        // Add product fields
+        packageID: productInputs.packageType,
+        productID_2: productInputs.product,
+        gram: parseInt(productInputs.gram),
+        ...(productInputs.name && { name: productInputs.name })
       };
 
       await updateDoc(clientRef, updateData);
@@ -442,63 +578,115 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
           </Card>
 
           {/* Product Section */}
-          <Card className="form-section" variant="outlined">
-            <CardContent>
-              <Typography variant="h6" className="form-section-title">
-                <LocalOfferIcon /> Продукт
-              </Typography>
-              
-              <div className="product-inputs-grid">
-                <TextField
-                  select
-                  fullWidth
-                  label="Тип продукта"
-                  value={productInputs.type}
-                  onChange={(e) =>
-                    setProductInputs((p) => ({ ...p, type: e.target.value }))
-                  }
-                >
-                  {getUniqueTypes().map((t) => (
-                    <MenuItem key={t} value={t}>
-                      {t}
-                    </MenuItem>
-                  ))}
-                </TextField>
+          {/* Product Section */}
+    <Card className="form-section" variant="outlined">
+      <CardContent>
+        <Typography variant="h6" className="form-section-title">
+          <LocalOfferIcon /> Продукт
+        </Typography>
+        
+        <Grid container spacing={2}>
+          {/* Package Type */}
+          <Grid item xs={12} sm={4}>
+            <TextField
+              select
+              fullWidth
+              label="Тип упаковки"
+              value={productInputs.packageType}
+              onChange={(e) => handleProductInputChange('packageType', e.target.value)}
+              required
+              size="small"
+              SelectProps={{
+                renderValue: (selected) => {
+                  if (!selected) return <span>Выбрать</span>;
+                  const selectedPackage = packageTypes.find((p) => p.id === selected);
+                  return selectedPackage?.name || selectedPackage?.type || selectedPackage?.id || selected;
+                }
+              }}
+            >
+              {packageTypes.map((pkg) => (
+                <MenuItem key={pkg.id} value={pkg.id}>
+                  {pkg.name || pkg.type || pkg.id}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
 
-                <TextField
-                  select
-                  fullWidth
-                  label="Упаковка"
-                  value={productInputs.packaging}
-                  onChange={(e) =>
-                    setProductInputs((p) => ({ ...p, packaging: e.target.value }))
-                  }
-                >
-                  {getUniquePackaging().map((p) => (
-                    <MenuItem key={p} value={p}>
-                      {p}
-                    </MenuItem>
-                  ))}
-                </TextField>
+          {/* Product */}
+          <Grid item xs={12} sm={4}>
+            <TextField
+              select
+              fullWidth
+              label="Продукт"
+              value={productInputs.product}
+              onChange={(e) => handleProductInputChange('product', e.target.value)}
+              required
+              size="small"
+              disabled={!productInputs.packageType}
+              SelectProps={{
+                renderValue: (selected) => {
+                  if (!selected) return <span>Выбрать</span>;
+                  const source = formData.designType === "unique" ? possibleProducts : availableProducts;
+                  const item = source.find((p) => p.id === selected);
+                  return item?.productName || item?.name || item?.id || selected;
+                }
+              }}
+            >
+              {(formData.designType === "unique" ? possibleProducts : availableProducts).map((product) => (
+                <MenuItem key={product.id} value={product.id}>
+                  {product.productName || product.name || product.id}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
 
-                <TextField
-                  select
-                  fullWidth
-                  label="Граммаж"
-                  value={productInputs.gramm}
-                  onChange={(e) =>
-                    setProductInputs((p) => ({ ...p, gramm: e.target.value }))
-                  }
-                >
-                  {getUniqueGramms().map((g) => (
-                    <MenuItem key={g} value={g}>
-                      {g} г
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Gram */}
+          <Grid item xs={12} sm={4}>
+            <TextField
+              select
+              fullWidth
+              label="Граммаж"
+              value={productInputs.gram}
+              onChange={(e) => handleProductInputChange('gram', e.target.value)}
+              required
+              size="small"
+              disabled={!productInputs.product}
+              SelectProps={{
+                renderValue: (selected) => selected ? `${selected} г` : <span>Выбрать</span>
+              }}
+            >
+              {/* Show available grams for standard design, or static options for unique */}
+              {(formData.designType === "standart" ? availableGrams : [1, 2, 3, 4, 5, 6]).map((gram) => (
+                <MenuItem key={gram} value={gram}>
+                  {gram} г
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+
+          {/* Name (only for Standard Design with multiple options) */}
+          {formData.designType === "standart" && availableNames.length > 0 && (
+            <Grid item xs={12} sm={4}>
+              <TextField
+                select
+                fullWidth
+                label="Название"
+                value={productInputs.name}
+                onChange={(e) => handleProductInputChange('name', e.target.value)}
+                required
+                size="small"
+              >
+                {availableNames.map((name) => (
+                  <MenuItem key={name} value={name}>
+                    {name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+          )}
+        </Grid>
+      </CardContent>
+    </Card>
 
           {/* Notification Section */}
           {!isStandardDesign && (
