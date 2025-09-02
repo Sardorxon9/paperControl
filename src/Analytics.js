@@ -35,13 +35,22 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 export default function Analytics({ user, userRole, onBackToDashboard, onLogout }) {
+    
   const [clientData, setClientData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [productStats, setProductStats] = useState({});
+
   const [packageStats, setPackageStats] = useState({
     stick: 0,
     sachet: 0,
     total: 0
   });
+  
+
+
+
+
+  
 
   // Fetch client data
   const fetchClientData = async () => {
@@ -75,6 +84,31 @@ export default function Analytics({ user, userRole, onBackToDashboard, onLogout 
         sachet: sachetCount,
         total: clientsArray.length
       });
+
+      const fetchProductNames = async () => {
+  try {
+    const productsSnapshot = await getDocs(collection(db, "products"));
+    const productMap = {};
+    
+    productsSnapshot.forEach(doc => {
+      productMap[doc.id] = doc.data().productName;
+    });
+
+    const productCounts = {};
+    clientsArray.forEach(client => {
+      if (client.productID_2 && productMap[client.productID_2]) {
+        const productName = productMap[client.productID_2];
+        productCounts[productName] = (productCounts[productName] || 0) + 1;
+      }
+    });
+
+    setProductStats(productCounts);
+  } catch (error) {
+    console.error("Error fetching product data:", error);
+  }
+};
+await fetchProductNames();
+ 
       
     } catch (error) {
       console.error("Error fetching client data:", error);
@@ -82,6 +116,7 @@ export default function Analytics({ user, userRole, onBackToDashboard, onLogout 
       setLoading(false);
     }
   };
+  
 
   useEffect(() => {
     fetchClientData();
@@ -131,6 +166,55 @@ export default function Analytics({ user, userRole, onBackToDashboard, onLogout 
     },
     maintainAspectRatio: false
   };
+
+  const productChartData = {
+  labels: Object.keys(productStats),
+  datasets: [
+    {
+      data: Object.values(productStats),
+      backgroundColor: [
+        '#0F9D8C',
+        '#4285F4',
+        '#F4B400',
+        '#DB4437',
+        '#0F9D58'
+      ],
+      borderColor: [
+        '#0c7a6e',
+        '#3367d6',
+        '#c69c04',
+        '#c1351a',
+        '#0c7a40'
+      ],
+      borderWidth: 2,
+    },
+  ],
+};
+
+const productChartOptions = {
+  plugins: {
+    legend: {
+      position: 'bottom',
+      labels: {
+        padding: 20,
+        font: {
+          size: 12
+        }
+      }
+    },
+    tooltip: {
+      callbacks: {
+        label: function(context) {
+          const label = context.label || '';
+          const value = context.raw || 0;
+          const percentage = Math.round((value / packageStats.total) * 100);
+          return `${label}: ${value} (${percentage}%)`;
+        }
+      }
+    }
+  },
+  maintainAspectRatio: false
+};
 
   // Custom center text plugin
  const centerTextPlugin = {
@@ -256,72 +340,12 @@ return (
         </Box>
       ) : (
         <Grid container spacing={3}>
-          {/* Donut Chart Card */}
-          <Grid item xs={12} md={6}>
-            <Card 
-              elevation={2}
-              sx={{
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                borderRadius: 3,
-                overflow: 'hidden',
-                border: '1px solid',
-                borderColor: 'divider'
-              }}
-            >
-              <CardContent sx={{ p: 3, flexGrow: 1 }}>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  Распределение клиентов по типам упаковки
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Процентное соотношение клиентов, использующих упаковку типа Стик и Сашет
-                </Typography>
-                
-                <Box sx={{ position: 'relative', height: 300 }}>
-                  <Doughnut data={chartData} options={chartOptions} plugins={[centerTextPlugin]} />
-                </Box>
-                
-                <Divider sx={{ my: 2 }} />
-                
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h6" fontWeight="bold">
-                        {packageStats.stick}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Стик
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {packageStats.total > 0 ? Math.round((packageStats.stick / packageStats.total) * 100) : 0}%
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h6" fontWeight="bold">
-                        {packageStats.sachet}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Сашет
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {packageStats.total > 0 ? Math.round((packageStats.sachet / packageStats.total) * 100) : 0}%
-                      </Typography>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* 3 Stats Cards in one row */}
-          <Grid item xs={12} md={6}>
+          {/* Top Row - Bento-style stats cards */}
+          <Grid item xs={12}>
             <Grid container spacing={3} alignItems="stretch">
               {/* Total Clients */}
               <Grid item xs={12} md={4}>
-                <Card 
+                <Card
                   elevation={2}
                   sx={{
                     background: 'linear-gradient(135deg, #0F9D8C 0%, #0c7a6e 100%)',
@@ -348,7 +372,7 @@ return (
 
               {/* Stick */}
               <Grid item xs={12} md={4}>
-                <Card 
+                <Card
                   elevation={2}
                   sx={{
                     backgroundColor: '#E2F0EE',
@@ -374,7 +398,7 @@ return (
 
               {/* Sachet */}
               <Grid item xs={12} md={4}>
-                <Card 
+                <Card
                   elevation={2}
                   sx={{
                     backgroundColor: '#E8F0FE',
@@ -399,6 +423,39 @@ return (
               </Grid>
             </Grid>
           </Grid>
+
+          {/* Second Row - Two Charts Side by Side */}
+        <Grid item xs={12} mt={6}>
+  <Grid container spacing={3} alignItems="stretch">
+    {/* Package Distribution Chart */}
+    <Grid item xs={12} md={6}>
+      <Card sx={{ height: '100%' }}>
+        <CardContent sx={{ p: 3, flexGrow: 1 }}>
+          <Typography variant="h6" fontWeight="bold" gutterBottom>
+            Распределение клиентов по типам упаковки
+          </Typography>
+          <Box sx={{ position: 'relative', height: 300 }}>
+            <Doughnut data={chartData} options={chartOptions} plugins={[centerTextPlugin]} />
+          </Box>
+        </CardContent>
+      </Card>
+    </Grid>
+
+    {/* Product Distribution Chart */}
+    <Grid item xs={12} md={6}>
+      <Card sx={{ height: '100%' }}>
+        <CardContent sx={{ p: 3, flexGrow: 1 }}>
+          <Typography variant="h6" fontWeight="bold" gutterBottom>
+            Распределение клиентов по продуктам
+          </Typography>
+          <Box sx={{ position: 'relative', height: 300 }}>
+            <Doughnut data={productChartData} options={productChartOptions} />
+          </Box>
+        </CardContent>
+      </Card>
+    </Grid>
+  </Grid>
+</Grid>
         </Grid>
       )}
     </Container>
