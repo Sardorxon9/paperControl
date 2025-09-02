@@ -995,38 +995,52 @@ return (
                   </Grid>
 
                   {/* Gram */}
-                  <Grid item xs={12} sm={4}>
-                    <TextField
-                      select
-                      fullWidth
-                      label="Граммаж"
-                      value={productInputs.gram}
-                      onChange={(e) => handleProductInputChange('gram', e.target.value)}
-                      required
-                      size="small"
-                      disabled={!productInputs.product}
-                      SelectProps={{
-                        renderValue: (selected) =>
-                          selected
-                            ? `${selected} г`
-                            : <span style={{ opacity: 0.6, fontStyle: "italic" }}>Выбрать</span>,
-                        MenuProps: { 
-                          PaperProps: { 
-                            sx: { 
-                              maxHeight: 200,
-                              minWidth: 120 
-                            } 
-                          } 
-                        }
-                      }}
-                    >
-                      {(formData.designType === "unique" ? staticGramOptions : availableGrams).map((gram) => (
-                        <MenuItem key={gram} value={gram}>
-                          {gram} г
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid>
+<Grid item xs={12} sm={4}>
+  <TextField
+    select
+    fullWidth
+    label="Граммаж"
+    value={productInputs.gram}
+    onChange={(e) => handleProductInputChange('gram', e.target.value)}
+    required
+    size="small"
+    disabled={!productInputs.product}
+    SelectProps={{
+      renderValue: (selected) =>
+        selected
+          ? `${selected} г`
+          : <span style={{ opacity: 0.6, fontStyle: "italic" }}>Выбрать</span>,
+      MenuProps: { 
+        PaperProps: { 
+          sx: { 
+            maxHeight: 200,
+            minWidth: 120 
+          } 
+        } 
+      }
+    }}
+  >
+    {formData.designType === "unique" ? (
+      staticGramOptions.map((gram) => (
+        <MenuItem key={gram} value={gram}>
+          {gram} г
+        </MenuItem>
+      ))
+    ) : (
+      availableGrams.length > 0 ? (
+        availableGrams.map((gram) => (
+          <MenuItem key={gram} value={gram}>
+            {gram} г
+          </MenuItem>
+        ))
+      ) : (
+        <MenuItem disabled value="">
+          Нет доступных граммажей
+        </MenuItem>
+      )
+    )}
+  </TextField>
+</Grid>
 
                   {/* Name (only for Standard Design with multiple options) */}
                   {isStandardDesign && availableNames.length > 0 && (
