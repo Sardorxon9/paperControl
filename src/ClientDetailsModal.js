@@ -1343,12 +1343,12 @@ const handleSendViaTelegram = async () => {
   switch (actionType) {
     case 'paperIn':
       return { 
-        icon: <ArrowUpwardRoundedIcon sx={{ color: '#2e7d32' }} fontSize="small" />,
+        icon: <ArrowDownwardRoundedIcon sx={{ color: '#2e7d32' }} fontSize="small" />,
         text: '+' + amount.toFixed(2)
       };
     case 'paperOut':
       return { 
-        icon: <ArrowDownwardRoundedIcon sx={{ color: '#d32f2f' }} fontSize="small" />,
+        icon: <ArrowUpwardRoundedIcon sx={{ color: '#d32f2f' }} fontSize="small" />,
         text: '-' + amount.toFixed(2)
       };
     case 'fixing':
