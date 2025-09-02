@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   Box,
@@ -14,27 +14,114 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
-  FormControlLabel,
-  Checkbox,
-  RadioGroup,
-  Radio
+  MenuItem
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
 const AddStandardDesignModal = ({ open, onClose, onDesignAdded, currentUser }) => {
   const [formData, setFormData] = useState({
     name: '',
-    type: '',
-    packaging: 'Сашет',
     gramm: '',
     shellNum: '',
     notifyWhen: 3
   });
+
+  // Product selection state
+  const [productInputs, setProductInputs] = useState({
+    packageType: "",
+    product: ""
+  });
+
+  // Data from collections
+  const [packageTypes, setPackageTypes] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [possibleProducts, setPossibleProducts] = useState([]);
+
   const [paperRolls, setPaperRolls] = useState([{ id: 1, paperRemaining: '' }]);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
+  // Load initial data on component mount
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        // Fetch package types
+        const packageTypesSnapshot = await getDocs(collection(db, "packageTypes"));
+        const packageTypesList = packageTypesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setPackageTypes(packageTypesList);
+
+        // Fetch products collection
+        const productsSnapshot = await getDocs(collection(db, "products"));
+        const productsList = productsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setProducts(productsList);
+
+        console.log("Fetched data:", { packageTypesList, productsList });
+      } catch (error) {
+        console.error("Error fetching initial data:", error);
+        setSnackbar({
+          open: true,
+          message: 'Ошибка при загрузке данных',
+          severity: 'error'
+        });
+      }
+    };
+
+    if (open) {
+      fetchInitialData();
+    }
+  }, [open]);
+
+  // Handle product input changes
+  const handleProductInputChange = async (field, value) => {
+    setProductInputs(prev => ({ ...prev, [field]: value }));
+
+    if (field === 'packageType') {
+      // Fetch possible products for selected package type
+      try {
+        const possibleProductsSnapshot = await getDocs(
+          collection(db, `packageTypes/${value}/possibleProducts`)
+        );
+        
+        const possibleProductIds = possibleProductsSnapshot.docs.map(doc => doc.data().productID);
+        
+        // Get product details from products collection
+        const productsWithNames = await Promise.all(
+          possibleProductIds.map(async (productID) => {
+            const productDoc = await getDoc(doc(db, "products", productID));
+            if (productDoc.exists()) {
+              return {
+                id: productID,
+                productName: productDoc.data().productName,
+                ...productDoc.data()
+              };
+            }
+            return null;
+          })
+        );
+        
+        setPossibleProducts(productsWithNames.filter(p => p !== null));
+        
+        // Reset dependent fields
+        setProductInputs(prev => ({ ...prev, product: "" }));
+        
+      } catch (error) {
+        console.error("Error fetching possible products:", error);
+        setSnackbar({
+          open: true,
+          message: 'Ошибка при загрузке продуктов',
+          severity: 'error'
+        });
+      }
+    }
+  };
 
   const handleInputChange = (field) => (e) => {
     setFormData({ ...formData, [field]: e.target.value });
@@ -58,13 +145,17 @@ const AddStandardDesignModal = ({ open, onClose, onDesignAdded, currentUser }) =
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (loading) return; // Prevent duplicate submissions
+    if (loading) return;
     setLoading(true);
 
     try {
       // Validate form
-      if (!formData.name || !formData.type || !formData.packaging || !formData.gramm || !formData.shellNum) {
+      if (!formData.name || !formData.gramm || !formData.shellNum) {
         throw new Error('Пожалуйста, заполните все обязательные поля');
+      }
+
+      if (!productInputs.packageType || !productInputs.product) {
+        throw new Error('Пожалуйста, выберите тип упаковки и продукт');
       }
 
       if (paperRolls.some(roll => !roll.paperRemaining || isNaN(roll.paperRemaining))) {
@@ -74,15 +165,15 @@ const AddStandardDesignModal = ({ open, onClose, onDesignAdded, currentUser }) =
       // Calculate total paper from rolls
       const totalKg = paperRolls.reduce((sum, roll) => sum + parseFloat(roll.paperRemaining), 0);
 
-      // Create product document
+      // Create product document with the new structure
       const productRef = await addDoc(collection(db, 'productTypes'), {
         name: formData.name,
-        type: formData.type,
-        packaging: formData.packaging,
-        gramm: formData.gramm,
+        gramm: formData.gramm, // Keep as string
         shellNum: formData.shellNum,
         totalKG: totalKg,
         notifyWhen: parseFloat(formData.notifyWhen) || 3,
+        packageID: productInputs.packageType, // Reference to packageTypes collection
+        productID_2: productInputs.product, // Reference to products collection
         createdAt: serverTimestamp()
       });
 
@@ -128,13 +219,18 @@ const AddStandardDesignModal = ({ open, onClose, onDesignAdded, currentUser }) =
       // Reset form
       setFormData({
         name: '',
-        type: '',
-        packaging: 'Сашет',
         gramm: '',
         shellNum: '',
         notifyWhen: 3
       });
+
+      setProductInputs({
+        packageType: "",
+        product: ""
+      });
+
       setPaperRolls([{ id: 1, paperRemaining: '' }]);
+      setPossibleProducts([]);
 
     } catch (error) {
       setSnackbar({
@@ -149,7 +245,6 @@ const AddStandardDesignModal = ({ open, onClose, onDesignAdded, currentUser }) =
 
   return (
     <Modal open={open} onClose={onClose}>
-      {/* Single container wrapping all modal content */}
       <Box sx={{
         position: 'absolute',
         top: '50%',
@@ -170,6 +265,133 @@ const AddStandardDesignModal = ({ open, onClose, onDesignAdded, currentUser }) =
 
         <Box component="form" onSubmit={handleSubmit}>
           <Grid container spacing={3}>
+            {/* Product Selection Section */}
+            <Grid item xs={12}>
+              <Paper variant="outlined" sx={{ p: 3 }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                  Выбор продукта
+                </Typography>
+                
+                <Grid container spacing={2}>
+                  {/* Package Type */}
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Тип упаковки"
+                      value={productInputs.packageType}
+                      onChange={(e) => handleProductInputChange('packageType', e.target.value)}
+                      required
+                      size="small"
+                      SelectProps={{
+                        renderValue: (selected) => {
+                          if (!selected) {
+                            return <span style={{ opacity: 0.6, fontStyle: "italic" }}>Выбрать</span>;
+                          }
+                          
+                          const selectedPackage = packageTypes.find((p) => p.id === selected);
+                          
+                          if (!selectedPackage) {
+                            const fallbackPackage = packageTypes.find((p) => 
+                              p.name === selected || p.type === selected || p.id === selected
+                            );
+                            
+                            if (fallbackPackage) {
+                              return fallbackPackage.name || fallbackPackage.type || fallbackPackage.id;
+                            }
+                            
+                            return selected;
+                          }
+                          
+                          return selectedPackage.name || selectedPackage.type || selectedPackage.id;
+                        },
+                        MenuProps: {
+                          PaperProps: {
+                            sx: {
+                              maxHeight: 250,
+                              minWidth: 200,
+                              '& .MuiMenuItem-root': {
+                                fontSize: '0.9rem',
+                                minHeight: '36px',
+                                padding: '8px 16px',
+                              }
+                            }
+                          }
+                        }
+                      }}
+                    >
+                      {packageTypes.length > 0 ? (
+                        packageTypes.map((pkg) => (
+                          <MenuItem key={pkg.id} value={pkg.id}>
+                            {pkg.name || pkg.type || pkg.id}
+                          </MenuItem>
+                        ))
+                      ) : (
+                        <MenuItem disabled value="">
+                          Загрузка типов упаковки...
+                        </MenuItem>
+                      )}
+                    </TextField>
+                  </Grid>
+
+                  {/* Product */}
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Продукт"
+                      value={productInputs.product}
+                      onChange={(e) => handleProductInputChange('product', e.target.value)}
+                      required
+                      size="small"
+                      disabled={!productInputs.packageType}
+                      SelectProps={{
+                        renderValue: (selected) => {
+                          if (!selected) return <span style={{ opacity: 0.6, fontStyle: "italic" }}>Выбрать</span>;
+                          
+                          const item = possibleProducts.find((p) => p.id === selected);
+                          
+                          if (!item) {
+                            const fallbackItem = possibleProducts.find((p) => 
+                              p.productName === selected || p.name === selected || p.id === selected
+                            );
+                            
+                            if (fallbackItem) {
+                              return fallbackItem.productName || fallbackItem.name || fallbackItem.id;
+                            }
+                            
+                            return selected;
+                          }
+                          
+                          return item.productName || item.name || item.id;
+                        },
+                        MenuProps: {
+                          PaperProps: { 
+                            sx: { 
+                              maxHeight: 250,
+                              minWidth: 200 
+                            } 
+                          }
+                        }
+                      }}
+                    >
+                      {possibleProducts.length > 0 ? (
+                        possibleProducts.map((product) => (
+                          <MenuItem key={product.id} value={product.id}>
+                            {product.productName || product.name || product.id}
+                          </MenuItem>
+                        ))
+                      ) : (
+                        <MenuItem disabled value="">
+                          {productInputs.packageType ? "Загрузка продуктов..." : "Сначала выберите тип упаковки"}
+                        </MenuItem>
+                      )}
+                    </TextField>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Grid>
+
             {/* Product Info */}
             <Grid item xs={12}>
               <Paper variant="outlined" sx={{ p: 3 }}>
@@ -189,39 +411,6 @@ const AddStandardDesignModal = ({ open, onClose, onDesignAdded, currentUser }) =
                     />
                   </Grid>
                   
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Тип продукта"
-                      value={formData.type}
-                      onChange={handleInputChange('type')}
-                      required
-                      size="small"
-                    />
-                  </Grid>
-                  
-                  <Grid item xs={12} sm={4}>
-                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                      Упаковка *
-                    </Typography>
-                    <RadioGroup
-                      value={formData.packaging}
-                      onChange={handleInputChange('packaging')}
-                      row
-                    >
-                      <FormControlLabel
-                        value="Сашет"
-                        control={<Radio size="small" />}
-                        label="Сашет"
-                      />
-                      <FormControlLabel
-                        value="Стик"
-                        control={<Radio size="small" />}
-                        label="Стик"
-                      />
-                    </RadioGroup>
-                  </Grid>
-                  
                   <Grid item xs={12} sm={4}>
                     <TextField
                       fullWidth
@@ -230,6 +419,7 @@ const AddStandardDesignModal = ({ open, onClose, onDesignAdded, currentUser }) =
                       onChange={handleInputChange('gramm')}
                       required
                       size="small"
+                      placeholder="например: 120г"
                     />
                   </Grid>
                   
@@ -241,6 +431,7 @@ const AddStandardDesignModal = ({ open, onClose, onDesignAdded, currentUser }) =
                       onChange={handleInputChange('shellNum')}
                       required
                       size="small"
+                      placeholder="например: 2-A"
                     />
                   </Grid>
                   
@@ -331,7 +522,6 @@ const AddStandardDesignModal = ({ open, onClose, onDesignAdded, currentUser }) =
           </Box>
         </Box>
 
-        {/* Snackbar now inside the main container */}
         <Snackbar
           open={snackbar.open}
           autoHideDuration={6000}

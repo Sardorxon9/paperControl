@@ -305,70 +305,104 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
     }
   };
 
-  const fetchProductTypesData = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "productTypes"));
-      
-      const validDocs = querySnapshot.docs.filter(docSnap => 
-        docSnap && docSnap.id && docSnap.exists()
-      );
+// Replace your existing fetchProductTypesData function with this fixed version:
 
-      const productTypesArray = await Promise.all(
-        validDocs.map(async (docSnap) => {
-          try {
-            const data = docSnap.data();
-            
-            if (!data) {
-              console.warn("Product document has no data:", docSnap.id);
-              return null;
-            }
-            
-            let shellNum = '-';
-            let paperRemaining = 0;
-            let totalRolls = 0;
-            
-            try {
-              const paperInfoQuery = await getDocs(collection(db, "productTypes", docSnap.id, "paperInfo"));
-              if (!paperInfoQuery.empty) {
-                const paperInfoDoc = paperInfoQuery.docs[0];
-                const paperInfoData = paperInfoDoc.data();
-                shellNum = paperInfoData.shellNum || '-';
-                paperRemaining = Number(paperInfoData.paperRemaining) || 0;
-                
-                const rollsQuery = await getDocs(
-                  collection(db, "productTypes", docSnap.id, "paperInfo", paperInfoDoc.id, "individualRolls")
-                );
-                totalRolls = rollsQuery.docs.length;
-              }
-            } catch (error) {
-              console.error("Error fetching paperInfo:", error);
-            }
-            
-            return {
-              id: docSnap.id,
-              type: data.type || '-',
-              packaging: data.packaging || '-',
-              gramm: data.gramm || '-',
-              shellNum,
-              paperRemaining,
-              totalRolls
-            };
-          } catch (error) {
-            console.error("Error processing product document:", docSnap.id, error);
+const fetchProductTypesData = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, "productTypes"));
+    
+    const validDocs = querySnapshot.docs.filter(docSnap => 
+      docSnap && docSnap.id && docSnap.exists()
+    );
+
+    const productTypesArray = await Promise.all(
+      validDocs.map(async (docSnap) => {
+        try {
+          const data = docSnap.data();
+          
+          if (!data) {
+            console.warn("Product document has no data:", docSnap.id);
             return null;
           }
-        })
-      );
+          
+          // Fetch product name from products collection using productID_2
+          let productName = '';
+          if (data.productID_2) {
+            try {
+              const productRef = doc(db, "products", data.productID_2);
+              const productSnap = await getDoc(productRef);
+              if (productSnap.exists()) {
+                productName = productSnap.data().productName || '';
+              }
+            } catch (error) {
+              console.error("Error fetching product name:", error);
+            }
+          }
 
-      const validProducts = productTypesArray.filter(product => product !== null && product.id);
-      setProductTypesData(validProducts);
-    } catch (error) {
-      console.error("Error fetching product types data:", error);
-      setProductTypesData([]);
-    } finally {
-      setProductTypesLoading(false);
-    }
-  };
+          // Fetch package type from packageTypes collection using packageID
+          let packageTypeName = '';
+          if (data.packageID) {
+            try {
+              const packageRef = doc(db, "packageTypes", data.packageID);
+              const packageSnap = await getDoc(packageRef);
+              if (packageSnap.exists()) {
+                packageTypeName = packageSnap.data().type || packageSnap.data().name || '';
+              }
+            } catch (error) {
+              console.error("Error fetching package type:", error);
+            }
+          }
+          
+          let shellNum = data.shellNum || '-'; // Use shellNum directly from productTypes document
+          let paperRemaining = data.totalKG || 0; // Use totalKG as initial paper remaining
+          let totalRolls = 0;
+          
+          // Try to get updated paper info from subcollection if it exists
+          try {
+            const paperInfoQuery = await getDocs(collection(db, "productTypes", docSnap.id, "paperInfo"));
+            if (!paperInfoQuery.empty) {
+              const paperInfoDoc = paperInfoQuery.docs[0];
+              const paperInfoData = paperInfoDoc.data();
+              paperRemaining = Number(paperInfoData.paperRemaining) || paperRemaining;
+              
+              // Count individual rolls
+              const rollsQuery = await getDocs(
+                collection(db, "productTypes", docSnap.id, "paperInfo", paperInfoDoc.id, "individualRolls")
+              );
+              totalRolls = rollsQuery.docs.length;
+            }
+          } catch (error) {
+            console.error("Error fetching paperInfo:", error);
+          }
+          
+          return {
+            id: docSnap.id,
+            name: data.name || '-', // Product name from productTypes document
+            type: productName || data.type || '-', // Product name from products collection
+            packaging: packageTypeName || data.packaging || '-', // Package type from packageTypes collection
+            gramm: data.gramm || '-',
+            shellNum,
+            paperRemaining,
+            totalRolls,
+            // Store original data for debugging
+            originalData: data
+          };
+        } catch (error) {
+          console.error("Error processing product document:", docSnap.id, error);
+          return null;
+        }
+      })
+    );
+
+    const validProducts = productTypesArray.filter(product => product !== null && product.id);
+    setProductTypesData(validProducts);
+  } catch (error) {
+    console.error("Error fetching product types data:", error);
+    setProductTypesData([]);
+  } finally {
+    setProductTypesLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchClientData();
@@ -760,9 +794,31 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
                   {index + 1}
                 </TableCell>
                 
-                <TableCell sx={{ padding: '16px' }}>
-                  {product.type}
-                </TableCell>
+              <TableCell sx={{ padding: '16px' }}>
+  <Box>
+    <Typography 
+      variant="body1" 
+      sx={{ 
+        fontWeight: 600, 
+        color: 'grey.800',
+        lineHeight: 1.2,
+        mb: 0.5
+      }}
+    >
+      {product.type}
+    </Typography>
+    <Typography 
+      variant="body2" 
+      sx={{ 
+        fontWeight: 400, 
+        color: 'grey.600',
+        lineHeight: 1.2
+      }}
+    >
+      {product.name}
+    </Typography>
+  </Box>
+</TableCell>
                 
                 <TableCell sx={{ padding: '16px' }}>
                   {product.packaging}

@@ -994,6 +994,7 @@ return (
                     </TextField>
                   </Grid>
 
+          
                   {/* Gram */}
 <Grid item xs={12} sm={4}>
   <TextField
@@ -1020,25 +1021,12 @@ return (
       }
     }}
   >
-    {formData.designType === "unique" ? (
-      staticGramOptions.map((gram) => (
-        <MenuItem key={gram} value={gram}>
-          {gram} г
-        </MenuItem>
-      ))
-    ) : (
-      availableGrams.length > 0 ? (
-        availableGrams.map((gram) => (
-          <MenuItem key={gram} value={gram}>
-            {gram} г
-          </MenuItem>
-        ))
-      ) : (
-        <MenuItem disabled value="">
-          Нет доступных граммажей
-        </MenuItem>
-      )
-    )}
+    {/* Always show static gram options for both design types */}
+    {staticGramOptions.map((gram) => (
+      <MenuItem key={gram} value={gram}>
+        {gram} г
+      </MenuItem>
+    ))}
   </TextField>
 </Grid>
 
