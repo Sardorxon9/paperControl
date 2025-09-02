@@ -5,15 +5,16 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { query, collection, where, getDocs } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import AuthPages from './AuthPages';
-import Dashboard from './Dashboard'; // We'll create this component
+import Dashboard from './Dashboard';
 import Welcome from './Welcome';
+import Analytics from './Analytics';
 import { CircularProgress, Box } from '@mui/material';
 
 function App() {
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' or 'welcome'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'welcome', or 'analytics'
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -72,6 +73,10 @@ function App() {
     setCurrentView('welcome');
   };
 
+  const handleNavigateToAnalytics = () => {
+    setCurrentView('analytics');
+  };
+
   const handleBackToDashboard = () => {
     setCurrentView('dashboard');
   };
@@ -97,27 +102,39 @@ function App() {
     return <AuthPages />;
   }
 
-  // If user is authenticated, show appropriate view
-  if (currentView === 'welcome') {
-    return (
-      <Welcome 
-        user={user} 
-        userRole={userRole} 
-        onBackToDashboard={handleBackToDashboard}
-        onLogout={handleLogout}
-      />
-    );
+  // Render appropriate view based on currentView state
+  switch(currentView) {
+    case 'welcome':
+      return (
+        <Welcome 
+          user={user} 
+          userRole={userRole} 
+          onBackToDashboard={handleBackToDashboard}
+          onLogout={handleLogout}
+        />
+      );
+    
+    case 'analytics':
+      return (
+        <Analytics 
+          user={user} 
+          userRole={userRole} 
+          onBackToDashboard={handleBackToDashboard}
+          onLogout={handleLogout}
+        />
+      );
+    
+    default: // dashboard view
+      return (
+        <Dashboard 
+          user={user}
+          userRole={userRole}
+          onNavigateToWelcome={handleNavigateToWelcome}
+          onNavigateToAnalytics={handleNavigateToAnalytics}
+          onLogout={handleLogout}
+        />
+      );
   }
-
-  // Default dashboard vw
-  return (
-    <Dashboard 
-      user={user}
-      userRole={userRole}
-      onNavigateToWelcome={handleNavigateToWelcome}
-      onLogout={handleLogout}
-    />
-  );
 }
 
 export default App;

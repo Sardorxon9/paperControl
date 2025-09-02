@@ -1,3 +1,4 @@
+// Dashboard.js
 import React from 'react';
 import {
   Container,
@@ -10,10 +11,16 @@ import {
 import {
   Shield,
   Work,
-  Assignment
+  Assignment,
+  Analytics as AnalyticsIcon,
+  Description,
+  Notifications,
+  People,
+  Settings,
+  Task
 } from '@mui/icons-material';
 
-const Dashboard = ({ user, userRole, onNavigateToWelcome, onLogout }) => {
+const Dashboard = ({ user, userRole, onNavigateToWelcome, onNavigateToAnalytics, onLogout }) => {
   return (
     <Container maxWidth="md" sx={{ mt: 6 }}>
       <Paper elevation={4} sx={{ p: 4, mb: 4 }}>
@@ -41,9 +48,9 @@ const Dashboard = ({ user, userRole, onNavigateToWelcome, onLogout }) => {
 
       <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }} gap={3}>
         {/* Клиенты и Бумаги Card */}
-        <Paper elevation={2} sx={{ p: 3 }}>
-          <Typography variant="h6">Клиенты и Бумаги</Typography>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
+        <Paper elevation={2} sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="h6" gutterBottom>Клиенты и Бумаги</Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom sx={{ flexGrow: 1 }}>
             Управление клиентами и контроль расхода бумаги
           </Typography>
           <Button 
@@ -59,49 +66,118 @@ const Dashboard = ({ user, userRole, onNavigateToWelcome, onLogout }) => {
           </Button>
         </Paper>
 
-        <Paper elevation={2} sx={{ p: 3 }}>
-          <Typography variant="h6">Мои документы</Typography>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
+        {/* Analytics Card - Only for admins */}
+        {userRole === 'admin' && (
+          <Paper elevation={2} sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="h6" gutterBottom>Аналитика</Typography>
+            <Typography variant="body2" color="text.secondary" gutterBottom sx={{ flexGrow: 1 }}>
+              Просмотр аналитики и отчетов по клиентам и бумаге
+            </Typography>
+            <Button 
+              variant="contained" 
+              sx={{
+                backgroundColor: '#4285F4',
+                '&:hover': { backgroundColor: '#3367d6' }
+              }}
+              startIcon={<AnalyticsIcon />}
+              onClick={onNavigateToAnalytics}
+            >
+              Открыть
+            </Button>
+          </Paper>
+        )}
+
+        {/* Мои документы Card */}
+        <Paper elevation={2} sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="h6" gutterBottom>Мои документы</Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom sx={{ flexGrow: 1 }}>
             Просмотрите и управляйте своими документами
           </Typography>
-          <Button variant="contained">Открыть</Button>
+          <Button 
+            variant="contained" 
+            startIcon={<Description />}
+          >
+            Открыть
+          </Button>
         </Paper>
 
-        <Paper elevation={2} sx={{ p: 3 }}>
-          <Typography variant="h6">Уведомления</Typography>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
+        {/* Уведомления Card */}
+        <Paper elevation={2} sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="h6" gutterBottom>Уведомления</Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom sx={{ flexGrow: 1 }}>
             Проверьте последние обновления
           </Typography>
-          <Button variant="contained" color="success">Просмотреть</Button>
+          <Button 
+            variant="contained" 
+            color="success"
+            startIcon={<Notifications />}
+          >
+            Просмотреть
+          </Button>
         </Paper>
 
         {userRole === 'admin' && (
           <>
-            {['Управление пользователями', 'Системные настройки', 'Отчеты и аналитика'].map((title, i) => (
-              <Paper key={i} elevation={2} sx={{ p: 3 }}>
-                <Typography variant="h6">{title}</Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  {title === 'Управление пользователями'
-                    ? 'Добавляйте и управляйте пользователями системы'
-                    : title === 'Системные настройки'
-                    ? 'Конфигурация системы и параметры'
-                    : 'Просмотр статистики и генерация отчетов'}
-                </Typography>
-                <Button variant="contained" color={i === 0 ? 'secondary' : i === 1 ? 'info' : 'warning'}>
-                  {title === 'Отчеты и аналитика' ? 'Отчеты' : 'Настроить'}
-                </Button>
-              </Paper>
-            ))}
+            {/* Управление пользователями Card */}
+            <Paper elevation={2} sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h6" gutterBottom>Управление пользователями</Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom sx={{ flexGrow: 1 }}>
+                Добавляйте и управляйте пользователями системы
+              </Typography>
+              <Button 
+                variant="contained" 
+                color="secondary"
+                startIcon={<People />}
+              >
+                Настроить
+              </Button>
+            </Paper>
+
+            {/* Системные настройки Card */}
+            <Paper elevation={2} sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h6" gutterBottom>Системные настройки</Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom sx={{ flexGrow: 1 }}>
+                Конфигурация системы и параметры
+              </Typography>
+              <Button 
+                variant="contained" 
+                color="info"
+                startIcon={<Settings />}
+              >
+                Настроить
+              </Button>
+            </Paper>
+
+            {/* Отчеты Card */}
+            <Paper elevation={2} sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h6" gutterBottom>Отчеты</Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom sx={{ flexGrow: 1 }}>
+                Просмотр статистики и генерация отчетов
+              </Typography>
+              <Button 
+                variant="contained" 
+                color="warning"
+                startIcon={<AnalyticsIcon />}
+              >
+                Отчеты
+              </Button>
+            </Paper>
           </>
         )}
 
         {userRole === 'worker' && (
-          <Paper elevation={2} sx={{ p: 3 }}>
-            <Typography variant="h6">Мои задачи</Typography>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
+          <Paper elevation={2} sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="h6" gutterBottom>Мои задачи</Typography>
+            <Typography variant="body2" color="text.secondary" gutterBottom sx={{ flexGrow: 1 }}>
               Просмотрите назначенные вам задачи
             </Typography>
-            <Button variant="contained" color="primary">Задачи</Button>
+            <Button 
+              variant="contained" 
+              color="primary"
+              startIcon={<Task />}
+            >
+              Задачи
+            </Button>
           </Paper>
         )}
       </Box>
