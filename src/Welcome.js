@@ -12,6 +12,8 @@ import { db } from "./firebase";
 import {
   Container,
   Typography,
+  Snackbar,
+  Alert,
   CircularProgress,
   Table,
   TableBody,
@@ -44,7 +46,8 @@ import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import CancelRoundedIcon from '@mui/icons-material/CancelRounded';
-
+import { checkAndNotifyLowPaper, sendLowPaperSummaryToAdmins } from "./paperNotificationService";
+import TelegramIcon from '@mui/icons-material/Telegram';
 const getHiddenColumns = (userRole) => {
   if (userRole === 'admin') {
     return [];
@@ -101,6 +104,8 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
   const [sortDirectionProduct, setSortDirectionProduct] = useState('asc');
   const [sortBy, setSortBy] = useState('name');   
   const [sortDirection, setSortDirection] = useState('asc'); 
+  const [sendingSummary, setSendingSummary] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const SortIcon = ({ column, activeColumn, direction }) => {
     if (column !== activeColumn) {
@@ -586,6 +591,43 @@ const fetchProductTypesData = async () => {
     return 0;
   });
 
+  const handleSendLowPaperSummary = async () => {
+  setSendingSummary(true);
+  try {
+    // Filter clients with low paper
+    const lowPaperClients = clientData.filter(client => 
+      client.paperRemaining !== undefined &&
+      client.notifyWhen !== undefined &&
+      client.paperRemaining <= client.notifyWhen
+    );
+
+    const result = await sendLowPaperSummaryToAdmins(db, lowPaperClients);
+    
+    if (result.success) {
+      setSnackbar({
+        open: true,
+        message: `Сводка отправлена ${result.successfulNotifications} администраторам`,
+        severity: 'success'
+      });
+    } else {
+      setSnackbar({
+        open: true,
+        message: `Ошибка отправки сводки: ${result.error}`,
+        severity: 'error'
+      });
+    }
+  } catch (error) {
+    console.error("Error sending low paper summary:", error);
+    setSnackbar({
+      open: true,
+      message: `Ошибка отправки сводки: ${error.message}`,
+      severity: 'error'
+    });
+  } finally {
+    setSendingSummary(false);
+  }
+};
+
   // Updated ClientsTable component
 // Updated ClientsTable component
 const ClientsTable = () => (
@@ -1022,6 +1064,27 @@ const ClientsTable = () => (
 
                 {userRole === 'admin' && (
                   <>
+                  {userRole === 'admin' && (
+  <Button
+    variant="contained"
+    color="secondary"
+    startIcon={<TelegramIcon />}
+    onClick={handleSendLowPaperSummary}
+    disabled={sendingSummary}
+    sx={{
+      backgroundColor: '#9C27B0',
+      '&:hover': { backgroundColor: '#7B1FA2' },
+      fontSize: '0.85rem',
+      px: 2.5,
+      py: 0.8,
+      borderRadius: 2,
+      textTransform: 'none',
+      whiteSpace: "nowrap"
+    }}
+  >
+    {sendingSummary ? 'Отправка...' : 'Отправить список бумаг ТГ'}
+  </Button>
+)}
                     <Button
                       variant="contained"
                       startIcon={<AddIcon />}
@@ -1211,6 +1274,20 @@ const ClientsTable = () => (
           />
         )}
       </Container>
+ <Snackbar
+  open={snackbar.open}
+  autoHideDuration={6000}
+  onClose={() => setSnackbar({ ...snackbar, open: false })}
+  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+>
+  <Alert 
+    onClose={() => setSnackbar({ ...snackbar, open: false })} 
+    severity={snackbar.severity}
+    sx={{ width: '100%' }}
+  >
+    {snackbar.message}
+  </Alert>
+</Snackbar>
     </>
   );
 }
