@@ -1,5 +1,6 @@
-const { collection, getDocs, query, where } = require("firebase/firestore");
-const axios = require('axios');
+import { collection, getDocs, query, where } from "firebase/firestore";
+import axios from "axios";
+
 
 // You'll need to import your Firebase config here
 // const { db } = require("./firebase"); // Adjust path as needed
@@ -129,7 +130,14 @@ const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen, db) =>
 };
 
 const sendLowPaperSummaryToAdmins = async (db, clients) => {
+  console.log("sendLowPaperSummaryToAdmins got db:", db.constructor.name);
+
   try {
+
+      if (!db) {
+      throw new Error("Firestore db instance is missing!");
+    }
+
     if (!clients || clients.length === 0) {
       console.log("No clients with low paper to report.");
       return { success: true, notificationSent: false, message: "No clients with low paper" };

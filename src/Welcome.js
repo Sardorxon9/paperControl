@@ -6,9 +6,7 @@ import {
   getDocs,
   doc,
   getDoc,
-  serverTimestamp,
-  where,
-  query
+  serverTimestamp
 } from "firebase/firestore";
 
 import { db } from "./firebase";
@@ -598,6 +596,9 @@ const fetchProductTypesData = async () => {
 const handleSendLowPaperSummary = async () => {
   setSendingSummary(true);
   try {
+    // Debug: check db instance
+    console.log('DB instance:', db, typeof db);
+
     // Filter clients with low paper
     const lowPaperClients = clientData.filter(client => 
       client.paperRemaining !== undefined &&
@@ -614,41 +615,22 @@ const handleSendLowPaperSummary = async () => {
       return;
     }
 
-    // Fetch admin users directly using the same db instance
-    const usersRef = collection(db, "users");
-    const adminQuery = query(usersRef, where("role", "==", "admin"));
-    const adminSnapshot = await getDocs(adminQuery);
-    
-    if (adminSnapshot.empty) {
+    // Call the service function with db and clients
+    const result = await sendLowPaperSummaryToAdmins(db, lowPaperClients);
+
+    if (result.success && result.notificationSent) {
       setSnackbar({
         open: true,
-        message: 'Не найдены администраторы',
-        severity: 'error'
+        message: `Сводка отправлена ${result.successfulNotifications}/${result.totalAdmins} администраторам`,
+        severity: 'success'
       });
-      return;
-    }
-
-    // Extract admin chat IDs
-    const adminChatIds = [];
-    adminSnapshot.forEach(doc => {
-      const userData = doc.data();
-      if (userData.chatId) {
-        adminChatIds.push(userData.chatId);
-      }
-    });
-
-    if (adminChatIds.length === 0) {
+    } else {
       setSnackbar({
         open: true,
-        message: 'У администраторов нет Telegram chat ID',
+        message: `Ошибка отправки сводки: ${result.error || 'Неизвестная ошибка'}`,
         severity: 'error'
       });
-      return;
     }
-
-    // Rest of your notification logic here...
-    // (Use the same logic from sendLowPaperSummaryToAdmins)
-    
   } catch (error) {
     console.error("Error sending low paper summary:", error);
     setSnackbar({
@@ -660,6 +642,7 @@ const handleSendLowPaperSummary = async () => {
     setSendingSummary(false);
   }
 };
+
 
   // Updated ClientsTable component
 // Updated ClientsTable component
