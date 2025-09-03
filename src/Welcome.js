@@ -225,85 +225,121 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
     }
   };
 
-  const fetchClientData = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "clients"));
-      const validDocs = querySnapshot.docs.filter(docSnap => 
-        docSnap && docSnap.id && docSnap.exists()
-      );
+// Updated fetchClientData function to include gramm and standard design name
+const fetchClientData = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, "clients"));
+    const validDocs = querySnapshot.docs.filter(docSnap => 
+      docSnap && docSnap.id && docSnap.exists()
+    );
 
-      const clientsArray = await Promise.all(
-        validDocs.map(async (docSnap) => {
-          try {
-            const data = docSnap.data();
-            
-            if (!data) {
-              console.warn("Document has no data:", docSnap.id);
-              return null;
-            }
-            
-            // Fetch product and package info using new fields
-            const { productName, packageType } = await fetchClientProductInfo(data);
-            
-            // For standard designs, still need product type data for paper info
-            const productTypeData = data.designType === "standart" && (data.productID_2 || data.packageID)
-              ? await fetchProductTypeData(data.productID_2, data.packageID, data.designType)
-              : { packaging: '', type: '', shellNum: '', paperRemaining: 0 };
-            
-            let rollCount = 0;
-            try {
-              const paperRollsQuery = await getDocs(collection(db, "clients", docSnap.id, "paperRolls"));
-              const availableRolls = paperRollsQuery.docs.filter(rollDoc => {
-                const rollData = rollDoc.data();
-                const weight = Number(rollData.paperRemaining) || 0;
-                return weight > 0;
-              });
-              rollCount = availableRolls.length;
-            } catch (error) {
-              console.error("Error fetching paper rolls count for client", docSnap.id, error);
-              rollCount = 0;
-            }
-
-            return { 
-              id: docSnap.id, 
-              ...data,
-              // Store the fetched product info
-              fetchedProductName: productName,
-              fetchedPackageType: packageType,
-              // For packaging, use packageType if available, otherwise fall back to productType packaging
-              packaging: packageType || productTypeData.packaging || '',
-              // For product display, use productName primarily
-              productTypeName: productName || productTypeData.type || '',
-              shellNum: data.designType === "standart" ? productTypeData.shellNum : (data.shellNum || ''),
-              paperRemaining: data.designType === "standart"
-                ? Number(productTypeData.paperRemaining) || 0
-                : Number(data.paperRemaining) || 0,
-              orgName: data.orgName || data.organization || '-',
-              totalRolls: rollCount
-            };
-          } catch (error) {
-            console.error("Error processing client document:", docSnap.id, error);
+    const clientsArray = await Promise.all(
+      validDocs.map(async (docSnap) => {
+        try {
+          const data = docSnap.data();
+          
+          if (!data) {
+            console.warn("Document has no data:", docSnap.id);
             return null;
           }
-        })
-      );
+          
+          // Fetch product and package info using new fields
+          const { productName, packageType } = await fetchClientProductInfo(data);
+          
+          // For standard designs, get product type data including name and gramm
+          let productTypeData = { packaging: '', type: '', shellNum: '', paperRemaining: 0, gramm: '', productTypeStandardName: '' };
+          
+          if (data.productID_2 || data.packageID) {
+            try {
+              const productTypeMatch = await findProductTypeByIds(data.productID_2, data.packageID);
+              if (productTypeMatch) {
+                const { data: ptData } = productTypeMatch;
+                
+                productTypeData = {
+                  packaging: ptData.packaging || '',
+                  type: ptData.type || '',
+                  gramm: ptData.gramm || '', // Get gramm from productType
+                  productTypeStandardName: ptData.name || '', // Get standard design name
+                  shellNum: '',
+                  paperRemaining: 0
+                };
 
-      const validClients = clientsArray.filter(client => client !== null && client.id);
-      setClientData(validClients);
+                // For standard designs, get paper info
+                if (data.designType === "standart") {
+                  try {
+                    const paperInfoQuery = await getDocs(collection(db, "productTypes", productTypeMatch.id, "paperInfo"));
+                    if (!paperInfoQuery.empty) {
+                      const paperInfoData = paperInfoQuery.docs[0].data();
+                      productTypeData.shellNum = paperInfoData.shellNum || '';
+                      productTypeData.paperRemaining = Number(paperInfoData.paperRemaining) || 0;
+                    }
+                  } catch (error) {
+                    console.error("Error fetching paperInfo for standard design:", error);
+                  }
+                }
+              }
+            } catch (error) {
+              console.error("Error fetching product type data:", error);
+            }
+          }
+          
+          let rollCount = 0;
+          try {
+            const paperRollsQuery = await getDocs(collection(db, "clients", docSnap.id, "paperRolls"));
+            const availableRolls = paperRollsQuery.docs.filter(rollDoc => {
+              const rollData = rollDoc.data();
+              const weight = Number(rollData.paperRemaining) || 0;
+              return weight > 0;
+            });
+            rollCount = availableRolls.length;
+          } catch (error) {
+            console.error("Error fetching paper rolls count for client", docSnap.id, error);
+            rollCount = 0;
+          }
 
-      if (validClients.length > 0) {
-        setColumnHeaders(getColumnHeaders(userRole));
-      } else {
-        setColumnHeaders([]);
-      }
-    } catch (error) {
-      console.error("Error fetching client data:", error);
-      setClientData([]);
+          return { 
+            id: docSnap.id, 
+            ...data,
+            // Store the fetched product info
+            fetchedProductName: productName,
+            fetchedPackageType: packageType,
+            // Add gramm and standard design name
+            gramm: productTypeData.gramm,
+            productTypeStandardName: productTypeData.productTypeStandardName,
+            // For packaging, use packageType if available, otherwise fall back to productType packaging
+            packaging: packageType || productTypeData.packaging || '',
+            // For product display, use productName primarily
+            productTypeName: productName || productTypeData.type || '',
+            shellNum: data.designType === "standart" ? productTypeData.shellNum : (data.shellNum || ''),
+            paperRemaining: data.designType === "standart"
+              ? Number(productTypeData.paperRemaining) || 0
+              : Number(data.paperRemaining) || 0,
+            orgName: data.orgName || data.organization || '-',
+            totalRolls: rollCount
+          };
+        } catch (error) {
+          console.error("Error processing client document:", docSnap.id, error);
+          return null;
+        }
+      })
+    );
+
+    const validClients = clientsArray.filter(client => client !== null && client.id);
+    setClientData(validClients);
+
+    if (validClients.length > 0) {
+      setColumnHeaders(getColumnHeaders(userRole));
+    } else {
       setColumnHeaders([]);
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    console.error("Error fetching client data:", error);
+    setClientData([]);
+    setColumnHeaders([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
 // Replace your existing fetchProductTypesData function with this fixed version:
 
@@ -551,178 +587,235 @@ const fetchProductTypesData = async () => {
   });
 
   // Updated ClientsTable component
-  const ClientsTable = () => (
-    <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
-      <Table sx={{ minWidth: 650 }}>
-        <TableHead>
-          <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
-            {columnHeaders
-              .filter((h) => !hiddenColumns.includes(h))
-              .map((h) => (
-                <TableCell
-                  key={h}
-                  sx={{
-                    color: '#fff',
-                    fontWeight: 'bold',
-                    fontSize: '1.1rem',
-                    padding: '16px',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    backgroundColor: (sortBy === h) ? '#2c5c57' : '#3c7570ff',
-                  }}
-                  onClick={() => {
-                    if (h === 'name' || h === 'paperRemaining' || h === 'shellNum') {
-                      const newSortBy = h === 'name' ? 'name' : 
-                                      h === 'paperRemaining' ? 'paperRemaining' : 'shellNum';
-                      
-                      if (sortBy === newSortBy) {
-                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                      } else {
-                        setSortBy(newSortBy);
-                        setSortDirection('asc');
-                      }
-                    }
-                  }}
-                >
-                  <Box display="flex" alignItems="center">
-                    {h === '№' ? (
-                      '№'
-                    ) : h === 'name' ? (
-                      'Название ресторана'
-                    ) : h === 'shellNum' ? (
-                      'Номер полки'
-                    ) : h === 'packaging' ? (
-                      'Упаковка'
-                    ) : h === 'orgName' ? (
-                      'Организация'
-                    ) : h === 'productTypeName' ? (
-                      'Продукт'
-                    ) : h === 'totalRolls' ? (
-                      'Всего рулонов'
-                    ) : h === 'paperRemaining' ? (
-                      'Остаток бумаги'
-                    ) : h === 'Actions' ? (
-                      'Действия'
-                    ) : (
-                      h
-                    )}
-                    
-                    {(h === 'name' || h === 'paperRemaining' || h === 'shellNum') && (
-                      <Box ml={1} display="flex">
-                        <SortIcon 
-                          column={h} 
-                          activeColumn={sortBy} 
-                          direction={sortDirection} 
-                        />
-                      </Box>
-                    )}
-                  </Box>
-                </TableCell>
-              ))}
-          </TableRow>
-        </TableHead>
-
-        <TableBody>
-          {sortedClients.map((client, index) => {
-            if (!client || !client.id) return null;
-
-            const lowPaper =
-              client.paperRemaining !== undefined &&
-              client.notifyWhen !== undefined &&
-              client.paperRemaining <= client.notifyWhen;
-
-            // Create display string for product info
-            const displayProductInfo = (() => {
-              const parts = [];
-              if (client.fetchedPackageType) parts.push(client.fetchedPackageType);
-              if (client.fetchedProductName) parts.push(client.fetchedProductName);
-              
-              if (parts.length > 0) {
-                return parts.join(', ');
-              }
-              
-              // Fallback to old productType field if no new data
-              return client.productType || client.productTypeName || '-';
-            })();
-
-            return (
-              <TableRow
-                key={client.id}
+// Updated ClientsTable component
+const ClientsTable = () => (
+  <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
+    <Table sx={{ minWidth: 650 }}>
+      <TableHead>
+        <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
+          {columnHeaders
+            .filter((h) => !hiddenColumns.includes(h) && h !== 'orgName') // Remove orgName column
+            .map((h) => (
+              <TableCell
+                key={h}
                 sx={{
-                  borderBottom: lowPaper
-                    ? '3px solid #f44336'
-                    : '1px solid #e0e0e0',
-                  '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
-                  '&:hover': { backgroundColor: '#e3f2fd' }
+                  color: '#fff',
+                  fontWeight: 'bold',
+                  fontSize: '1.1rem',
+                  padding: '16px',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  backgroundColor: (sortBy === h) ? '#2c5c57' : '#3c7570ff',
+                }}
+                onClick={() => {
+                  if (h === 'name' || h === 'paperRemaining' || h === 'shellNum') {
+                    const newSortBy = h === 'name' ? 'name' : 
+                                    h === 'paperRemaining' ? 'paperRemaining' : 'shellNum';
+                    
+                    if (sortBy === newSortBy) {
+                      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortBy(newSortBy);
+                      setSortDirection('asc');
+                    }
+                  }
                 }}
               >
-                {columnHeaders
-                  .filter((f) => !hiddenColumns.includes(f))
-                  .map((f) => (
-                    <TableCell key={f} sx={{ padding: '16px' }}>
-                      {f === '№' ? (
-                        index + 1
-                      ) : f === 'name' ? (
-                        <Box display="flex" alignItems="center" gap={1}>
-                          {lowPaper && <ReportGmailerrorredIcon color="error" />}
-                          <Box>
-                            <Typography fontWeight={600}>
-                              {client.name || '-'}
+                <Box display="flex" alignItems="center">
+                  {h === '№' ? (
+                    '№'
+                  ) : h === 'name' ? (
+                    'Название ресторана'
+                  ) : h === 'shellNum' ? (
+                    'Номер полки'
+                  ) : h === 'packaging' ? (
+                    'Упаковка'
+                  ) : h === 'productTypeName' ? (
+                    'Продукт'
+                  ) : h === 'totalRolls' ? (
+                    'Всего рулонов'
+                  ) : h === 'paperRemaining' ? (
+                    'Остаток бумаги'
+                  ) : h === 'Actions' ? (
+                    'Действия'
+                  ) : (
+                    h
+                  )}
+                  
+                  {(h === 'name' || h === 'paperRemaining' || h === 'shellNum') && (
+                    <Box ml={1} display="flex">
+                      <SortIcon 
+                        column={h} 
+                        activeColumn={sortBy} 
+                        direction={sortDirection} 
+                      />
+                    </Box>
+                  )}
+                </Box>
+              </TableCell>
+            ))}
+        </TableRow>
+      </TableHead>
+
+      <TableBody>
+        {sortedClients.map((client, index) => {
+          if (!client || !client.id) return null;
+
+          const lowPaper =
+            client.paperRemaining !== undefined &&
+            client.notifyWhen !== undefined &&
+            client.paperRemaining <= client.notifyWhen;
+
+      
+
+          // Get product info with standard design details
+          const getProductInfo = async () => {
+            const productName = client.fetchedProductName || client.productTypeName || '';
+            
+            if (client.designType === 'standart' && (client.productID_2 || client.packageID)) {
+              // For standard designs, get the productType name
+              try {
+                const productTypeMatch = await findProductTypeByIds(client.productID_2, client.packageID);
+                if (productTypeMatch && productTypeMatch.data.name) {
+                  return {
+                    productName,
+                    standardName: productTypeMatch.data.name
+                  };
+                }
+              } catch (error) {
+                console.error("Error fetching standard design name:", error);
+              }
+            }
+            
+            return { productName, standardName: null };
+          };
+
+          // For now, use sync version - you might want to refactor this to use state
+          const displayProductName = client.fetchedProductName || client.productTypeName || '-';
+          const isStandardDesign = client.designType === 'standart';
+          
+          return (
+            <TableRow
+              key={client.id}
+              sx={{
+                borderBottom: lowPaper
+                  ? '3px solid #f44336'
+                  : '1px solid #e0e0e0',
+                '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
+                '&:hover': { backgroundColor: '#e3f2fd' }
+              }}
+            >
+              {columnHeaders
+                .filter((f) => !hiddenColumns.includes(f) && f !== 'orgName') // Remove orgName column
+                .map((f) => (
+                  <TableCell key={f} sx={{ padding: '16px' }}>
+                    {f === '№' ? (
+                      index + 1
+                    ) : f === 'name' ? (
+                      <Box display="flex" alignItems="center" gap={1}>
+                        {lowPaper && <ReportGmailerrorredIcon color="error" />}
+                        <Box>
+                          <Typography fontWeight={600}>
+                            {client.name || '-'}
+                          </Typography>
+                          {/* Organization name below restaurant name in green */}
+                          {client.orgName && client.orgName !== '-' && (
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                color: '#0F9D8C',
+                                fontWeight: 400,
+                                fontSize: '0.85rem'
+                              }}
+                            >
+                              {client.orgName}
                             </Typography>
-                            <Typography variant="body2" color="#0F9D8C">
-                              {displayProductInfo}
-                            </Typography>
-                          </Box>
+                          )}
                         </Box>
-                      ) : f === 'Actions' ? (
-                        <Button
-                          variant="outlined"
-                          color="primary"
-                          size="small"
-                          sx={{
-                            color: '#0F9D8C',
-                            borderColor: '#0F9D8C',
-                            '&:hover': {
-                              borderColor: '#0c7a6e',
-                              color: '#0c7a6e'
-                            }
-                          }}
-                          onClick={() => handleOpenModal(client)}
-                        >
-                          Подробно
-                        </Button>
-                      ) : f === 'shellNum' ? (
-                        client.shellNum || '-'
-                      ) : f === 'packaging' ? (
-                        client.packaging || '-'
-                      ) : f === 'orgName' ? (
+                      </Box>
+                    ) : f === 'Actions' ? (
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        size="small"
+                        sx={{
+                          color: '#0F9D8C',
+                          borderColor: '#0F9D8C',
+                          '&:hover': {
+                            borderColor: '#0c7a6e',
+                            color: '#0c7a6e'
+                          }
+                        }}
+                        onClick={() => handleOpenModal(client)}
+                      >
+                        Подробно
+                      </Button>
+                    ) : f === 'shellNum' ? (
+                      client.shellNum || '-'
+                    ) : f === 'packaging' ? (
+                      <Box>
+    {(() => {
+      const packageType = client.fetchedPackageType || client.packaging || '';
+      const gramm = client.gramm || '';
+      
+      if (packageType && gramm) {
+        return (
+          <Typography variant="body2" component="span">
+            {packageType}{' '}
+            <Typography 
+              component="span" 
+              sx={{ 
+                color: '#757575',
+                fontSize: 'inherit'
+              }}
+            >
+              ({gramm} гр)
+            </Typography>
+          </Typography>
+        );
+      }
+      return packageType || '-';
+    })()}
+  </Box>
+                    ) : f === 'productTypeName' ? (
+                      <Box>
                         <Typography variant="body2" fontWeight={500}>
-                          {client.orgName || '-'}
+                          {displayProductName}
                         </Typography>
-                      ) : f === 'productTypeName' ? (
-                        <Typography variant="body2" fontWeight={500}>
-                          {displayProductInfo}
-                        </Typography>
-                      ) : f === 'totalRolls' ? (
-                        <Typography variant="body2" fontWeight={600} color="primary">
-                          {client.totalRolls ?? 0}
-                        </Typography>
-                      ) : f === 'paperRemaining' ? (
-                        client.paperRemaining != null
-                          ? `${client.paperRemaining.toFixed(2)} кг`
-                          : '-'
-                      ) : (
-                        client[f] ?? '-'
-                      )}
-                    </TableCell>
-                  ))}
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  );
+                        {/* Show standard design info only for standard designs */}
+                        {isStandardDesign && client.productTypeStandardName && (
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              color: '#757575',
+                              fontSize: '0.8rem',
+                              fontWeight: 400
+                            }}
+                          >
+                            Стандарт "{client.productTypeStandardName}"
+                          </Typography>
+                        )}
+                      </Box>
+                    ) : f === 'totalRolls' ? (
+                      <Typography variant="body2" fontWeight={600} color="primary">
+                        {client.totalRolls ?? 0}
+                      </Typography>
+                    ) : f === 'paperRemaining' ? (
+                      client.paperRemaining != null
+                        ? `${client.paperRemaining.toFixed(2)} кг`
+                        : '-'
+                    ) : (
+                      client[f] ?? '-'
+                    )}
+                  </TableCell>
+                ))}
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  </TableContainer>
+);
 
   const ProductTypesTable = () => (
     <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
