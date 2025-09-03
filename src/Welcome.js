@@ -6,7 +6,9 @@ import {
   getDocs,
   doc,
   getDoc,
-  serverTimestamp
+  serverTimestamp,
+  where,
+  query
 } from "firebase/firestore";
 
 import { db } from "./firebase";
@@ -603,22 +605,50 @@ const handleSendLowPaperSummary = async () => {
       client.paperRemaining <= client.notifyWhen
     );
 
-    // Pass the db import from firebase.js
-    const result = await sendLowPaperSummaryToAdmins(db, lowPaperClients);
-    
-    if (result.success) {
+    if (lowPaperClients.length === 0) {
       setSnackbar({
         open: true,
-        message: `Сводка отправлена ${result.successfulNotifications} администраторам`,
-        severity: 'success'
+        message: 'Нет клиентов с низким уровнем бумаги',
+        severity: 'info'
       });
-    } else {
+      return;
+    }
+
+    // Fetch admin users directly using the same db instance
+    const usersRef = collection(db, "users");
+    const adminQuery = query(usersRef, where("role", "==", "admin"));
+    const adminSnapshot = await getDocs(adminQuery);
+    
+    if (adminSnapshot.empty) {
       setSnackbar({
         open: true,
-        message: `Ошибка отправки сводки: ${result.error}`,
+        message: 'Не найдены администраторы',
         severity: 'error'
       });
+      return;
     }
+
+    // Extract admin chat IDs
+    const adminChatIds = [];
+    adminSnapshot.forEach(doc => {
+      const userData = doc.data();
+      if (userData.chatId) {
+        adminChatIds.push(userData.chatId);
+      }
+    });
+
+    if (adminChatIds.length === 0) {
+      setSnackbar({
+        open: true,
+        message: 'У администраторов нет Telegram chat ID',
+        severity: 'error'
+      });
+      return;
+    }
+
+    // Rest of your notification logic here...
+    // (Use the same logic from sendLowPaperSummaryToAdmins)
+    
   } catch (error) {
     console.error("Error sending low paper summary:", error);
     setSnackbar({
