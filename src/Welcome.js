@@ -8,6 +8,7 @@ import {
   getDoc,
   serverTimestamp
 } from "firebase/firestore";
+
 import { db } from "./firebase";
 import {
   Container,
@@ -48,6 +49,7 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import CancelRoundedIcon from '@mui/icons-material/CancelRounded';
 import { checkAndNotifyLowPaper, sendLowPaperSummaryToAdmins } from "./paperNotificationService";
 import TelegramIcon from '@mui/icons-material/Telegram';
+
 const getHiddenColumns = (userRole) => {
   if (userRole === 'admin') {
     return [];
@@ -591,7 +593,7 @@ const fetchProductTypesData = async () => {
     return 0;
   });
 
-  const handleSendLowPaperSummary = async () => {
+const handleSendLowPaperSummary = async () => {
   setSendingSummary(true);
   try {
     // Filter clients with low paper
@@ -601,6 +603,7 @@ const fetchProductTypesData = async () => {
       client.paperRemaining <= client.notifyWhen
     );
 
+    // Pass the db import from firebase.js
     const result = await sendLowPaperSummaryToAdmins(db, lowPaperClients);
     
     if (result.success) {
