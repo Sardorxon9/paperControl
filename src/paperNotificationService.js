@@ -128,6 +128,117 @@ const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen, db) =>
   }
 };
 
-module.exports = {
-  checkAndNotifyLowPaper
+const sendLowPaperSummaryToAdmins = async (db, clients) => {
+  try {
+    if (!clients || clients.length === 0) {
+      console.log("No clients with low paper to report.");
+      return { success: true, notificationSent: false, message: "No clients with low paper" };
+    }
+
+    // Fetch all admin users
+    const usersRef = collection(db, "users");
+    const adminQuery = query(usersRef, where("role", "==", "admin"));
+    const adminSnapshot = await getDocs(adminQuery);
+    
+    if (adminSnapshot.empty) {
+      console.log("No admin users found");
+      return { success: false, error: "No admin users found" };
+    }
+
+    // Extract admin chat IDs
+    const adminChatIds = [];
+    adminSnapshot.forEach(doc => {
+      const userData = doc.data();
+      if (userData.chatId) {
+        adminChatIds.push(userData.chatId);
+      }
+    });
+
+    if (adminChatIds.length === 0) {
+      console.log("No admin users have Telegram chat IDs");
+      return { success: false, error: "No admin users with Telegram chat IDs found" };
+    }
+
+    // Prepare the summary message
+    const currentDate = new Date().toLocaleString('ru-RU', {
+      timeZone: 'Asia/Tashkent',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+
+    let summaryMessage = `📋 <b>Сводка по клиентам с малым количеством бумаги</b>\n\n`;
+    summaryMessage += `📅 <b>Дата:</b> ${currentDate}\n\n`;
+
+    clients.forEach(client => {
+      const name = client.restaurant || client.name || 'Unnamed Client';
+      const remaining = client.paperRemaining.toFixed(2);
+      summaryMessage += `• ${name}: ${remaining} кг\n`;
+    });
+
+    summaryMessage += `\n<i>Всего клиентов: ${clients.length}</i>`;
+
+    // Send notifications to all admins
+    const notificationPromises = adminChatIds.map(async (chatId) => {
+      try {
+        const response = await axios.post(`${TELEGRAM_API_URL}/sendMessage`, {
+          chat_id: chatId,
+          text: summaryMessage,
+          parse_mode: 'HTML'
+        });
+        
+        if (response.data.ok) {
+          console.log(`Summary sent successfully to admin chat ID: ${chatId}`);
+          return { chatId, success: true };
+        } else {
+          console.error(`Failed to send summary to chat ID: ${chatId}`, response.data);
+          return { chatId, success: false, error: response.data };
+        }
+      } catch (error) {
+        console.error(`Error sending summary to chat ID: ${chatId}`, error.message);
+        return { chatId, success: false, error: error.message };
+      }
+    });
+
+    // Wait for all notifications to complete
+    const results = await Promise.allSettled(notificationPromises);
+    
+    // Count successful notifications
+    const successfulNotifications = results.filter(result => 
+      result.status === 'fulfilled' && result.value.success
+    ).length;
+
+    results.forEach((result, i) => {
+      const chatId = adminChatIds[i];
+      if (result.status === 'fulfilled') {
+        if (!result.value.success) {
+          console.warn(`⚠️ Summary to ${chatId} failed:`, result.value.error);
+        }
+      } else {
+        console.error(`❌ Promise to ${chatId} rejected:`, result.reason);
+      }
+    });
+
+    console.log(`Low paper summary sent: ${successfulNotifications}/${adminChatIds.length} admins notified`);
+
+    return {
+      success: true,
+      notificationSent: true,
+      totalAdmins: adminChatIds.length,
+      successfulNotifications,
+      results: results.map(result => result.status === 'fulfilled' ? result.value : { success: false, error: result.reason })
+    };
+
+  } catch (error) {
+    console.error("Error in sendLowPaperSummaryToAdmins:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
+export {
+  checkAndNotifyLowPaper,
+  sendLowPaperSummaryToAdmins
 };
