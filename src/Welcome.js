@@ -1083,13 +1083,15 @@ const ClientsTable = () => (
                   {userRole === 'admin' && (
   <Button
     variant="contained"
-    color="secondary"
+
     startIcon={<TelegramIcon />}
     onClick={handleSendLowPaperSummary}
     disabled={sendingSummary}
+    
     sx={{
-      backgroundColor: '#9C27B0',
-      '&:hover': { backgroundColor: '#7B1FA2' },
+      
+       backgroundColor: '#24A1DE',
+      '&:hover': { backgroundColor: '#0674abff' },
       fontSize: '0.85rem',
       px: 2.5,
       py: 0.8,
@@ -1098,7 +1100,7 @@ const ClientsTable = () => (
       whiteSpace: "nowrap"
     }}
   >
-    {sendingSummary ? 'Отправка...' : 'Отправить список бумаг ТГ'}
+    {sendingSummary ? 'Отправка...' : 'Отправить сводку бумаг ТГ'}
   </Button>
 )}
                     <Button
