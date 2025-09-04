@@ -1,12 +1,4 @@
 import { collection, getDocs, query, where } from "firebase/firestore";
-import axios from "axios";
-
-
-// You'll need to import your Firebase config here
-// const { db } = require("./firebase"); // Adjust path as needed
-
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
 /**
  * Checks if paper remaining is low and sends notifications to admin users
@@ -49,76 +41,46 @@ const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen, db) =>
       return { success: false, error: "No admin users with Telegram chat IDs found" };
     }
 
-    // Prepare the alert message
-    const currentDate = new Date().toLocaleString('ru-RU', {
-      timeZone: 'Asia/Tashkent',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    // Call the API endpoint instead of making direct Telegram calls
+    try {
+      const response = await fetch('/api/send-low-paper-alert', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          adminChatIds,
+          client,
+          paperRemaining,
+          notifyWhen
+        })
+      });
 
-    const alertMessage = `🚨 <b>ВНИМАНИЕ! Заканчивается бумага(test)</b>
-
-📍 <b>Ресторан:</b> ${client.restaurant || client.name}
-📦 <b>Остаток бумаги:</b> ${paperRemaining} кг
-⚠️ <b>Критический уровень:</b> ${notifyWhen} кг
-
-🕒 <b>Дата уведомления:</b> ${currentDate}
-
-<i>Необходимо пополнить запасы бумаги!</i>`;
-
-    // Send notifications to all admins
-    const notificationPromises = adminChatIds.map(async (chatId) => {
-      try {
-        const response = await axios.post(`${TELEGRAM_API_URL}/sendMessage`, {
-          chat_id: chatId,
-          text: alertMessage,
-          parse_mode: 'HTML'
-        });
-        
-        if (response.data.ok) {
-          console.log(`Notification sent successfully to admin chat ID: ${chatId}`);
-          return { chatId, success: true };
-        } else {
-          console.error(`Failed to send notification to chat ID: ${chatId}`, response.data);
-          return { chatId, success: false, error: response.data };
-        }
-      } catch (error) {
-        console.error(`Error sending notification to chat ID: ${chatId}`, error.message);
-        return { chatId, success: false, error: error.message };
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        console.log(`Low paper notifications sent: ${result.successfulNotifications}/${result.totalAdmins} admins notified`);
+        return {
+          success: true,
+          notificationSent: true,
+          totalAdmins: result.totalAdmins,
+          successfulNotifications: result.successfulNotifications,
+          results: result.results
+        };
+      } else {
+        console.error("API call failed:", result);
+        return {
+          success: false,
+          error: result.error || "Failed to send notifications"
+        };
       }
-    });
-
-    // Wait for all notifications to complete
-    const results = await Promise.allSettled(notificationPromises);
-    
-    // Count successful notifications
-    const successfulNotifications = results.filter(result => 
-      result.status === 'fulfilled' && result.value.success
-    ).length;
-
-    results.forEach((result, i) => {
-  const chatId = adminChatIds[i];
-  if (result.status === 'fulfilled') {
-    if (!result.value.success) {
-      console.warn(`⚠️ Message to ${chatId} failed:`, result.value.error);
+    } catch (apiError) {
+      console.error("Error calling API:", apiError);
+      return {
+        success: false,
+        error: `API call failed: ${apiError.message}`
+      };
     }
-  } else {
-    console.error(`❌ Promise to ${chatId} rejected:`, result.reason);
-  }
-});
-
-    console.log(`Low paper notifications sent: ${successfulNotifications}/${adminChatIds.length} admins notified`);
-
-    return {
-      success: true,
-      notificationSent: true,
-      totalAdmins: adminChatIds.length,
-      successfulNotifications,
-      results: results.map(result => result.status === 'fulfilled' ? result.value : { success: false, error: result.reason })
-    };
 
   } catch (error) {
     console.error("Error in checkAndNotifyLowPaper:", error);
@@ -130,11 +92,10 @@ const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen, db) =>
 };
 
 const sendLowPaperSummaryToAdmins = async (db, clients) => {
-  console.log("sendLowPaperSummaryToAdmins got db:", db.constructor.name);
+  console.log("sendLowPaperSummaryToAdmins called with clients:", clients?.length);
 
   try {
-
-      if (!db) {
+    if (!db) {
       throw new Error("Firestore db instance is missing!");
     }
 
@@ -167,75 +128,47 @@ const sendLowPaperSummaryToAdmins = async (db, clients) => {
       return { success: false, error: "No admin users with Telegram chat IDs found" };
     }
 
-    // Prepare the summary message
-    const currentDate = new Date().toLocaleString('ru-RU', {
-      timeZone: 'Asia/Tashkent',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    });
+    console.log(`Found ${adminChatIds.length} admin chat IDs:`, adminChatIds);
 
-    let summaryMessage = `📋 <b>Сводка по клиентам с малым количеством бумаги</b>\n\n`;
-    summaryMessage += `📅 <b>Дата:</b> ${currentDate}\n\n`;
+    // Create the API endpoint call for sending summary
+    try {
+      const response = await fetch('/api/send-low-paper-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          adminChatIds,
+          clients
+        })
+      });
 
-    clients.forEach(client => {
-      const name = client.restaurant || client.name || 'Unnamed Client';
-      const remaining = client.paperRemaining.toFixed(2);
-      summaryMessage += `• ${name}: ${remaining} кг\n`;
-    });
-
-    summaryMessage += `\n<i>Всего клиентов: ${clients.length}</i>`;
-
-    // Send notifications to all admins
-    const notificationPromises = adminChatIds.map(async (chatId) => {
-      try {
-        const response = await axios.post(`${TELEGRAM_API_URL}/sendMessage`, {
-          chat_id: chatId,
-          text: summaryMessage,
-          parse_mode: 'HTML'
-        });
-        
-        if (response.data.ok) {
-          console.log(`Summary sent successfully to admin chat ID: ${chatId}`);
-          return { chatId, success: true };
-        } else {
-          console.error(`Failed to send summary to chat ID: ${chatId}`, response.data);
-          return { chatId, success: false, error: response.data };
-        }
-      } catch (error) {
-        console.error(`Error sending summary to chat ID: ${chatId}`, error.message);
-        return { chatId, success: false, error: error.message };
-      }
-    });
-
-    // Wait for all notifications to complete
-    const results = await Promise.allSettled(notificationPromises);
-    
-    // Count successful notifications
-    const successfulNotifications = results.filter(result => 
-      result.status === 'fulfilled' && result.value.success
-    ).length;
-
-    results.forEach((result, i) => {
-      const chatId = adminChatIds[i];
-      if (result.status === 'fulfilled') {
-        if (!result.value.success) {
-          console.warn(`⚠️ Summary to ${chatId} failed:`, result.value.error);
-        }
+      const result = await response.json();
+      console.log("API response:", result);
+      
+      if (response.ok && result.success) {
+        console.log(`Low paper summary sent: ${result.successfulNotifications}/${result.totalAdmins} admins notified`);
+        return {
+          success: true,
+          notificationSent: true,
+          totalAdmins: result.totalAdmins,
+          successfulNotifications: result.successfulNotifications,
+          results: result.results
+        };
       } else {
-        console.error(`❌ Promise to ${chatId} rejected:`, result.reason);
+        console.error("API call failed:", result);
+        return {
+          success: false,
+          error: result.error || "Failed to send summary"
+        };
       }
-    });
-
-    console.log(`Low paper summary sent: ${successfulNotifications}/${adminChatIds.length} admins notified`);
-
-    return {
-      success: true,
-      notificationSent: true,
-      totalAdmins: adminChatIds.length,
-      successfulNotifications,
-      results: results.map(result => result.status === 'fulfilled' ? result.value : { success: false, error: result.reason })
-    };
+    } catch (apiError) {
+      console.error("Error calling summary API:", apiError);
+      return {
+        success: false,
+        error: `API call failed: ${apiError.message}`
+      };
+    }
 
   } catch (error) {
     console.error("Error in sendLowPaperSummaryToAdmins:", error);
