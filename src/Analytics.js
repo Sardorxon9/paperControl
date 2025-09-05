@@ -30,6 +30,11 @@ import Shield from '@mui/icons-material/Shield';
 import Work from '@mui/icons-material/Work';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import {
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper as MuiPaper
+} from "@mui/material";
+import { ArrowDownward, ArrowUpward } from "@mui/icons-material";
+import { subDays } from "date-fns";
 
 // Register ChartJS components
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -37,6 +42,8 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 export default function Analytics({ user, userRole, onBackToDashboard, onLogout }) {
     
   const [clientData, setClientData] = useState([]);
+  const [recentLogs, setRecentLogs] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [productStats, setProductStats] = useState({});
 
@@ -53,69 +60,74 @@ export default function Analytics({ user, userRole, onBackToDashboard, onLogout 
   
 
   // Fetch client data
-  const fetchClientData = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "clients"));
-      const validDocs = querySnapshot.docs.filter(docSnap => 
-        docSnap && docSnap.id && docSnap.exists()
-      );
-
-      const clientsArray = validDocs.map(docSnap => ({
-        id: docSnap.id,
-        ...docSnap.data()
-      }));
-
-      setClientData(clientsArray);
-      
-      // Calculate package statistics
-      let stickCount = 0;
-      let sachetCount = 0;
-      
-      clientsArray.forEach(client => {
-        if (client.packageID === 'sKHbhJ8Ik7QpVUCEgbpP') {
-          stickCount++;
-        } else if (client.packageID === 'fhLBOV7ai4N7MZDPkSCL') {
-          sachetCount++;
-        }
-      });
-      
-      setPackageStats({
-        stick: stickCount,
-        sachet: sachetCount,
-        total: clientsArray.length
-      });
-
-      const fetchProductNames = async () => {
+const fetchClientData = async () => {
   try {
-    const productsSnapshot = await getDocs(collection(db, "products"));
+    // --- Fetch Clients ---
+    const clientSnapshot = await getDocs(collection(db, "clients"));
+    const clientList = [];
+    const logsList = [];
+    const oneWeekAgo = subDays(new Date(), 7); // last 7 days
+
+    // --- Iterate through Clients ---
+  await Promise.all(clientSnapshot.docs.map(async (clientDoc) => {
+  const client = { id: clientDoc.id, ...clientDoc.data() };
+  clientList.push(client);
+
+  const logsRef = collection(db, "clients", clientDoc.id, "logs");
+  const logSnapshot = await getDocs(logsRef);
+
+  logSnapshot.docs.forEach((logDoc) => {
+    const log = logDoc.data();
+    const logDate = log.date?.toDate ? log.date.toDate() : new Date(log.date);
+
+    if (logDate >= oneWeekAgo) {
+      logsList.push({
+        date: logDate,
+        restaurantName: client.name || "—",
+        actionType: log.actionType,
+        amount: log.amount,
+      });
+    }
+  });
+}));
+
+
+    // --- Fetch Products ---
+    const productSnapshot = await getDocs(collection(db, "products"));
     const productMap = {};
-    
-    productsSnapshot.forEach(doc => {
+    productSnapshot.docs.forEach((doc) => {
       productMap[doc.id] = doc.data().productName;
     });
 
-    const productCounts = {};
-    clientsArray.forEach(client => {
-      if (client.productID_2 && productMap[client.productID_2]) {
-        const productName = productMap[client.productID_2];
-        productCounts[productName] = (productCounts[productName] || 0) + 1;
-      }
+    // --- Package Stats ---
+    const stats = { stick: 0, sachet: 0, total: clientList.length };
+    clientList.forEach((client) => {
+      if (client.packageID === "sKHbhJ8Ik7QpVUCEgbpP") stats.stick++;
+      else if (client.packageID === "fhLBOV7ai4N7MZDPkSCL") stats.sachet++;
     });
 
-    setProductStats(productCounts);
-  } catch (error) {
-    console.error("Error fetching product data:", error);
+    // --- Product Stats ---
+    const productStats = {};
+    clientList.forEach((client) => {
+      const productName = productMap[client.productID_2] || "Неизвестный продукт";
+      productStats[productName] = (productStats[productName] || 0) + 1;
+    });
+
+    // --- Sort logs (latest first) ---
+    logsList.sort((a, b) => b.date - a.date);
+
+    // --- Set State ---
+    setClientData(clientList);
+    setPackageStats(stats);
+    setProductStats(productStats);
+    setRecentLogs(logsList);
+  } catch (err) {
+    console.error("Error fetching data:", err);
+  } finally {
+    setLoading(false);
   }
 };
-await fetchProductNames();
- 
-      
-    } catch (error) {
-      console.error("Error fetching client data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+
   
 
   useEffect(() => {
@@ -454,6 +466,45 @@ return (
         </CardContent>
       </Card>
     </Grid>
+
+    <Grid item xs={12}>
+  <Card sx={{ height: "auto", display: "flex", flexDirection: "column" }}>
+    <CardContent>
+      <Typography variant="h6" gutterBottom>
+        Недавние лог-записи (последние 7 дней)
+      </Typography>
+      <TableContainer component={MuiPaper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Дата</TableCell>
+              <TableCell>Ресторан</TableCell>
+              <TableCell>Действие</TableCell>
+              <TableCell>Кол-во (кг)</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {recentLogs.map((log, index) => (
+              <TableRow key={index}>
+                <TableCell>{log.date.toLocaleString()}</TableCell>
+                <TableCell>{log.restaurantName}</TableCell>
+                <TableCell>
+                  {log.actionType === "paperIn" ? (
+                    <ArrowDownward sx={{ color: "green" }} />
+                  ) : (
+                    <ArrowUpward sx={{ color: "red" }} />
+                  )}
+                </TableCell>
+                <TableCell>{log.amount} кг</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </CardContent>
+  </Card>
+</Grid>
+
   </Grid>
 </Grid>
         </Grid>
