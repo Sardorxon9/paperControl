@@ -253,23 +253,53 @@ const fetchClientData = async () => {
           // Fetch product and package info using new fields
           const { productName, packageType } = await fetchClientProductInfo(data);
           
-          // For standard designs, get product type data including name and gramm
-          let productTypeData = { packaging: '', type: '', shellNum: '', paperRemaining: 0, gramm: '', productTypeStandardName: '' };
+          // Initialize productTypeData with default values
+          let productTypeData = { 
+            packaging: '', 
+            type: '', 
+            shellNum: '', 
+            paperRemaining: 0, 
+            gramm: '', 
+            productTypeStandardName: '' 
+          };
           
-          if (data.productID_2 || data.packageID) {
+          // Get gramm value - try multiple sources
+          let grammValue = '';
+          
+          // First, try to get gramm from client's own data (for unique designs)
+          if (data.designType === "unique" && data.gramm) {
+            grammValue = data.gramm;
+            console.log(`Client ${data.name}: Using unique design gramm:`, grammValue);
+          }
+          
+          // If no gramm from client data, or if it's a standard design, try productType
+          if (!grammValue && (data.productID_2 || data.packageID)) {
             try {
               const productTypeMatch = await findProductTypeByIds(data.productID_2, data.packageID);
+              
               if (productTypeMatch) {
                 const { data: ptData } = productTypeMatch;
+                console.log(`Client ${data.name}: Found productType match:`, {
+                  name: ptData.name,
+                  gramm: ptData.gramm,
+                  packaging: ptData.packaging,
+                  type: ptData.type
+                });
                 
                 productTypeData = {
                   packaging: ptData.packaging || '',
                   type: ptData.type || '',
-                  gramm: ptData.gramm || '', // Get gramm from productType
-                  productTypeStandardName: ptData.name || '', // Get standard design name
+                  gramm: ptData.gramm || '',
+                  productTypeStandardName: ptData.name || '',
                   shellNum: '',
                   paperRemaining: 0
                 };
+
+                // Use gramm from productType if not already set
+                if (!grammValue && ptData.gramm) {
+                  grammValue = ptData.gramm;
+                  console.log(`Client ${data.name}: Using productType gramm:`, grammValue);
+                }
 
                 // For standard designs, get paper info
                 if (data.designType === "standart") {
@@ -281,15 +311,23 @@ const fetchClientData = async () => {
                       productTypeData.paperRemaining = Number(paperInfoData.paperRemaining) || 0;
                     }
                   } catch (error) {
-                    console.error("Error fetching paperInfo for standard design:", error);
+                    console.error(`Error fetching paperInfo for standard design (${data.name}):`, error);
                   }
                 }
+              } else {
+                console.warn(`Client ${data.name}: No productType match found for productID_2: ${data.productID_2}, packageID: ${data.packageID}`);
               }
             } catch (error) {
-              console.error("Error fetching product type data:", error);
+              console.error(`Error fetching product type data for client ${data.name}:`, error);
             }
           }
+
+          // Final fallback - check if gramm exists in any of the related data
+          if (!grammValue) {
+            console.warn(`Client ${data.name}: No gramm value found from any source`);
+          }
           
+          // Count available paper rolls
           let rollCount = 0;
           try {
             const paperRollsQuery = await getDocs(collection(db, "clients", docSnap.id, "paperRolls"));
@@ -300,23 +338,23 @@ const fetchClientData = async () => {
             });
             rollCount = availableRolls.length;
           } catch (error) {
-            console.error("Error fetching paper rolls count for client", docSnap.id, error);
+            console.error(`Error fetching paper rolls count for client ${data.name}:`, error);
             rollCount = 0;
           }
 
-          return { 
+          const clientResult = { 
             id: docSnap.id, 
             ...data,
             // Store the fetched product info
             fetchedProductName: productName,
             fetchedPackageType: packageType,
-            // Add gramm and standard design name
-            gramm: productTypeData.gramm,
+            // Add gramm from the determined source
+            gramm: grammValue,
             productTypeStandardName: productTypeData.productTypeStandardName,
-            // For packaging, use packageType if available, otherwise fall back to productType packaging
-            packaging: packageType || productTypeData.packaging || '',
+            // For packaging, prioritize fetched packageType, then productType packaging, then client data
+            packaging: packageType || productTypeData.packaging || data.packaging || '',
             // For product display, use productName primarily
-            productTypeName: productName || productTypeData.type || '',
+            productTypeName: productName || productTypeData.type || data.productTypeName || '',
             shellNum: data.designType === "standart" ? productTypeData.shellNum : (data.shellNum || ''),
             paperRemaining: data.designType === "standart"
               ? Number(productTypeData.paperRemaining) || 0
@@ -324,6 +362,17 @@ const fetchClientData = async () => {
             orgName: data.orgName || data.organization || '-',
             totalRolls: rollCount
           };
+
+          // Debug log for final client data
+          console.log(`Final client data for ${data.name}:`, {
+            designType: clientResult.designType,
+            gramm: clientResult.gramm,
+            packaging: clientResult.packaging,
+            productTypeName: clientResult.productTypeName
+          });
+
+          return clientResult;
+          
         } catch (error) {
           console.error("Error processing client document:", docSnap.id, error);
           return null;
@@ -339,6 +388,9 @@ const fetchClientData = async () => {
     } else {
       setColumnHeaders([]);
     }
+    
+    console.log('Total valid clients loaded:', validClients.length);
+    
   } catch (error) {
     console.error("Error fetching client data:", error);
     setClientData([]);
@@ -347,7 +399,6 @@ const fetchClientData = async () => {
     setLoading(false);
   }
 };
-
 // Replace your existing fetchProductTypesData function with this fixed version:
 
 const fetchProductTypesData = async () => {
@@ -812,28 +863,28 @@ const ClientsTable = () => (
                       client.shellNum || '-'
                     ) : f === 'packaging' ? (
                       <Box>
-    {(() => {
-      const packageType = client.fetchedPackageType || client.packaging || '';
-      const gramm = client.gramm || '';
-      
-      if (packageType && gramm) {
-        return (
-          <Typography variant="body2" component="span">
-            {packageType}{' '}
-            <Typography 
-              component="span" 
-              sx={{ 
-                color: '#757575',
-                fontSize: 'inherit'
-              }}
-            >
-              ({gramm} гр)
-            </Typography>
-          </Typography>
-        );
-      }
-      return packageType || '-';
-    })()}
+  {(() => {
+ const packageType = client.fetchedPackageType || client.packaging || '';
+const gramm = client.gramm || ''; 
+  
+  if (packageType && gramm) {
+ return (
+    <Typography variant="body2" component="span">
+      {packageType}{' '}
+      <Typography 
+        component="span" 
+        sx={{ 
+          color: '#757575',
+          fontSize: 'inherit'
+        }}
+      >
+        ({gramm} гр)
+      </Typography>
+    </Typography>
+  );
+  }
+  return packageType || '-';
+})()}
   </Box>
                     ) : f === 'productTypeName' ? (
                       <Box>
