@@ -244,34 +244,48 @@ const [productInputs, setProductInputs] = useState({
         const clientRef = doc(db, "clients", clientId);
         const clientSnap = await getDoc(clientRef);
         if (clientSnap.exists()) {
-          const data = clientSnap.data();
-          setFormData({
-            name: data.name || "",
-            orgName: data.orgName || "",
-            addressShort: data.addressShort || "",
-            geoPoint: data.addressLong
-              ? `${data.addressLong.latitude}, ${data.addressLong.longitude}`
-              : "",
-            designType: data.designType || "unique",
-            shellNum: data.shellNum || "",
-            notifyWhen: data.notifyWhen || "",
-            comment: data.comment || "",
-            imageURL1: data.imageURL1 || DEFAULT_PLACEHOLDER_URL,
-          });
+            const data = clientSnap.data();
+  setFormData({
+    name: data.name || "",
+    orgName: data.orgName || "",
+    addressShort: data.addressShort || "",
+    geoPoint: data.addressLong
+      ? `${data.addressLong.latitude}, ${data.addressLong.longitude}`
+      : "",
+    designType: data.designType || "unique",
+    shellNum: data.shellNum || "",
+    notifyWhen: data.notifyWhen || "",
+    comment: data.comment || "",
+    imageURL1: data.imageURL1 || DEFAULT_PLACEHOLDER_URL,
+  });
 
-          // Set product inputs from client data
-          setProductInputs({
-            packageType: data.packageID || "",
-            product: data.productID_2 || "",
-            gram: data.gram || "",
-            name: data.name || ""
-          });
+  // Fix product inputs initialization
+  setProductInputs({
+    packageType: data.packageID || "",
+    product: data.productID_2 || "",
+    gram: data.gramm || data.gram || "", // Check both field names
+    name: data.name || ""
+  });
 
-          // Load possible products if package is selected
-          if (data.packageID) {
-            await handleProductInputChange('packageType', data.packageID);
-          }
+  // Initialize cascading dropdowns properly
+  if (data.packageID) {
+    await handleProductInputChange('packageType', data.packageID);
+    
+    // After package is loaded, set product if it exists
+    if (data.productID_2) {
+      setTimeout(async () => {
+        await handleProductInputChange('product', data.productID_2);
+        
+        // After product is loaded, set gram if it exists
+        if (data.gramm || data.gram) {
+          setTimeout(() => {
+            setProductInputs(prev => ({ ...prev, gram: data.gramm || data.gram || "" }));
+          }, 100);
         }
+      }, 100);
+    }
+  }
+}
       } catch (err) {
         console.error("Error loading data:", err);
         setMessage({ type: "error", text: "Ошибка при загрузке данных" });
@@ -284,14 +298,14 @@ const [productInputs, setProductInputs] = useState({
 
    // Add product input change handlers from AddClientForm
   const handleProductInputChange = async (field, value) => {
-    setProductInputs(prev => ({ ...prev, [field]: value }));
+  setProductInputs(prev => ({ ...prev, [field]: value }));
 
-    if (formData.designType === "unique") {
-      await handleUniqueDesignChange(field, value);
-    } else {
-      await handleStandardDesignChange(field, value);
-    }
-  };
+  if (formData.designType === "unique") {
+    await handleUniqueDesignChange(field, value);
+  } else {
+    await handleStandardDesignChange(field, value);
+  }
+};
 
    const handleUniqueDesignChange = async (field, value) => {
     if (field === 'packageType') {
@@ -391,47 +405,53 @@ const [productInputs, setProductInputs] = useState({
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
 
   // Update client
- const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setSaving(true);
 
-    try {
-      const clientRef = doc(db, "clients", clientId);
-      const [lat, lng] = formData.geoPoint
-        .split(",")
-        .map((coord) => parseFloat(coord.trim()));
+  try {
+    const clientRef = doc(db, "clients", clientId);
+    
+    // Parse coordinates
+    const [lat, lng] = formData.geoPoint
+      .split(",")
+      .map((coord) => parseFloat(coord.trim()));
 
-      // Build update data with new product format
-      const updateData = {
-        name: formData.name,
-        orgName: formData.orgName,
-        addressShort: formData.addressShort,
-        addressLong: new GeoPoint(lat, lng),
-        designType: formData.designType,
-        shellNum: formData.shellNum,
-        notifyWhen: parseFloat(formData.notifyWhen),
-        comment: formData.comment,
-        imageURL1: formData.imageURL1 || DEFAULT_PLACEHOLDER_URL,
-        updatedAt: Timestamp.now(),
-        // Add product fields
-        packageID: productInputs.packageType,
-        productID_2: productInputs.product,
-        gram: parseInt(productInputs.gram),
-        ...(productInputs.name && { name: productInputs.name })
-      };
+    // Build update data with correct field names
+    const updateData = {
+      name: formData.name,
+      orgName: formData.orgName,
+      addressShort: formData.addressShort,
+      addressLong: new GeoPoint(lat, lng),
+      designType: formData.designType,
+      shellNum: formData.shellNum,
+      notifyWhen: parseFloat(formData.notifyWhen),
+      comment: formData.comment,
+      imageURL1: formData.imageURL1 || DEFAULT_PLACEHOLDER_URL,
+      updatedAt: Timestamp.now(),
+      // Product fields with correct names
+      packageID: productInputs.packageType,
+      productID_2: productInputs.product,
+      gramm: parseInt(productInputs.gram), // Use 'gramm' to match your schema
+    };
 
-      await updateDoc(clientRef, updateData);
-
-      setMessage({ type: "success", text: "Клиент обновлен" });
-      if (onClientUpdated) onClientUpdated();
-      onClose();
-    } catch (err) {
-      console.error("Error updating client:", err);
-      setMessage({ type: "error", text: "Ошибка при обновлении клиента" });
-    } finally {
-      setSaving(false);
+    // Only add name field if it exists and is for standard designs
+    if (formData.designType === "standart" && productInputs.name) {
+      updateData.standardDesignName = productInputs.name;
     }
-  };
+
+    await updateDoc(clientRef, updateData);
+
+    setMessage({ type: "success", text: "Клиент обновлен" });
+    if (onClientUpdated) onClientUpdated();
+    onClose();
+  } catch (err) {
+    console.error("Error updating client:", err);
+    setMessage({ type: "error", text: "Ошибка при обновлении клиента" });
+  } finally {
+    setSaving(false);
+  }
+};
 
   if (loading) return <div>Загрузка...</div>;
 
@@ -641,28 +661,27 @@ const [productInputs, setProductInputs] = useState({
           </Grid>
 
           {/* Gram */}
-          <Grid item xs={12} sm={4}>
-            <TextField
-              select
-              fullWidth
-              label="Граммаж"
-              value={productInputs.gram}
-              onChange={(e) => handleProductInputChange('gram', e.target.value)}
-              required
-              size="small"
-              disabled={!productInputs.product}
-              SelectProps={{
-                renderValue: (selected) => selected ? `${selected} г` : <span>Выбрать</span>
-              }}
-            >
-              {/* Show available grams for standard design, or static options for unique */}
-              {(formData.designType === "standart" ? availableGrams : [1, 2, 3, 4, 5, 6]).map((gram) => (
-                <MenuItem key={gram} value={gram}>
-                  {gram} г
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
+       <Grid item xs={12} sm={4}>
+  <TextField
+    select
+    fullWidth
+    label="Граммаж"
+    value={productInputs.gram}
+    onChange={(e) => handleProductInputChange('gram', e.target.value)}
+    required
+    size="small"
+    disabled={!productInputs.product}
+    SelectProps={{
+      renderValue: (selected) => selected ? `${selected} г` : <span>Выбрать</span>
+    }}
+  >
+    {(formData.designType === "standart" ? availableGrams : [1, 2, 3, 4, 5, 6]).map((gram) => (
+      <MenuItem key={gram} value={gram.toString()}>
+        {gram} г
+      </MenuItem>
+    ))}
+  </TextField>
+</Grid>
 
           {/* Name (only for Standard Design with multiple options) */}
           {formData.designType === "standart" && availableNames.length > 0 && (
