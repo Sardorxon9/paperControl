@@ -1169,7 +1169,7 @@ const ClientsTable = () => (
               <img
                 src="https://whiteray.uz/images/whiteray_1200px_logo_green.png"
                 alt="WhiteRay"
-                style={{ height: 34, objectFit: 'contain' }}
+                style={{ height: 30, objectFit: 'contain' }}
               />
             </Box>
 
@@ -1225,7 +1225,7 @@ const ClientsTable = () => (
       whiteSpace: "nowrap"
     }}
   >
-    {sendingSummary ? 'Отправка...' : 'Отправить сводку бумаг ТГ'}
+    {sendingSummary ? 'Отправка...' : 'Сводка бумаг'}
   </Button>
 )}
                     <Button
@@ -1243,7 +1243,7 @@ const ClientsTable = () => (
                         whiteSpace: "nowrap"
                       }}
                     >
-                      Добавить клиента
+                      Новый клиент
                     </Button>
 
                     <Button
@@ -1261,7 +1261,7 @@ const ClientsTable = () => (
                         whiteSpace: "nowrap"
                       }}
                     >
-                      Добавить стандартный дизайн
+                      Стандарт диз рулон
                     </Button>
                   </>
                 )}
