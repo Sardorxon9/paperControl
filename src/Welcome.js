@@ -31,7 +31,13 @@ import {
   Tabs,
   Tab,
   IconButton,
-  InputAdornment
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  ListItemText
 } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
 import Shield from '@mui/icons-material/Shield';
@@ -108,6 +114,8 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
   const [sortDirection, setSortDirection] = useState('asc'); 
   const [sendingSummary, setSendingSummary] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [selectedPackageType, setSelectedPackageType] = useState('');
+  const [selectedProducts, setSelectedProducts] = useState([]);
 
   const SortIcon = ({ column, activeColumn, direction }) => {
     if (column !== activeColumn) {
@@ -120,6 +128,31 @@ export default function Welcome({ user, userRole, onBackToDashboard, onLogout })
   };
 
   const hiddenColumns = getHiddenColumns(userRole);
+
+  // Get unique package types and products from client data
+  const packageTypes = [...new Set(clientData
+    .map(client => client.fetchedPackageType || client.packaging || '')
+    .filter(Boolean)
+  )].sort();
+
+  const products = [...new Set(clientData
+    .map(client => client.fetchedProductName || client.productTypeName || '')
+    .filter(Boolean)
+  )].sort();
+
+  // Filter clients based on selected package type and products
+  const getFilteredClients = () => {
+    return clientData.filter(client => {
+      const clientPackageType = client.fetchedPackageType || client.packaging || '';
+      const clientProduct = client.fetchedProductName || client.productTypeName || '';
+      
+      const matchesPackage = !selectedPackageType || clientPackageType === selectedPackageType;
+      const matchesProducts = selectedProducts.length === 0 || 
+                            selectedProducts.some(prod => clientProduct.includes(prod));
+      
+      return matchesPackage && matchesProducts;
+    });
+  };
 
   // Updated function to fetch product name from "products" collection using productID_2
   const fetchProductName = async (productID_2) => {
@@ -522,408 +555,449 @@ const fetchProductTypesData = async () => {
           }
         } catch (error) {
           console.error("Error fetching product data:", error);
+            setSelectedClientProduct(null);
+          }
+        } else {
           setSelectedClientProduct(null);
         }
-      } else {
-        setSelectedClientProduct(null);
-      }
 
-      setModalOpen(true);
+        setModalOpen(true);
+      };
+
+      fetchProductData();
     };
 
-    fetchProductData();
-  };
+    const handleOpenProductModal = (product) => {
+      setSelectedProduct(product);
+      setProductModalOpen(true);
+    };
 
-  const handleOpenProductModal = (product) => {
-    setSelectedProduct(product);
-    setProductModalOpen(true);
-  };
+    const handleCloseModal = () => {
+      setModalOpen(false);
+      setSelectedClient(null);
+    };
 
-  const handleCloseModal = () => {
-    setModalOpen(false);
-    setSelectedClient(null);
-  };
+    const handleCloseSimpleModal = () => {
+      setSimpleModalOpen(false);
+      setSelectedClient(null);
+      setSelectedClientProduct(null);
+    };
 
-  const handleCloseSimpleModal = () => {
-    setSimpleModalOpen(false);
-    setSelectedClient(null);
-    setSelectedClientProduct(null);
-  };
+    const handleCloseProductModal = () => {
+      setProductModalOpen(false);
+      setSelectedProduct(null);
+    };
 
-  const handleCloseProductModal = () => {
-    setProductModalOpen(false);
-    setSelectedProduct(null);
-  };
+    const handleClientUpdate = (updatedClient) => {
+      setClientData(prevData => {
+        if (!prevData || !Array.isArray(prevData)) {
+          return updatedClient ? [updatedClient] : [];
+        }
+        
+        if (!updatedClient || !updatedClient.id) {
+          return prevData;
+        }
+        
+        return prevData
+          .filter(client => client && client.id)
+          .map(client =>
+            client.id === updatedClient.id ? updatedClient : client
+          );
+      });
+      setSelectedClient(updatedClient);
+    };
 
-  const handleClientUpdate = (updatedClient) => {
-    setClientData(prevData => {
-      if (!prevData || !Array.isArray(prevData)) {
-        return updatedClient ? [updatedClient] : [];
-      }
-      
-      if (!updatedClient || !updatedClient.id) {
-        return prevData;
-      }
-      
-      return prevData
-        .filter(client => client && client.id)
-        .map(client =>
-          client.id === updatedClient.id ? updatedClient : client
-        );
-    });
-    setSelectedClient(updatedClient);
-  };
+    const handleOpenAddClientModal = () => {
+      setAddClientModalOpen(true);
+    };
 
-  const handleOpenAddClientModal = () => {
-    setAddClientModalOpen(true);
-  };
+    const handleCloseAddClientModal = () => {
+      setAddClientModalOpen(false);
+    };
 
-  const handleCloseAddClientModal = () => {
-    setAddClientModalOpen(false);
-  };
+    const handleClientAdded = () => {
+      fetchClientData();
+      handleCloseAddClientModal();
+    };
 
-  const handleClientAdded = () => {
-    fetchClientData();
-    handleCloseAddClientModal();
-  };
+    const handleTabChange = (event, newValue) => {
+      setCurrentTab(newValue);
+    };
 
-  const handleTabChange = (event, newValue) => {
-    setCurrentTab(newValue);
-  };
-
-  const visibleClients = (clientData || []).filter((client) =>
-    client &&
-    (client.restaurant || client.name || '')
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase())
-  );
-
-  const sortedClients = [...visibleClients].sort((a, b) => {
-    if (!a || !b) return 0;
-    
-    if (sortBy === 'name') {
-      const nameA = (a.restaurant || a.name || '').toLowerCase();
-      const nameB = (b.restaurant || b.name || '').toLowerCase();
-      return sortDirection === 'asc'
-        ? nameA.localeCompare(nameB)
-        : nameB.localeCompare(nameA);
-    } else if (sortBy === 'paperRemaining') {
-      return sortDirection === 'asc'
-        ? (a.paperRemaining || 0) - (b.paperRemaining || 0)
-        : (b.paperRemaining || 0) - (a.paperRemaining || 0);
-    } else if (sortBy === 'shellNum') {
-      const shellNumA = (a.shellNum || '').toString().toLowerCase();
-      const shellNumB = (b.shellNum || '').toString().toLowerCase();
-      return sortDirection === 'asc'
-        ? shellNumA.localeCompare(shellNumB)
-        : shellNumB.localeCompare(shellNumA);
-    }
-    return 0;
-  });
-
-  const sortedProductTypes = [...productTypesData].sort((a, b) => {
-    if (!a || !b) return 0;
-    
-    if (sortByProduct === 'type') {
-      const typeA = (a.type || '').toLowerCase();
-      const typeB = (b.type || '').toLowerCase();
-      return sortDirectionProduct === 'asc'
-        ? typeA.localeCompare(typeB)
-        : typeB.localeCompare(typeA);
-    } else if (sortByProduct === 'paperRemaining') {
-      return sortDirectionProduct === 'asc'
-        ? (a.paperRemaining || 0) - (b.paperRemaining || 0)
-        : (b.paperRemaining || 0) - (a.paperRemaining || 0);
-    } else if (sortByProduct === 'shellNum') {
-      const shellNumA = (a.shellNum || '').toString().toLowerCase();
-      const shellNumB = (b.shellNum || '').toString().toLowerCase();
-      return sortDirectionProduct === 'asc'
-        ? shellNumA.localeCompare(shellNumB)
-        : shellNumB.localeCompare(shellNumA);
-    }
-    return 0;
-  });
-
-const handleSendLowPaperSummary = async () => {
-  setSendingSummary(true);
-  try {
-    // Debug: check db instance
-    console.log('DB instance:', db, typeof db);
-
-    // Filter clients with low paper
-    const lowPaperClients = clientData.filter(client => 
-      client.paperRemaining !== undefined &&
-      client.notifyWhen !== undefined &&
-      client.paperRemaining <= client.notifyWhen
+    const visibleClients = getFilteredClients().filter((client) =>
+      client &&
+      (client.restaurant || client.name || '')
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase())
     );
 
-    if (lowPaperClients.length === 0) {
-      setSnackbar({
-        open: true,
-        message: 'Нет клиентов с низким уровнем бумаги',
-        severity: 'info'
-      });
-      return;
-    }
+    const sortedClients = [...visibleClients].sort((a, b) => {
+      if (!a || !b) return 0;
+      
+      if (sortBy === 'name') {
+        const nameA = (a.restaurant || a.name || '').toLowerCase();
+        const nameB = (b.restaurant || b.name || '').toLowerCase();
+        return sortDirection === 'asc'
+          ? nameA.localeCompare(nameB)
+          : nameB.localeCompare(nameA);
+      } else if (sortBy === 'paperRemaining') {
+        return sortDirection === 'asc'
+          ? (a.paperRemaining || 0) - (b.paperRemaining || 0)
+          : (b.paperRemaining || 0) - (a.paperRemaining || 0);
+      } else if (sortBy === 'shellNum') {
+        const shellNumA = (a.shellNum || '').toString().toLowerCase();
+        const shellNumB = (b.shellNum || '').toString().toLowerCase();
+        return sortDirection === 'asc'
+          ? shellNumA.localeCompare(shellNumB)
+          : shellNumB.localeCompare(shellNumA);
+      }
+      return 0;
+    });
 
-    // Call the service function with db and clients
-    const result = await sendLowPaperSummaryToAdmins(db, lowPaperClients);
+    const sortedProductTypes = [...productTypesData].sort((a, b) => {
+      if (!a || !b) return 0;
+      
+      if (sortByProduct === 'type') {
+        const typeA = (a.type || '').toLowerCase();
+        const typeB = (b.type || '').toLowerCase();
+        return sortDirectionProduct === 'asc'
+          ? typeA.localeCompare(typeB)
+          : typeB.localeCompare(typeA);
+      } else if (sortByProduct === 'paperRemaining') {
+        return sortDirectionProduct === 'asc'
+          ? (a.paperRemaining || 0) - (b.paperRemaining || 0)
+          : (b.paperRemaining || 0) - (a.paperRemaining || 0);
+      } else if (sortByProduct === 'shellNum') {
+        const shellNumA = (a.shellNum || '').toString().toLowerCase();
+        const shellNumB = (b.shellNum || '').toString().toLowerCase();
+        return sortDirectionProduct === 'asc'
+          ? shellNumA.localeCompare(shellNumB)
+          : shellNumB.localeCompare(shellNumA);
+      }
+      return 0;
+    });
 
-    if (result.success && result.notificationSent) {
+  const handleSendLowPaperSummary = async () => {
+    setSendingSummary(true);
+    try {
+      // Debug: check db instance
+      console.log('DB instance:', db, typeof db);
+
+      // Filter clients with low paper
+      const lowPaperClients = clientData.filter(client => 
+        client.paperRemaining !== undefined &&
+        client.notifyWhen !== undefined &&
+        client.paperRemaining <= client.notifyWhen
+      );
+
+      if (lowPaperClients.length === 0) {
+        setSnackbar({
+          open: true,
+          message: 'Нет клиентов с низким уровнем бумаги',
+          severity: 'info'
+        });
+        return;
+      }
+
+      // Call the service function with db and clients
+      const result = await sendLowPaperSummaryToAdmins(db, lowPaperClients);
+
+      if (result.success && result.notificationSent) {
+        setSnackbar({
+          open: true,
+          message: `Сводка отправлена ${result.successfulNotifications}/${result.totalAdmins} администраторам`,
+          severity: 'success'
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: `Ошибка отправки сводки: ${result.error || 'Неизвестная ошибка'}`,
+          severity: 'error'
+        });
+      }
+    } catch (error) {
+      console.error("Error sending low paper summary:", error);
       setSnackbar({
         open: true,
-        message: `Сводка отправлена ${result.successfulNotifications}/${result.totalAdmins} администраторам`,
-        severity: 'success'
-      });
-    } else {
-      setSnackbar({
-        open: true,
-        message: `Ошибка отправки сводки: ${result.error || 'Неизвестная ошибка'}`,
+        message: `Ошибка отправки сводки: ${error.message}`,
         severity: 'error'
       });
+    } finally {
+      setSendingSummary(false);
     }
-  } catch (error) {
-    console.error("Error sending low paper summary:", error);
-    setSnackbar({
-      open: true,
-      message: `Ошибка отправки сводки: ${error.message}`,
-      severity: 'error'
-    });
-  } finally {
-    setSendingSummary(false);
-  }
-};
+  };
 
 
   // Updated ClientsTable component
 // Updated ClientsTable component
 const ClientsTable = () => (
-  <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
-    <Table sx={{ minWidth: 650 }}>
-      <TableHead>
-        <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
-          {columnHeaders
-            .filter((h) => !hiddenColumns.includes(h) && h !== 'orgName') // Remove orgName column
-            .map((h) => (
-              <TableCell
-                key={h}
-                sx={{
-                  color: '#fff',
-                  fontWeight: 'bold',
-                  fontSize: '1.1rem',
-                  padding: '16px',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  backgroundColor: (sortBy === h) ? '#2c5c57' : '#3c7570ff',
-                }}
-                onClick={() => {
-                  if (h === 'name' || h === 'paperRemaining' || h === 'shellNum') {
-                    const newSortBy = h === 'name' ? 'name' : 
-                                    h === 'paperRemaining' ? 'paperRemaining' : 'shellNum';
-                    
-                    if (sortBy === newSortBy) {
-                      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                    } else {
-                      setSortBy(newSortBy);
-                      setSortDirection('asc');
+  <>
+    {/* Filter Dropdowns */}
+    <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+      <FormControl sx={{ minWidth: 200 }}>
+        <InputLabel>Тип упаковки</InputLabel>
+        <Select
+          value={selectedPackageType}
+          label="Тип упаковки"
+          onChange={(e) => setSelectedPackageType(e.target.value)}
+        >
+          <MenuItem value="">
+            <em>Все типы упаковки</em>
+          </MenuItem>
+          {packageTypes.map((type) => (
+            <MenuItem key={type} value={type}>
+              {type}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <FormControl sx={{ minWidth: 200 }}>
+        <InputLabel>Продукт</InputLabel>
+        <Select
+          multiple
+          value={selectedProducts}
+          label="Продукт"
+          onChange={(e) => setSelectedProducts(e.target.value)}
+          renderValue={(selected) => selected.join(', ')}
+        >
+          {products.map((product) => (
+            <MenuItem key={product} value={product}>
+              <Checkbox checked={selectedProducts.indexOf(product) > -1} />
+              <ListItemText primary={product} />
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    </Box>
+
+    <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
+      <Table sx={{ minWidth: 650 }}>
+        <TableHead>
+          <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
+            {columnHeaders
+              .filter((h) => !hiddenColumns.includes(h) && h !== 'orgName') // Remove orgName column
+              .map((h) => (
+                <TableCell
+                  key={h}
+                  sx={{
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    fontSize: '1.1rem',
+                    padding: '16px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    backgroundColor: (sortBy === h) ? '#2c5c57' : '#3c7570ff',
+                  }}
+                  onClick={() => {
+                    if (h === 'name' || h === 'paperRemaining' || h === 'shellNum') {
+                      const newSortBy = h === 'name' ? 'name' : 
+                                      h === 'paperRemaining' ? 'paperRemaining' : 'shellNum';
+                      
+                      if (sortBy === newSortBy) {
+                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortBy(newSortBy);
+                        setSortDirection('asc');
+                      }
                     }
+                  }}
+                >
+                  <Box display="flex" alignItems="center">
+                    {h === '№' ? (
+                      '№'
+                    ) : h === 'name' ? (
+                      'Название ресторана'
+                    ) : h === 'shellNum' ? (
+                      'Номер полки'
+                    ) : h === 'packaging' ? (
+                      'Упаковка'
+                    ) : h === 'productTypeName' ? (
+                      'Продукт'
+                    ) : h === 'totalRolls' ? (
+                      'Всего рулонов'
+                    ) : h === 'paperRemaining' ? (
+                      'Остаток бумаги'
+                    ) : h === 'Actions' ? (
+                      'Действия'
+                    ) : (
+                      h
+                    )}
+                    
+                    {(h === 'name' || h === 'paperRemaining' || h === 'shellNum') && (
+                      <Box ml={1} display="flex">
+                        <SortIcon 
+                          column={h} 
+                          activeColumn={sortBy} 
+                          direction={sortDirection} 
+                        />
+                      </Box>
+                    )}
+                  </Box>
+                </TableCell>
+              ))}
+          </TableRow>
+        </TableHead>
+
+        <TableBody>
+          {sortedClients.map((client, index) => {
+            if (!client || !client.id) return null;
+
+            const lowPaper =
+              client.paperRemaining !== undefined &&
+              client.notifyWhen !== undefined &&
+              client.paperRemaining <= client.notifyWhen;
+
+        
+
+            // Get product info with standard design details
+            const getProductInfo = async () => {
+              const productName = client.fetchedProductName || client.productTypeName || '';
+              
+              if (client.designType === 'standart' && (client.productID_2 || client.packageID)) {
+                // For standard designs, get the productType name
+                try {
+                  const productTypeMatch = await findProductTypeByIds(client.productID_2, client.packageID);
+                  if (productTypeMatch && productTypeMatch.data.name) {
+                    return {
+                      productName,
+                      standardName: productTypeMatch.data.name
+                    };
                   }
+                } catch (error) {
+                  console.error("Error fetching standard design name:", error);
+                }
+              }
+              
+              return { productName, standardName: null };
+            };
+
+            // For now, use sync version - you might want to refactor this to use state
+            const displayProductName = client.fetchedProductName || client.productTypeName || '-';
+            const isStandardDesign = client.designType === 'standart';
+            
+            return (
+              <TableRow
+                key={client.id}
+                sx={{
+                  borderBottom: lowPaper
+                    ? '3px solid #f44336'
+                    : '1px solid #e0e0e0',
+                  '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
+                  '&:hover': { backgroundColor: '#e3f2fd' }
                 }}
               >
-                <Box display="flex" alignItems="center">
-                  {h === '№' ? (
-                    '№'
-                  ) : h === 'name' ? (
-                    'Название ресторана'
-                  ) : h === 'shellNum' ? (
-                    'Номер полки'
-                  ) : h === 'packaging' ? (
-                    'Упаковка'
-                  ) : h === 'productTypeName' ? (
-                    'Продукт'
-                  ) : h === 'totalRolls' ? (
-                    'Всего рулонов'
-                  ) : h === 'paperRemaining' ? (
-                    'Остаток бумаги'
-                  ) : h === 'Actions' ? (
-                    'Действия'
-                  ) : (
-                    h
-                  )}
-                  
-                  {(h === 'name' || h === 'paperRemaining' || h === 'shellNum') && (
-                    <Box ml={1} display="flex">
-                      <SortIcon 
-                        column={h} 
-                        activeColumn={sortBy} 
-                        direction={sortDirection} 
-                      />
-                    </Box>
-                  )}
-                </Box>
-              </TableCell>
-            ))}
-        </TableRow>
-      </TableHead>
-
-      <TableBody>
-        {sortedClients.map((client, index) => {
-          if (!client || !client.id) return null;
-
-          const lowPaper =
-            client.paperRemaining !== undefined &&
-            client.notifyWhen !== undefined &&
-            client.paperRemaining <= client.notifyWhen;
-
-      
-
-          // Get product info with standard design details
-          const getProductInfo = async () => {
-            const productName = client.fetchedProductName || client.productTypeName || '';
-            
-            if (client.designType === 'standart' && (client.productID_2 || client.packageID)) {
-              // For standard designs, get the productType name
-              try {
-                const productTypeMatch = await findProductTypeByIds(client.productID_2, client.packageID);
-                if (productTypeMatch && productTypeMatch.data.name) {
-                  return {
-                    productName,
-                    standardName: productTypeMatch.data.name
-                  };
-                }
-              } catch (error) {
-                console.error("Error fetching standard design name:", error);
-              }
-            }
-            
-            return { productName, standardName: null };
-          };
-
-          // For now, use sync version - you might want to refactor this to use state
-          const displayProductName = client.fetchedProductName || client.productTypeName || '-';
-          const isStandardDesign = client.designType === 'standart';
-          
-          return (
-            <TableRow
-              key={client.id}
-              sx={{
-                borderBottom: lowPaper
-                  ? '3px solid #f44336'
-                  : '1px solid #e0e0e0',
-                '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
-                '&:hover': { backgroundColor: '#e3f2fd' }
-              }}
-            >
-              {columnHeaders
-                .filter((f) => !hiddenColumns.includes(f) && f !== 'orgName') // Remove orgName column
-                .map((f) => (
-                  <TableCell key={f} sx={{ padding: '16px' }}>
-                    {f === '№' ? (
-                      index + 1
-                    ) : f === 'name' ? (
-                      <Box display="flex" alignItems="center" gap={1}>
-                        {lowPaper && <ReportGmailerrorredIcon color="error" />}
+                {columnHeaders
+                  .filter((f) => !hiddenColumns.includes(f) && f !== 'orgName') // Remove orgName column
+                  .map((f) => (
+                    <TableCell key={f} sx={{ padding: '16px' }}>
+                      {f === '№' ? (
+                        index + 1
+                      ) : f === 'name' ? (
+                        <Box display="flex" alignItems="center" gap={1}>
+                          {lowPaper && <ReportGmailerrorredIcon color="error" />}
+                          <Box>
+                            <Typography fontWeight={600}>
+                              {client.name || '-'}
+                            </Typography>
+                            {/* Organization name below restaurant name in green */}
+                            {client.orgName && client.orgName !== '-' && (
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  color: '#0F9D8C',
+                                  fontWeight: 400,
+                                  fontSize: '0.85rem'
+                                }}
+                              >
+                                {client.orgName}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                      ) : f === 'Actions' ? (
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          size="small"
+                          sx={{
+                            color: '#0F9D8C',
+                            borderColor: '#0F9D8C',
+                            '&:hover': {
+                              borderColor: '#0c7a6e',
+                              color: '#0c7a6e'
+                            }
+                          }}
+                          onClick={() => handleOpenModal(client)}
+                        >
+                          Подробно
+                        </Button>
+                      ) : f === 'shellNum' ? (
+                        client.shellNum || '-'
+                      ) : f === 'packaging' ? (
                         <Box>
-                          <Typography fontWeight={600}>
-                            {client.name || '-'}
+    {(() => {
+   const packageType = client.fetchedPackageType || client.packaging || '';
+  const gramm = client.gramm || ''; 
+    
+    if (packageType && gramm) {
+   return (
+      <Typography variant="body2" component="span">
+        {packageType}{' '}
+        <Typography 
+          component="span" 
+          sx={{ 
+            color: '#757575',
+            fontSize: 'inherit'
+          }}
+        >
+          ({gramm} гр)
+        </Typography>
+      </Typography>
+    );
+    }
+    return packageType || '-';
+  })()}
+    </Box>
+                      ) : f === 'productTypeName' ? (
+                        <Box>
+                          <Typography variant="body2" fontWeight={500}>
+                            {displayProductName}
                           </Typography>
-                          {/* Organization name below restaurant name in green */}
-                          {client.orgName && client.orgName !== '-' && (
+                          {/* Show standard design info only for standard designs */}
+                          {isStandardDesign && client.productTypeStandardName && (
                             <Typography 
                               variant="body2" 
                               sx={{ 
-                                color: '#0F9D8C',
-                                fontWeight: 400,
-                                fontSize: '0.85rem'
+                                color: '#757575',
+                                fontSize: '0.8rem',
+                                fontWeight: 400
                               }}
                             >
-                              {client.orgName}
+                              Стандарт "{client.productTypeStandardName}"
                             </Typography>
                           )}
                         </Box>
-                      </Box>
-                    ) : f === 'Actions' ? (
-                      <Button
-                        variant="outlined"
-                        color="primary"
-                        size="small"
-                        sx={{
-                          color: '#0F9D8C',
-                          borderColor: '#0F9D8C',
-                          '&:hover': {
-                            borderColor: '#0c7a6e',
-                            color: '#0c7a6e'
-                          }
-                        }}
-                        onClick={() => handleOpenModal(client)}
-                      >
-                        Подробно
-                      </Button>
-                    ) : f === 'shellNum' ? (
-                      client.shellNum || '-'
-                    ) : f === 'packaging' ? (
-                      <Box>
-  {(() => {
- const packageType = client.fetchedPackageType || client.packaging || '';
-const gramm = client.gramm || ''; 
-  
-  if (packageType && gramm) {
- return (
-    <Typography variant="body2" component="span">
-      {packageType}{' '}
-      <Typography 
-        component="span" 
-        sx={{ 
-          color: '#757575',
-          fontSize: 'inherit'
-        }}
-      >
-        ({gramm} гр)
-      </Typography>
-    </Typography>
-  );
-  }
-  return packageType || '-';
-})()}
-  </Box>
-                    ) : f === 'productTypeName' ? (
-                      <Box>
-                        <Typography variant="body2" fontWeight={500}>
-                          {displayProductName}
+                      ) : f === 'totalRolls' ? (
+                        <Typography variant="body2" fontWeight={600} color="primary">
+                          {client.totalRolls ?? 0}
                         </Typography>
-                        {/* Show standard design info only for standard designs */}
-                        {isStandardDesign && client.productTypeStandardName && (
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: '#757575',
-                              fontSize: '0.8rem',
-                              fontWeight: 400
-                            }}
-                          >
-                            Стандарт "{client.productTypeStandardName}"
-                          </Typography>
-                        )}
-                      </Box>
-                    ) : f === 'totalRolls' ? (
-                      <Typography variant="body2" fontWeight={600} color="primary">
-                        {client.totalRolls ?? 0}
-                      </Typography>
-                    ) : f === 'paperRemaining' ? (
-                      client.paperRemaining != null
-                        ? `${client.paperRemaining.toFixed(2)} кг`
-                        : '-'
-                    ) : (
-                      client[f] ?? '-'
-                    )}
-                  </TableCell>
-                ))}
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
-  </TableContainer>
+                      ) : f === 'paperRemaining' ? (
+                        client.paperRemaining != null
+                          ? `${client.paperRemaining.toFixed(2)} кг`
+                          : '-'
+                      ) : (
+                        client[f] ?? '-'
+                      )}
+                    </TableCell>
+                  ))}
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  </>
 );
 
   const ProductTypesTable = () => (
