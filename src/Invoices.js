@@ -241,7 +241,7 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
             
             @page {
                 size: A4 landscape;
-                margin: 0;
+                margin: 2;
             }
             
             body {
@@ -250,12 +250,15 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
             }
         }
         
-        .invoice-container {
-            width: 148.5mm;
-            height: 210mm;
-            position: relative;
-            border-right: 1px dashed #ccc;
-        }
+     .invoice-container {
+    width: 148.5mm;
+    height: 210mm;
+    position: relative;
+    border-right: 1px dashed #ccc;
+    padding: 4mm; /* ✅ safe area padding inside invoice */
+    box-sizing: border-box; /* ✅ ensures content shrinks, doesn’t overflow */
+}
+
         
         .invoice-container:last-child {
             border-right: none;
