@@ -111,7 +111,7 @@ const Dashboard = ({
               }}
               onClick={onNavigateToInvoices}
             >
-              Генератор накладных
+              Накладные
             </Button>
             <Button 
               variant="outlined" 

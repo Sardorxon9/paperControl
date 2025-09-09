@@ -40,6 +40,8 @@ import {
   orderBy
 } from 'firebase/firestore';
 import BorderColorRoundedIcon from '@mui/icons-material/BorderColorRounded';
+import { NumericFormat } from "react-number-format";
+
 
 const Invoices = ({ onNavigateToWelcome, currentUser }) => {
   const [clients, setClients] = useState([]);
@@ -1108,16 +1110,19 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
 </Box>
 
               
-              <TextField
-                fullWidth
-                label="Количество"
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                sx={{ mb: 2 }}
-                inputProps={{ min: 1, step: 1 }}
-              />
-              
+ <NumericFormat
+  customInput={TextField}
+  fullWidth
+  label="Количество"
+  value={quantity}
+  onValueChange={(values) => {
+    setQuantity(values.value); // `values.value` is raw number without spaces
+  }}
+  thousandSeparator=" "
+  allowNegative={false}
+  decimalScale={0}
+  sx={{ mb: 2 }}
+/>
               <TextField
                 fullWidth
                 label="Цена за единицу (сум)"
