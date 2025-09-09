@@ -8,6 +8,7 @@ import AuthPages from './AuthPages';
 import Dashboard from './Dashboard';
 import Welcome from './Welcome';
 import Analytics from './Analytics';
+import Invoices from './Invoices';
 import { CircularProgress, Box } from '@mui/material';
 
 function App() {
@@ -77,6 +78,11 @@ function App() {
     setCurrentView('analytics');
   };
 
+// App.js - Fix the handleNavigateToInvoices function
+const handleNavigateToInvoices = () => {
+  setCurrentView('invoices');
+};
+
   const handleBackToDashboard = () => {
     setCurrentView('dashboard');
   };
@@ -103,38 +109,47 @@ function App() {
   }
 
   // Render appropriate view based on currentView state
-  switch(currentView) {
-    case 'welcome':
-      return (
-        <Welcome 
-          user={user} 
-          userRole={userRole} 
-          onBackToDashboard={handleBackToDashboard}
-          onLogout={handleLogout}
-        />
-      );
-    
-    case 'analytics':
-      return (
-        <Analytics 
-          user={user} 
-          userRole={userRole} 
-          onBackToDashboard={handleBackToDashboard}
-          onLogout={handleLogout}
-        />
-      );
-    
-    default: // dashboard view
-      return (
-        <Dashboard 
-          user={user}
-          userRole={userRole}
-          onNavigateToWelcome={handleNavigateToWelcome}
-          onNavigateToAnalytics={handleNavigateToAnalytics}
-          onLogout={handleLogout}
-        />
-      );
-  }
+switch(currentView) {
+  case 'welcome':
+    return (
+      <Welcome 
+        user={user} 
+        userRole={userRole} 
+        onBackToDashboard={handleBackToDashboard}
+        onLogout={handleLogout}
+      />
+    );
+  
+  case 'analytics':
+    return (
+      <Analytics 
+        user={user} 
+        userRole={userRole} 
+        onBackToDashboard={handleBackToDashboard}
+        onLogout={handleLogout}
+      />
+    );
+  
+  case 'invoices': // Add this case
+    return (
+      <Invoices 
+        onNavigateToWelcome={handleNavigateToWelcome}
+        currentUser={user}
+      />
+    );
+  
+  default: // dashboard view
+    return (
+      <Dashboard 
+        user={user}
+        userRole={userRole}
+        onNavigateToWelcome={handleNavigateToWelcome}
+        onNavigateToAnalytics={handleNavigateToAnalytics}
+        onNavigateToInvoices={handleNavigateToInvoices}
+        onLogout={handleLogout}
+      />
+    );
+}
 }
 
 export default App;

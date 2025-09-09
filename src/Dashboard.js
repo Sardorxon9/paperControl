@@ -17,10 +17,18 @@ import {
   Notifications,
   People,
   Settings,
-  Task
+  Task,
+  Receipt
 } from '@mui/icons-material';
 
-const Dashboard = ({ user, userRole, onNavigateToWelcome, onNavigateToAnalytics, onLogout }) => {
+const Dashboard = ({ 
+  user, 
+  userRole, 
+  onNavigateToWelcome, 
+  onNavigateToAnalytics, 
+  onNavigateToInvoices, 
+  onLogout 
+}) => {
   return (
     <Container maxWidth="md" sx={{ mt: 6 }}>
       <Paper elevation={4} sx={{ p: 4, mb: 4 }}>
@@ -87,18 +95,33 @@ const Dashboard = ({ user, userRole, onNavigateToWelcome, onNavigateToAnalytics,
           </Paper>
         )}
 
-        {/* Мои документы Card */}
+        {/* Мои документы Card - Modified */}
         <Paper elevation={2} sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
           <Typography variant="h6" gutterBottom>Мои документы</Typography>
           <Typography variant="body2" color="text.secondary" gutterBottom sx={{ flexGrow: 1 }}>
-            Просмотрите и управляйте своими документами
+            Генератор накладных и управление документами
           </Typography>
-          <Button 
-            variant="contained" 
-            startIcon={<Description />}
-          >
-            Открыть
-          </Button>
+          <Stack spacing={1}>
+            <Button 
+              variant="contained" 
+              startIcon={<Receipt />}
+              sx={{
+                backgroundColor: '#0F9D8C',
+                '&:hover': { backgroundColor: '#0c7a6e' }
+              }}
+              onClick={onNavigateToInvoices}
+            >
+              Генератор накладных
+            </Button>
+            <Button 
+              variant="outlined" 
+              startIcon={<Description />}
+              size="small"
+              disabled
+            >
+              Другие документы
+            </Button>
+          </Stack>
         </Paper>
 
         {/* Уведомления Card */}
