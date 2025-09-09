@@ -39,6 +39,7 @@ import {
   query,
   orderBy
 } from 'firebase/firestore';
+import BorderColorRoundedIcon from '@mui/icons-material/BorderColorRounded';
 
 const Invoices = ({ onNavigateToWelcome, currentUser }) => {
   const [clients, setClients] = useState([]);
@@ -52,7 +53,8 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [senderCompany, setSenderCompany] = useState('White Ray');
   const [searchQuery, setSearchQuery] = useState("");
-
+const [customRestaurantName, setCustomRestaurantName] = useState('');
+const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -598,14 +600,15 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
                         <div class="info-label">От кого / Kimdan</div>
                         <div class="info-value">${senderName}</div>
                     </div>
-                    <div class="info-block">
-                        <div class="info-label">Кому / Kimga</div>
-                        <div class="info-value">${client.displayOrgName}</div>
-                        ${client.displayOrgName !== client.displayRestaurantName ? 
-                          `<div class="restaurant-name">( ${client.displayRestaurantName} )</div>` : 
-                          ''
-                        }
-                    </div>
+                <div class="info-block">
+  <div class="info-label">Кому / Kimga</div>
+  <div class="info-value">${client.displayOrgName}</div>
+  ${
+    client.displayOrgName !== (customRestaurantName || client.displayRestaurantName)
+      ? `<div class="restaurant-name">( ${customRestaurantName || client.displayRestaurantName} )</div>`
+      : ''
+  }
+</div>
                 </div>
             </div>
             
@@ -901,6 +904,8 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
   // Handle opening modal
   const handleOpenModal = (client) => {
     setSelectedClient(client);
+     setCustomRestaurantName(client.displayRestaurantName || ""); // prefill with DB value
+  setIsEditingRestaurant(false); // start in read-only
     setModalOpen(true);
   };
 
@@ -1045,26 +1050,60 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
               <Typography variant="body1" gutterBottom>
                 <strong>Упаковка:</strong> {selectedClient.fetchedPackageType} ({selectedClient.fetchedGramm} гр)
               </Typography>
-              
+              {/* Restaurant Name (editable) */}
+<Box sx={{ mb: 2 }}>
+  <TextField
+    label="Ресторан"
+    fullWidth
+    value={customRestaurantName}
+    onChange={(e) => setCustomRestaurantName(e.target.value)}
+  />
+</Box>
+
               {/* Sender Company Selection */}
-              <Box sx={{ mt: 2, mb: 2 }}>
-                <Typography variant="body2" gutterBottom>
-                  <strong>От имени компании:</strong>
-                </Typography>
-                <ToggleButtonGroup
-                  value={senderCompany}
-                  exclusive
-                  onChange={handleSenderCompanyChange}
-                  aria-label="sender company"
-                >
-                  <ToggleButton value="White Ray" aria-label="white ray">
-                    White Ray
-                  </ToggleButton>
-                  <ToggleButton value="Pure Pack" aria-label="pure pack">
-                    Pure Pack
-                  </ToggleButton>
-                </ToggleButtonGroup>
-              </Box>
+             <Box sx={{ mt: 2, mb: 2 }}>
+  <Typography variant="body2" gutterBottom>
+    <strong>От имени компании:</strong>
+  </Typography>
+  <ToggleButtonGroup
+    value={senderCompany}
+    exclusive
+    onChange={handleSenderCompanyChange}
+    aria-label="sender company"
+  >
+    <ToggleButton
+      value="White Ray"
+      aria-label="white ray"
+      sx={{
+        "&.Mui-selected": {
+          backgroundColor: "#b2ded9",
+          color: "#025249",
+          "&:hover": {
+            backgroundColor: "#a0d3cd"
+          }
+        }
+      }}
+    >
+      White Ray
+    </ToggleButton>
+    <ToggleButton
+      value="Pure Pack"
+      aria-label="pure pack"
+      sx={{
+        "&.Mui-selected": {
+          backgroundColor: "#b2ded9",
+          color: "#025249",
+          "&:hover": {
+            backgroundColor: "#a0d3cd"
+          }
+        }
+      }}
+    >
+      Pure Pack
+    </ToggleButton>
+  </ToggleButtonGroup>
+</Box>
+
               
               <TextField
                 fullWidth
