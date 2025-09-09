@@ -25,9 +25,22 @@ import {
   CardContent,
   ToggleButtonGroup,
   ToggleButton,
-  InputAdornment
+  InputAdornment,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Divider
 } from '@mui/material';
-import { ArrowBack, Receipt, Download, Print, Search } from '@mui/icons-material';
+import { 
+  ArrowBack, 
+  Receipt, 
+  Download, 
+  Print, 
+  Search, 
+  Add, 
+  Delete 
+} from '@mui/icons-material';
 import { db } from "./firebase";
 import {
   collection,
@@ -42,41 +55,107 @@ import {
 import BorderColorRoundedIcon from '@mui/icons-material/BorderColorRounded';
 import { NumericFormat } from "react-number-format";
 
-
 const Invoices = ({ onNavigateToWelcome, currentUser }) => {
   const [clients, setClients] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [packageTypes, setPackageTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedClient, setSelectedClient] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [quantity, setQuantity] = useState('');
-  const [price, setPrice] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generatedInvoiceUrl, setGeneratedInvoiceUrl] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [senderCompany, setSenderCompany] = useState('White Ray');
   const [searchQuery, setSearchQuery] = useState("");
-const [customRestaurantName, setCustomRestaurantName] = useState('');
-const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
+  const [customRestaurantName, setCustomRestaurantName] = useState('');
+  const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
     severity: 'success'
   });
 
-    const filteredClients = clients.filter(client =>
+  // New state for multiple products
+  const [invoiceProducts, setInvoiceProducts] = useState([
+    {
+      id: 1,
+      isDefault: true,
+      productName: '',
+      packageType: '',
+      gramm: '',
+      quantity: '',
+      price: ''
+    }
+  ]);
+
+  const grammOptions = [
+    { value: '1', label: '1 гр' },
+    { value: '2', label: '2 гр' },
+    { value: '3', label: '3 гр' },
+    { value: '4', label: '4 гр' },
+    { value: '5', label: '5 гр' },
+    { value: '6', label: '6 гр' }
+  ];
+
+  const filteredClients = clients.filter(client =>
     client.displayRestaurantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     client.displayOrgName.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  // Fetch clients data on component mount
+
+  // Fetch all required data on component mount
   useEffect(() => {
-    fetchClientsData();
+    fetchAllData();
   }, []);
+
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+      await Promise.all([
+        fetchClientsData(),
+        fetchProducts(),
+        fetchPackageTypes()
+      ]);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setSnackbar({
+        open: true,
+        message: 'Ошибка при загрузке данных',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "products"));
+      const productsArray = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setProducts(productsArray);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    }
+  };
+
+  const fetchPackageTypes = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "packageTypes"));
+      const packageTypesArray = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setPackageTypes(packageTypesArray);
+    } catch (error) {
+      console.error("Error fetching package types:", error);
+    }
+  };
 
   const fetchClientsData = async () => {
     try {
-      setLoading(true);
       const querySnapshot = await getDocs(collection(db, "clients"));
-      
       
       const clientsArray = await Promise.all(
         querySnapshot.docs.map(async (docSnap) => {
@@ -112,12 +191,11 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
               }
             }
 
-            // Get gramm value (try multiple sources)
+            // Get gramm value
             let grammValue = '';
             if (data.designType === "unique" && data.gramm) {
               grammValue = data.gramm;
             } else if (data.productID_2 || data.packageID) {
-              // Try to get from productTypes
               try {
                 const productTypesQuery = await getDocs(collection(db, "productTypes"));
                 for (const ptDoc of productTypesQuery.docs) {
@@ -150,7 +228,6 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
           }
         })
       );
-      
 
       const validClients = clientsArray.filter(client => 
         client !== null && 
@@ -159,26 +236,15 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
       );
       
       setClients(validClients);
-     
-
-
-
     } catch (error) {
       console.error("Error fetching clients data:", error);
-      setSnackbar({
-        open: true,
-        message: 'Ошибка при загрузке данных клиентов',
-        severity: 'error'
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
   // Generate random invoice number with date
   const generateInvoiceNumber = () => {
     const now = new Date();
-    const year = now.getFullYear().toString().slice(-2); // Last 2 digits of year
+    const year = now.getFullYear().toString().slice(-2);
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
     const day = now.getDate().toString().padStart(2, '0');
     const random = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
@@ -186,24 +252,261 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
     return `${year}${month}${day}${random}`;
   };
 
-  // Generate invoice HTML
-  const generateInvoiceHTML = (client, quantity, price, invoiceNumber, senderCompany) => {
-    const totalAmount = quantity * price;
-    const senderName = senderCompany === 'White Ray' ? '"WHITE RAY" MCHJ' : '"PURE PACK" MCHJ';
-    
-    // Manual date formatting to avoid date-fns conflicts
-    const now = new Date();
-    const months = [
-      'Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня',
-      'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'
-    ];
-    const currentDate = `${now.getDate()} ${months[now.getMonth()]}, ${now.getFullYear()}`;
+  // Add new product row
+  const addProductRow = () => {
+    const newProduct = {
+      id: Date.now(),
+      isDefault: false,
+      productName: '',
+      packageType: '',
+      gramm: '',
+      quantity: '',
+      price: ''
+    };
+    setInvoiceProducts([...invoiceProducts, newProduct]);
+  };
 
-    // Format product description
-    const productDescription = `( В ${client.fetchedPackageType} упаковках ${client.fetchedGramm} гр )`;
+  // Remove product row
+  const removeProductRow = (productId) => {
+    if (invoiceProducts.length > 1) {
+      setInvoiceProducts(invoiceProducts.filter(product => product.id !== productId));
+    }
+  };
 
+  // Update product field
+  const updateProductField = (productId, field, value) => {
+    setInvoiceProducts(invoiceProducts.map(product =>
+      product.id === productId ? { ...product, [field]: value } : product
+    ));
+  };
 
-    const htmlTemplate = `<!DOCTYPE html>
+  // Calculate total amount for all products
+  const calculateTotalAmount = () => {
+    return invoiceProducts.reduce((total, product) => {
+      const quantity = parseFloat(product.quantity) || 0;
+      const price = parseFloat(product.price) || 0;
+      return total + (quantity * price);
+    }, 0);
+  };
+
+  // Validate all products
+  const validateProducts = () => {
+    for (const product of invoiceProducts) {
+      if (product.isDefault) {
+        // For default product, it uses client's existing data
+        if (!product.quantity || !product.price) {
+          return false;
+        }
+      } else {
+        // For additional products, all fields are required
+        if (!product.productName || !product.packageType || !product.gramm || !product.quantity || !product.price) {
+          return false;
+        }
+      }
+      
+      const quantity = parseFloat(product.quantity);
+      const price = parseFloat(product.price);
+      if (isNaN(quantity) || isNaN(price) || quantity <= 0 || price <= 0) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Handle creating invoice
+  const handleCreateInvoice = async () => {
+    if (!selectedClient || !validateProducts()) {
+      setSnackbar({
+        open: true,
+        message: 'Пожалуйста, заполните все поля',
+        severity: 'warning'
+      });
+      return;
+    }
+
+    setGenerating(true);
+
+    try {
+      // Generate invoice number
+      const newInvoiceNumber = generateInvoiceNumber();
+      setInvoiceNumber(newInvoiceNumber);
+
+      // Prepare products data for HTML generation
+      const productsForInvoice = invoiceProducts.map(product => {
+        if (product.isDefault) {
+          return {
+            productName: selectedClient.fetchedProductName,
+            packageType: selectedClient.fetchedPackageType,
+            gramm: selectedClient.fetchedGramm,
+            quantity: parseFloat(product.quantity),
+            price: parseFloat(product.price)
+          };
+        } else {
+          const selectedProductObj = products.find(p => p.id === product.productName);
+          const selectedPackageObj = packageTypes.find(p => p.id === product.packageType);
+          
+          return {
+            productName: selectedProductObj?.productName || '',
+            packageType: selectedPackageObj?.type || '',
+            gramm: product.gramm,
+            quantity: parseFloat(product.quantity),
+            price: parseFloat(product.price)
+          };
+        }
+      });
+
+      // Generate HTML content
+      const htmlContent = generateInvoiceHTML(
+        selectedClient, 
+        productsForInvoice, 
+        newInvoiceNumber, 
+        senderCompany,
+        customRestaurantName
+      );
+
+      // Create blob URL
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      setGeneratedInvoiceUrl(url);
+
+      // Save invoice record to Firestore with multiple products
+      const invoiceData = {
+        dateCreated: Timestamp.now(),
+        products: productsForInvoice.map(product => ({
+          productName: product.productName,
+          packageType: product.packageType,
+          gramm: product.gramm,
+          quantity: product.quantity,
+          price: product.price,
+          totalPrice: product.quantity * product.price
+        })),
+        totalInvoiceAmount: calculateTotalAmount(),
+        invoiceNumber: newInvoiceNumber,
+        userID: currentUser?.uid || 'unknown',
+        userName: currentUser?.name || 'Unknown User',
+        senderCompany: senderCompany,
+        customRestaurantName: customRestaurantName || selectedClient.displayRestaurantName
+      };
+
+      await addDoc(collection(db, `clients/${selectedClient.id}/invoices`), invoiceData);
+
+      setSnackbar({
+        open: true,
+        message: 'Накладная успешно создана!',
+        severity: 'success'
+      });
+
+    } catch (error) {
+      console.error('Error creating invoice:', error);
+      setSnackbar({
+        open: true,
+        message: 'Ошибка при создании накладной',
+        severity: 'error'
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Handle download
+  const handleDownload = () => {
+    if (!generatedInvoiceUrl || !selectedClient || !invoiceNumber) return;
+
+    const link = document.createElement('a');
+    link.href = generatedInvoiceUrl;
+    link.download = `Накладная_${selectedClient.displayRestaurantName}_${invoiceNumber}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Handle modal close
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setSelectedClient(null);
+    setInvoiceProducts([
+      {
+        id: 1,
+        isDefault: true,
+        productName: '',
+        packageType: '',
+        gramm: '',
+        quantity: '',
+        price: ''
+      }
+    ]);
+    setGeneratedInvoiceUrl('');
+    setInvoiceNumber('');
+    setSenderCompany('White Ray');
+    setCustomRestaurantName('');
+  };
+
+  // Handle opening modal
+  const handleOpenModal = (client) => {
+    setSelectedClient(client);
+    setCustomRestaurantName(client.displayRestaurantName || "");
+    setIsEditingRestaurant(false);
+    setInvoiceProducts([
+      {
+        id: 1,
+        isDefault: true,
+        productName: client.fetchedProductName,
+        packageType: client.fetchedPackageType,
+        gramm: client.fetchedGramm,
+        quantity: '',
+        price: ''
+      }
+    ]);
+    setModalOpen(true);
+  };
+
+  // Handle sender company change
+  const handleSenderCompanyChange = (event, newCompany) => {
+    if (newCompany !== null) {
+      setSenderCompany(newCompany);
+    }
+  };
+
+  // This function will be replaced with the HTML template from the second artifact
+ // Replace the generateInvoiceHTML function in your Invoices.js with this:
+
+const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany, customRestaurantName) => {
+  const totalAmount = productsData.reduce((sum, product) => sum + (product.quantity * product.price), 0);
+  const senderName = senderCompany === 'White Ray' ? '"WHITE RAY" MCHJ' : '"PURE PACK" MCHJ';
+  
+  // Manual date formatting
+  const now = new Date();
+  const months = [
+    'Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня',
+    'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'
+  ];
+  const currentDate = `${now.getDate()} ${months[now.getMonth()]}, ${now.getFullYear()}`;
+
+  // Generate table rows for multiple products
+  const generateProductRows = (products) => {
+    return products.map((product, index) => {
+      const productDescription = `( В ${product.packageType} упаковках ${product.gramm} гр )`;
+      const productTotal = product.quantity * product.price;
+      
+      return `
+        <tr class="table-row">
+          <td class="col-number">${index + 1}.</td>
+          <td class="col-name">
+            <div class="product-name">${product.productName}</div>
+            <div class="product-description">${productDescription}</div>
+          </td>
+          <td class="col-unit">шт</td>
+          <td class="col-quantity">${product.quantity.toLocaleString('ru-RU')}</td>
+          <td class="col-price">${product.price} сум</td>
+          <td class="col-total">${productTotal.toLocaleString('ru-RU')} сум</td>
+        </tr>
+      `;
+    }).join('');
+  };
+
+  const productRowsHtml = generateProductRows(productsData);
+
+  const htmlTemplate = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -243,7 +546,7 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
             
             @page {
                 size: A4 landscape;
-                margin: 2;
+                margin: 0;
             }
             
             body {
@@ -252,15 +555,14 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
             }
         }
         
-     .invoice-container {
-    width: 148.5mm;
-    height: 210mm;
-    position: relative;
-    border-right: 1px dashed #ccc;
-    padding: 4mm; /* ✅ safe area padding inside invoice */
-    box-sizing: border-box; /* ✅ ensures content shrinks, doesn’t overflow */
-}
-
+        .invoice-container {
+            width: 148.5mm;
+            height: 210mm;
+            position: relative;
+            border-right: 1px dashed #ccc;
+            padding: 4mm;
+            box-sizing: border-box;
+        }
         
         .invoice-container:last-child {
             border-right: none;
@@ -291,13 +593,13 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
             letter-spacing: -0.09px;
         }
         
-       .date-value {
-    font-size: 10px;
-    font-weight: 600;
-    color: #28352f;
-    letter-spacing: -0.1px;
-    white-space: nowrap; /* ✅ Prevent year from jumping to new line */
-}
+        .date-value {
+            font-size: 10px;
+            font-weight: 600;
+            color: #28352f;
+            letter-spacing: -0.1px;
+            white-space: nowrap;
+        }
         
         .invoice-title {
             text-align: center;
@@ -605,15 +907,15 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
                         <div class="info-label">От кого / Kimdan</div>
                         <div class="info-value">${senderName}</div>
                     </div>
-                <div class="info-block">
-  <div class="info-label">Кому / Kimga</div>
-  <div class="info-value">${client.displayOrgName}</div>
-  ${
-    client.displayOrgName !== (customRestaurantName || client.displayRestaurantName)
-      ? `<div class="restaurant-name">( ${customRestaurantName || client.displayRestaurantName} )</div>`
-      : ''
-  }
-</div>
+                    <div class="info-block">
+                        <div class="info-label">Кому / Kimga</div>
+                        <div class="info-value">${client.displayOrgName}</div>
+                        ${
+                          client.displayOrgName !== (customRestaurantName || client.displayRestaurantName)
+                            ? `<div class="restaurant-name">( ${customRestaurantName || client.displayRestaurantName} )</div>`
+                            : ''
+                        }
+                    </div>
                 </div>
             </div>
             
@@ -646,17 +948,7 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
                         </tr>
                     </thead>
                     <tbody>
-                        <tr class="table-row">
-                            <td class="col-number">1.</td>
-                            <td class="col-name">
-                                <div class="product-name">${client.fetchedProductName}</div>
-                                <div class="product-description">${productDescription}</div>
-                            </td>
-                            <td class="col-unit">шт</td>
-                            <td class="col-quantity">${quantity.toLocaleString('ru-RU')}</td>
-                            <td class="col-price">${price} сум</td>
-                            <td class="col-total">${totalAmount.toLocaleString('ru-RU')} сум</td>
-                        </tr>
+                        ${productRowsHtml}
                     </tbody>
                 </table>
                 
@@ -721,9 +1013,10 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
                     <div class="info-block">
                         <div class="info-label">Кому / Kimga</div>
                         <div class="info-value">${client.displayOrgName}</div>
-                        ${client.displayOrgName !== client.displayRestaurantName ? 
-                          `<div class="restaurant-name">( ${client.displayRestaurantName} )</div>` : 
-                          ''
+                        ${
+                          client.displayOrgName !== (customRestaurantName || client.displayRestaurantName)
+                            ? `<div class="restaurant-name">( ${customRestaurantName || client.displayRestaurantName} )</div>`
+                            : ''
                         }
                     </div>
                 </div>
@@ -758,17 +1051,7 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
                         </tr>
                     </thead>
                     <tbody>
-                        <tr class="table-row">
-                            <td class="col-number">1.</td>
-                            <td class="col-name">
-                                <div class="product-name">${client.fetchedProductName}</div>
-                                <div class="product-description">${productDescription}</div>
-                            </td>
-                            <td class="col-unit">шт</td>
-                            <td class="col-quantity">${quantity.toLocaleString('ru-RU')}</td>
-                            <td class="col-price">${price} сум</td>
-                            <td class="col-total">${totalAmount.toLocaleString('ru-RU')} сум</td>
-                        </tr>
+                        ${productRowsHtml}
                     </tbody>
                 </table>
                 
@@ -809,117 +1092,7 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
 </html>`;
 
     return htmlTemplate;
-  };
-
-  // Handle creating invoice
-  const handleCreateInvoice = async () => {
-    if (!quantity || !price || !selectedClient) {
-      setSnackbar({
-        open: true,
-        message: 'Пожалуйста, заполните все поля',
-        severity: 'warning'
-      });
-      return;
-    }
-
-    const quantityNum = parseFloat(quantity);
-    const priceNum = parseFloat(price);
-
-    if (isNaN(quantityNum) || isNaN(priceNum) || quantityNum <= 0 || priceNum <= 0) {
-      setSnackbar({
-        open: true,
-        message: 'Пожалуйста, введите корректные числовые значения',
-        severity: 'warning'
-      });
-      return;
-    }
-
-    setGenerating(true);
-
-    try {
-      // Generate invoice number
-      const newInvoiceNumber = generateInvoiceNumber();
-      setInvoiceNumber(newInvoiceNumber);
-
-      // Generate HTML content
-      const htmlContent = generateInvoiceHTML(selectedClient, quantityNum, priceNum, newInvoiceNumber, senderCompany);
-
-      // Create blob URL
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      setGeneratedInvoiceUrl(url);
-
-      // Save invoice record to Firestore
-      const invoiceData = {
-        dateCreated: Timestamp.now(),
-        quantity: quantityNum,
-        price: priceNum,
-        totalPrice: quantityNum * priceNum,
-        productID_2: selectedClient.productID_2,
-        packageID: selectedClient.packageID,
-        invoiceNumber: newInvoiceNumber,
-        userID: currentUser?.uid || 'unknown',
-        userName: currentUser?.name || 'Unknown User',
-        senderCompany: senderCompany
-      };
-
-      await addDoc(collection(db, `clients/${selectedClient.id}/invoices`), invoiceData);
-
-      setSnackbar({
-        open: true,
-        message: 'Накладная успешно создана!',
-        severity: 'success'
-      });
-
-    } catch (error) {
-      console.error('Error creating invoice:', error);
-      setSnackbar({
-        open: true,
-        message: 'Ошибка при создании накладной',
-        severity: 'error'
-      });
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  // Handle download
-  const handleDownload = () => {
-    if (!generatedInvoiceUrl || !selectedClient || !invoiceNumber) return;
-
-    const link = document.createElement('a');
-    link.href = generatedInvoiceUrl;
-    link.download = `Накладная_${selectedClient.displayRestaurantName}_${invoiceNumber}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Handle modal close
-  const handleCloseModal = () => {
-    setModalOpen(false);
-    setSelectedClient(null);
-    setQuantity('');
-    setPrice('');
-    setGeneratedInvoiceUrl('');
-    setInvoiceNumber('');
-    setSenderCompany('White Ray');
-  };
-
-  // Handle opening modal
-  const handleOpenModal = (client) => {
-    setSelectedClient(client);
-     setCustomRestaurantName(client.displayRestaurantName || ""); // prefill with DB value
-  setIsEditingRestaurant(false); // start in read-only
-    setModalOpen(true);
-  };
-
-  // Handle sender company change
-  const handleSenderCompanyChange = (event, newCompany) => {
-    if (newCompany !== null) {
-      setSenderCompany(newCompany);
-    }
-  };
+};
 
   if (loading) {
     return (
@@ -957,88 +1130,90 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
           </Box>
         </CardContent>
       </Card>
-{/* Search Input */}
-<Box mb={2}>
-  <TextField
-    fullWidth
-    variant="outlined"
-    placeholder="Поиск по ресторану или организации..."
-    value={searchQuery}
-    onChange={(e) => setSearchQuery(e.target.value)}
-    InputProps={{
-      startAdornment: (
-        <InputAdornment position="start">
-          <Search />
-        </InputAdornment>
-      )
-    }}
-  />
-</Box>
+
+      {/* Search Input */}
+      <Box mb={2}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Поиск по ресторану или организации..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search />
+              </InputAdornment>
+            )
+          }}
+        />
+      </Box>
+
       {/* Clients Table */}
       <Paper elevation={3}>
         <TableContainer>
           <Table>
-        <TableHead>
-  <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
-    <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
-      Ресторан
-    </TableCell>
-    <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
-      Организация
-    </TableCell>
-    <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
-      Продукт
-    </TableCell>
-    <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
-      Граммаж
-    </TableCell>
-    <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
-      Тип упаковки
-    </TableCell>
-    <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
-      Действия
-    </TableCell>
-  </TableRow>
-</TableHead>
-     <TableBody>
-  {filteredClients.map((client) => (
-    <TableRow
-      key={client.id}
-      sx={{
-        '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
-        '&:hover': { backgroundColor: '#e3f2fd' }
-      }}
-    >
-      <TableCell sx={{ fontWeight: 600 }}>
-        {client.displayRestaurantName}
-      </TableCell>
-      <TableCell>{client.displayOrgName}</TableCell>
-      <TableCell>{client.fetchedProductName}</TableCell>
-      <TableCell>{client.fetchedGramm} гр</TableCell>
-      <TableCell>{client.fetchedPackageType}</TableCell>
-      <TableCell>
-        <Button
-          variant="contained"
-          startIcon={<Receipt />}
-          sx={{
-            backgroundColor: '#0F9D8C',
-            fontSize : '12px',
-            '&:hover': { backgroundColor: '#0c7a6e' }
-          }}
-          onClick={() => handleOpenModal(client)}
-        >
-          Создать накладную
-        </Button>
-      </TableCell>
-    </TableRow>
-  ))}
-</TableBody>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
+                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
+                  Ресторан
+                </TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
+                  Организация
+                </TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
+                  Продукт
+                </TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
+                  Граммаж
+                </TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
+                  Тип упаковки
+                </TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
+                  Действия
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredClients.map((client) => (
+                <TableRow
+                  key={client.id}
+                  sx={{
+                    '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
+                    '&:hover': { backgroundColor: '#e3f2fd' }
+                  }}
+                >
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    {client.displayRestaurantName}
+                  </TableCell>
+                  <TableCell>{client.displayOrgName}</TableCell>
+                  <TableCell>{client.fetchedProductName}</TableCell>
+                  <TableCell>{client.fetchedGramm} гр</TableCell>
+                  <TableCell>{client.fetchedPackageType}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="contained"
+                      startIcon={<Receipt />}
+                      sx={{
+                        backgroundColor: '#0F9D8C',
+                        fontSize: '12px',
+                        '&:hover': { backgroundColor: '#0c7a6e' }
+                      }}
+                      onClick={() => handleOpenModal(client)}
+                    >
+                      Создать накладную
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
           </Table>
         </TableContainer>
       </Paper>
 
       {/* Invoice Creation Modal */}
-      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
+      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="md" fullWidth>
         <DialogTitle>
           Создание накладной
           {selectedClient && (
@@ -1050,93 +1225,187 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
         <DialogContent>
           {selectedClient && (
             <Box sx={{ mt: 2 }}>
-              <Typography variant="body1" gutterBottom>
-                <strong>Продукт:</strong> {selectedClient.fetchedProductName}
-              </Typography>
-              <Typography variant="body1" gutterBottom>
-                <strong>Упаковка:</strong> {selectedClient.fetchedPackageType} ({selectedClient.fetchedGramm} гр)
-              </Typography>
               {/* Restaurant Name (editable) */}
-<Box sx={{ mb: 2 }}>
-  <TextField
-    label="Ресторан"
-    fullWidth
-    value={customRestaurantName}
-    onChange={(e) => setCustomRestaurantName(e.target.value)}
-  />
-</Box>
+              <Box sx={{ mb: 2 }}>
+                <TextField
+                  label="Ресторан"
+                  fullWidth
+                  value={customRestaurantName}
+                  onChange={(e) => setCustomRestaurantName(e.target.value)}
+                />
+              </Box>
 
               {/* Sender Company Selection */}
-             <Box sx={{ mt: 2, mb: 2 }}>
-  <Typography variant="body2" gutterBottom>
-    <strong>От имени компании:</strong>
-  </Typography>
-  <ToggleButtonGroup
-    value={senderCompany}
-    exclusive
-    onChange={handleSenderCompanyChange}
-    aria-label="sender company"
-  >
-    <ToggleButton
-      value="White Ray"
-      aria-label="white ray"
-      sx={{
-        "&.Mui-selected": {
-          backgroundColor: "#b2ded9",
-          color: "#025249",
-          "&:hover": {
-            backgroundColor: "#a0d3cd"
-          }
-        }
-      }}
-    >
-      White Ray
-    </ToggleButton>
-    <ToggleButton
-      value="Pure Pack"
-      aria-label="pure pack"
-      sx={{
-        "&.Mui-selected": {
-          backgroundColor: "#b2ded9",
-          color: "#025249",
-          "&:hover": {
-            backgroundColor: "#a0d3cd"
-          }
-        }
-      }}
-    >
-      Pure Pack
-    </ToggleButton>
-  </ToggleButtonGroup>
-</Box>
+              <Box sx={{ mt: 2, mb: 2 }}>
+                <Typography variant="body2" gutterBottom>
+                  <strong>От имени компании:</strong>
+                </Typography>
+                <ToggleButtonGroup
+                  value={senderCompany}
+                  exclusive
+                  onChange={handleSenderCompanyChange}
+                  aria-label="sender company"
+                >
+                  <ToggleButton
+                    value="White Ray"
+                    aria-label="white ray"
+                    sx={{
+                      "&.Mui-selected": {
+                        backgroundColor: "#b2ded9",
+                        color: "#025249",
+                        "&:hover": {
+                          backgroundColor: "#a0d3cd"
+                        }
+                      }
+                    }}
+                  >
+                    White Ray
+                  </ToggleButton>
+                  <ToggleButton
+                    value="Pure Pack"
+                    aria-label="pure pack"
+                    sx={{
+                      "&.Mui-selected": {
+                        backgroundColor: "#b2ded9",
+                        color: "#025249",
+                        "&:hover": {
+                          backgroundColor: "#a0d3cd"
+                        }
+                      }
+                    }}
+                  >
+                    Pure Pack
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
 
-              
- <NumericFormat
-  customInput={TextField}
-  fullWidth
-  label="Количество"
-  value={quantity}
-  onValueChange={(values) => {
-    setQuantity(values.value); // `values.value` is raw number without spaces
-  }}
-  thousandSeparator=" "
-  allowNegative={false}
-  decimalScale={0}
-  sx={{ mb: 2 }}
-/>
-              <TextField
-                fullWidth
-                label="Цена за единицу (сум)"
-                type="number"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
+              <Divider sx={{ my: 2 }} />
+
+              {/* Products Section */}
+              <Typography variant="h6" gutterBottom>
+                Товары в накладной
+              </Typography>
+
+              {invoiceProducts.map((product, index) => (
+                <Card key={product.id} sx={{ mb: 2, p: 2 }}>
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      {product.isDefault ? `Основной товар` : `Дополнительный товар ${index}`}
+                    </Typography>
+                    {!product.isDefault && (
+                      <IconButton
+                        onClick={() => removeProductRow(product.id)}
+                        color="error"
+                        size="small"
+                      >
+                        <Delete />
+                      </IconButton>
+                    )}
+                  </Box>
+
+                  {product.isDefault ? (
+                    <Box>
+                      <Typography variant="body2" gutterBottom>
+                        <strong>Продукт:</strong> {selectedClient.fetchedProductName}
+                      </Typography>
+                      <Typography variant="body2" gutterBottom>
+                        <strong>Упаковка:</strong> {selectedClient.fetchedPackageType} ({selectedClient.fetchedGramm} гр)
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2, mb: 2 }}>
+                      <FormControl fullWidth>
+                        <InputLabel>Продукт</InputLabel>
+                        <Select
+                          value={product.productName}
+                          onChange={(e) => updateProductField(product.id, 'productName', e.target.value)}
+                          label="Продукт"
+                        >
+                          {products.map((prod) => (
+                            <MenuItem key={prod.id} value={prod.id}>
+                              {prod.productName}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      <FormControl fullWidth>
+                        <InputLabel>Упаковка</InputLabel>
+                        <Select
+                          value={product.packageType}
+                          onChange={(e) => updateProductField(product.id, 'packageType', e.target.value)}
+                          label="Упаковка"
+                        >
+                          {packageTypes.map((pkg) => (
+                            <MenuItem key={pkg.id} value={pkg.id}>
+                              {pkg.type}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      <FormControl fullWidth>
+                        <InputLabel>Граммаж</InputLabel>
+                        <Select
+                          value={product.gramm}
+                          onChange={(e) => updateProductField(product.id, 'gramm', e.target.value)}
+                          label="Граммаж"
+                        >
+                          {grammOptions.map((option) => (
+                            <MenuItem key={option.value} value={option.value}>
+                              {option.label}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Box>
+                  )}
+
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
+                    <NumericFormat
+                      customInput={TextField}
+                      fullWidth
+                      label="Количество"
+                      value={product.quantity}
+                      onValueChange={(values) => {
+                        updateProductField(product.id, 'quantity', values.value);
+                      }}
+                      thousandSeparator=" "
+                      allowNegative={false}
+                      decimalScale={0}
+                    />
+                    <TextField
+                      fullWidth
+                      label="Цена за единицу (сум)"
+                      type="number"
+                      value={product.price}
+                      onChange={(e) => updateProductField(product.id, 'price', e.target.value)}
+                      inputProps={{ min: 0, step: 0.01 }}
+                    />
+                  </Box>
+
+                  {product.quantity && product.price && (
+                    <Typography variant="body2" color="primary" sx={{ mt: 1 }}>
+                      Сумма: {(parseFloat(product.quantity) * parseFloat(product.price)).toLocaleString('ru-RU')} сум
+                    </Typography>
+                  )}
+                </Card>
+              ))}
+
+              {/* Add Product Button */}
+              <Button
+                variant="outlined"
+                startIcon={<Add />}
+                onClick={addProductRow}
                 sx={{ mb: 2 }}
-                inputProps={{ min: 0, step: 0.01 }}
-              />
+              >
+                Добавить товар
+              </Button>
 
-              {quantity && price && (
-                <Typography variant="h6" color="primary" sx={{ mt: 2 }}>
-                  Общая сумма: {(parseFloat(quantity) * parseFloat(price)).toLocaleString('ru-RU')} сум
+              {/* Total Amount */}
+              {calculateTotalAmount() > 0 && (
+                <Typography variant="h6" color="primary" sx={{ mt: 2, mb: 2 }}>
+                  Общая сумма: {calculateTotalAmount().toLocaleString('ru-RU')} сум
                 </Typography>
               )}
 
@@ -1184,7 +1453,7 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
           <Button
             onClick={handleCreateInvoice}
             variant="contained"
-            disabled={generating || !quantity || !price}
+            disabled={generating || !validateProducts()}
             sx={{
               backgroundColor: '#0F9D8C',
               '&:hover': { backgroundColor: '#0c7a6e' }
