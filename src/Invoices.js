@@ -8,7 +8,7 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow,
+ TableRow,
   Button,
   Dialog,
   DialogTitle,
@@ -22,7 +22,9 @@ import {
   Snackbar,
   Alert,
   Card,
-  CardContent
+  CardContent,
+  ToggleButtonGroup,
+  ToggleButton
 } from '@mui/material';
 import {
   ArrowBack,
@@ -52,6 +54,7 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
   const [generating, setGenerating] = useState(false);
   const [generatedInvoiceUrl, setGeneratedInvoiceUrl] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [senderCompany, setSenderCompany] = useState('White Ray');
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -172,8 +175,9 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
   };
 
   // Generate invoice HTML
-  const generateInvoiceHTML = (client, quantity, price, invoiceNumber) => {
+  const generateInvoiceHTML = (client, quantity, price, invoiceNumber, senderCompany) => {
     const totalAmount = quantity * price;
+    const senderName = senderCompany === 'White Ray' ? '"WHITE RAY" MCHJ' : '"PURE PACK" MCHJ';
     
     // Manual date formatting to avoid date-fns conflicts
     const now = new Date();
@@ -208,24 +212,24 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
             line-height: 1.52;
         }
         
-        .invoice-container {
-            width: 210mm;
-            min-height: 297mm;
+        .page-container {
+            width: 297mm;
+            height: 210mm;
             margin: 0 auto;
-            padding: 0;
             background: white;
             position: relative;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            display: flex;
         }
         
         @media print {
-            .invoice-container {
+            .page-container {
                 box-shadow: none;
                 margin: 0;
             }
             
             @page {
-                size: A4;
+                size: A4 landscape;
                 margin: 0;
             }
             
@@ -235,55 +239,67 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
             }
         }
         
+        .invoice-container {
+            width: 148.5mm;
+            height: 210mm;
+            position: relative;
+            border-right: 1px dashed #ccc;
+        }
+        
+        .invoice-container:last-child {
+            border-right: none;
+        }
+        
         .header-section {
-            padding: 51px 25px 40px 25px;
+            padding: 25px 15px 20px 15px;
             position: relative;
         }
         
         .logo {
-            width: 114px;
-            height: 28px;
+            width: 80px;
+            height: 20px;
         }
         
         .date-section {
             position: absolute;
-            top: 40px;
-            right: 25px;
-            width: 110px;
+            top: 20px;
+            right: 15px;
+            width: 80px;
         }
         
         .date-label {
-            font-size: 11px;
+            font-size: 9px;
             font-weight: 500;
             color: #949494;
             margin-bottom: 2px;
-            letter-spacing: -0.11px;
+            letter-spacing: -0.09px;
         }
         
-        .date-value {
-            font-size: 13px;
-            font-weight: 600;
-            color: #28352f;
-            letter-spacing: -0.13px;
-        }
+       .date-value {
+    font-size: 10px;
+    font-weight: 600;
+    color: #28352f;
+    letter-spacing: -0.1px;
+    white-space: nowrap; /* ✅ Prevent year from jumping to new line */
+}
         
         .invoice-title {
             text-align: center;
-            margin-top: 45px;
-            font-size: 16px;
+            margin-top: 25px;
+            font-size: 12px;
             font-weight: 700;
             color: black;
-            letter-spacing: -0.16px;
+            letter-spacing: -0.12px;
         }
         
         .invoice-number {
             font-weight: 600;
-            margin-left: 8px;
+            margin-left: 6px;
         }
         
         .sender-recipient-section {
             background-color: #eeeeee;
-            padding: 15px 37px 20px 37px;
+            padding: 10px 20px 12px 20px;
             margin: 0;
         }
         
@@ -292,39 +308,38 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
             justify-content: space-between;
             align-items: flex-start;
             width: 100%;
-            max-width: 472px;
         }
         
         .info-block {
-            width: 134px;
+            width: 45%;
         }
         
         .info-label {
-            font-size: 12px;
+            font-size: 9px;
             font-weight: 500;
             color: #5c5c5c;
-            margin-bottom: 3px;
-            letter-spacing: -0.12px;
+            margin-bottom: 2px;
+            letter-spacing: -0.09px;
         }
         
         .info-value {
-            font-size: 13px;
+            font-size: 10px;
             font-weight: 700;
             color: #000;
-            letter-spacing: -0.13px;
+            letter-spacing: -0.1px;
         }
         
         .restaurant-name {
-            font-size: 12px;
+            font-size: 9px;
             font-weight: 500;
             color: #000;
-            letter-spacing: -0.12px;
-            margin-top: 2px;
+            letter-spacing: -0.09px;
+            margin-top: 1px;
         }
         
         .table-section {
-            padding: 0 30px;
-            margin-top: 42px;
+            padding: 0 18px;
+            margin-top: 20px;
         }
         
         .products-table {
@@ -334,146 +349,147 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
         
         .table-header {
             background-color: #f8f8f8;
-            height: 41px;
+            height: 30px;
             border-bottom: 1px solid black;
         }
         
         .table-header th {
-            padding: 4px 8px;
+            padding: 3px 6px;
             text-align: left;
             vertical-align: top;
-            font-size: 10.5px;
+            font-size: 8px;
             font-weight: 500;
             color: black;
-            letter-spacing: -0.105px;
+            letter-spacing: -0.08px;
         }
         
         .table-header .sub-label {
-            font-size: 9.5px;
+            font-size: 7px;
             color: grey;
-            letter-spacing: -0.095px;
-            margin-top: 2px;
+            letter-spacing: -0.07px;
+            margin-top: 1px;
             display: block;
         }
         
         .col-number {
-            width: 38px;
+            width: 20px;
             text-align: center;
         }
         
         .col-name {
-            width: 174px;
+            width: 45%;
         }
         
         .col-unit {
-            width: 60px;
+            width: 30px;
         }
         
         .col-quantity {
-            width: 77px;
+            width: 35px;
             text-align: center;
         }
         
         .col-price {
-            width: 81px;
+            width: 40px;
             text-align: center;
         }
         
         .col-total {
-            width: 106px;
+            width: 50px;
             text-align: right;
         }
         
         .table-row {
-            height: 52px;
-            border-bottom: 0.95px solid #d2d2d2;
+            height: 35px;
+            border-bottom: 0.5px solid #d2d2d2;
         }
         
         .table-row td {
-            padding: 9.5px;
+            padding: 6px;
             vertical-align: center;
-            font-size: 10.5px;
+            font-size: 8px;
             font-weight: 500;
             color: #212121;
-            letter-spacing: -0.105px;
+            letter-spacing: -0.08px;
         }
         
         .product-name {
             font-weight: 700;
             color: black;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
         
         .product-description {
             color: #2d2d2d;
             font-weight: 500;
+            font-size: 7px;
         }
         
         .total-section {
-            margin-top: 35px;
+            margin-top: 15px;
             display: flex;
             justify-content: flex-end;
-            padding-right: 30px;
+            padding-right: 18px;
         }
         
         .total-box {
             background-color: #f8f8f8;
             border: 1px solid rgba(172,172,172,0.21);
-            border-radius: 5px;
-            padding: 6px 9px 10px 9px;
-            width: 158px;
+            border-radius: 3px;
+            padding: 4px 6px 6px 6px;
+            width: 100px;
         }
         
         .total-label {
-            font-size: 11.5px;
+            font-size: 8px;
             font-weight: 500;
             color: #484848;
             margin-bottom: 1px;
-            letter-spacing: -0.115px;
+            letter-spacing: -0.08px;
         }
         
         .total-amount {
-            font-size: 14px;
+            font-size: 10px;
             font-weight: 700;
             color: black;
-            letter-spacing: -0.14px;
+            letter-spacing: -0.1px;
         }
         
         .signatures-section {
-            margin-top: 100px;
-            padding: 0 45px;
+            margin-top: 40px;
+            padding: 0 25px;
             display: flex;
             justify-content: space-between;
         }
         
         .signature-block {
-            width: 134px;
+            width: 45%;
         }
         
         .signature-label {
-            font-size: 12px;
+            font-size: 9px;
             font-weight: 500;
             color: #282828;
-            margin-bottom: 3px;
-            letter-spacing: -0.12px;
+            margin-bottom: 2px;
+            letter-spacing: -0.09px;
         }
         
         .signature-line {
-            font-size: 14px;
+            font-size: 10px;
             font-weight: 700;
             color: #000;
-            letter-spacing: -0.14px;
+            letter-spacing: -0.1px;
         }
         
         .credits {
             position: absolute;
-            bottom: 120px;
+            bottom: 40px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 12px;
+            font-size: 8px;
             font-weight: 500;
             color: #8d8d8d;
-            letter-spacing: -0.12px;
+            letter-spacing: -0.08px;
         }
         
         .footer {
@@ -481,40 +497,33 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
             bottom: 0;
             left: 0;
             right: 0;
-            height: 51px;
+            height: 30px;
             background-color: #d6eae6;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 66px;
+            padding: 0 35px;
         }
         
         .footer-logo {
-            width: 26px;
-            height: 26px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
-            background-color: #148274;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 16px;
-            font-weight: 600;
         }
         
         .footer-text {
-            font-size: 11px;
+            font-size: 8px;
             font-weight: 500;
             color: #303030;
-            letter-spacing: -0.11px;
+            letter-spacing: -0.08px;
         }
         
         .footer-left {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 5px;
         }
-
+        
         .print-section {
             text-align: center;
             margin: 20px 0;
@@ -554,114 +563,229 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
         </button>
     </div>
 
-    <div class="invoice-container">
-        <!-- Header Section -->
-        <div class="header-section">
-            <img src="https://whiteray.uz/images/whiteray_1200px_logo_green.png" alt="WhiteRay Logo" class="logo">
-            
-            <div class="date-section">
-                <div class="date-label">Дата</div>
-                <div class="date-value">${currentDate}</div>
-            </div>
-            
-            <div class="invoice-title">
-                <span style="font-weight: 700;">YUK XATI /</span>
-                <span style="font-weight: 700;">НАКЛАДНАЯ</span>
-                <span class="invoice-number">№ ${invoiceNumber}</span>
-            </div>
-        </div>
-        
-        <!-- Sender/Recipient Section -->
-        <div class="sender-recipient-section">
-            <div class="sender-recipient-content">
-                <div class="info-block">
-                    <div class="info-label">От кого / Kimdan</div>
-                    <div class="info-value">"WHITE RAY" MCHJ</div>
+    <div class="page-container">
+        <!-- First Invoice Copy -->
+        <div class="invoice-container">
+            <!-- Header Section -->
+            <div class="header-section">
+                <img src="https://whiteray.uz/images/whiteray_1200px_logo_green.png" alt="WhiteRay Logo" class="logo">
+                
+                <div class="date-section">
+                    <div class="date-label">Дата</div>
+                    <div class="date-value">${currentDate}</div>
                 </div>
-                <div class="info-block">
-                    <div class="info-label">Кому / Kimga</div>
-                    <div class="info-value">${client.displayOrgName}</div>
-                    ${client.displayOrgName !== client.displayRestaurantName ? 
-                      `<div class="restaurant-name">( ${client.displayRestaurantName} )</div>` : 
-                      ''
-                    }
+                
+                <div class="invoice-title">
+                    <span style="font-weight: 700;">YUK XATI /</span>
+                    <span style="font-weight: 700;">НАКЛАДНАЯ</span>
+                    <span class="invoice-number">№ ${invoiceNumber}</span>
                 </div>
             </div>
-        </div>
-        
-        <!-- Table Section -->
-        <div class="table-section">
-            <table class="products-table">
-                <thead>
-                    <tr class="table-header">
-                        <th class="col-number">#</th>
-                        <th class="col-name">
-                            Наименование
-                            <span class="sub-label">Nomi</span>
-                        </th>
-                        <th class="col-unit">
-                            Ед.изм
-                            <span class="sub-label">Ulchov bir.</span>
-                        </th>
-                        <th class="col-quantity">
-                            Кол-во
-                            <span class="sub-label">Soni</span>
-                        </th>
-                        <th class="col-price">
-                            Цена
-                            <span class="sub-label">Narxi</span>
-                        </th>
-                        <th class="col-total">
-                            Сумма
-                            <span class="sub-label">Summasi</span>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="table-row">
-                        <td class="col-number">1.</td>
-                        <td class="col-name">
-                            <div class="product-name">${client.fetchedProductName}</div>
-                            <div class="product-description">${productDescription}</div>
-                        </td>
-                        <td class="col-unit">шт</td>
-                        <td class="col-quantity">${quantity.toLocaleString('ru-RU')}</td>
-                        <td class="col-price">${price} сум</td>
-                        <td class="col-total">${totalAmount.toLocaleString('ru-RU')} сум</td>
-                    </tr>
-                </tbody>
-            </table>
             
-            <div class="total-section">
-                <div class="total-box">
-                    <div class="total-label">Итого</div>
-                    <div class="total-amount">${totalAmount.toLocaleString('ru-RU')} сум</div>
+            <!-- Sender/Recipient Section -->
+            <div class="sender-recipient-section">
+                <div class="sender-recipient-content">
+                    <div class="info-block">
+                        <div class="info-label">От кого / Kimdan</div>
+                        <div class="info-value">${senderName}</div>
+                    </div>
+                    <div class="info-block">
+                        <div class="info-label">Кому / Kimga</div>
+                        <div class="info-value">${client.displayOrgName}</div>
+                        ${client.displayOrgName !== client.displayRestaurantName ? 
+                          `<div class="restaurant-name">( ${client.displayRestaurantName} )</div>` : 
+                          ''
+                        }
+                    </div>
                 </div>
             </div>
+            
+            <!-- Table Section -->
+            <div class="table-section">
+                <table class="products-table">
+                    <thead>
+                        <tr class="table-header">
+                            <th class="col-number">#</th>
+                            <th class="col-name">
+                                Наименование
+                                <span class="sub-label">Nomi</span>
+                            </th>
+                            <th class="col-unit">
+                                Ед.изм
+                                <span class="sub-label">Ulchov bir.</span>
+                            </th>
+                            <th class="col-quantity">
+                                Кол-во
+                                <span class="sub-label">Soni</span>
+                            </th>
+                            <th class="col-price">
+                                Цена
+                                <span class="sub-label">Narxi</span>
+                            </th>
+                            <th class="col-total">
+                                Сумма
+                                <span class="sub-label">Summasi</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="table-row">
+                            <td class="col-number">1.</td>
+                            <td class="col-name">
+                                <div class="product-name">${client.fetchedProductName}</div>
+                                <div class="product-description">${productDescription}</div>
+                            </td>
+                            <td class="col-unit">шт</td>
+                            <td class="col-quantity">${quantity.toLocaleString('ru-RU')}</td>
+                            <td class="col-price">${price} сум</td>
+                            <td class="col-total">${totalAmount.toLocaleString('ru-RU')} сум</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="total-section">
+                    <div class="total-box">
+                        <div class="total-label">Итого</div>
+                        <div class="total-amount">${totalAmount.toLocaleString('ru-RU')} сум</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Signatures Section -->
+            <div class="signatures-section">
+                <div class="signature-block">
+                    <div class="signature-label">Отпустил / Berdim</div>
+                    <div class="signature-line">__________________</div>
+                </div>
+                <div class="signature-block">
+                    <div class="signature-label">Получил / Oldim</div>
+                    <div class="signature-line">__________________</div>
+                </div>
+            </div>
+            
+            <!-- Credits -->
+            <div class="credits">By D&A</div>
+            
+            <!-- Footer -->
+            <div class="footer">
+                <div class="footer-left">
+                    <img src="https://whiteray.uz/images/favicon.png" alt="Logo" class="footer-logo">
+                    <div class="footer-text">www.whiteray.uz</div>
+                </div>
+                <div class="footer-text">+998 97 716 61 33</div>
+            </div>
         </div>
-        
-        <!-- Signatures Section -->
-        <div class="signatures-section">
-            <div class="signature-block">
-                <div class="signature-label">Отпустил / Berdim</div>
-                <div class="signature-line">__________________</div>
+
+        <!-- Second Invoice Copy -->
+        <div class="invoice-container">
+            <!-- Header Section -->
+            <div class="header-section">
+                <img src="https://whiteray.uz/images/whiteray_1200px_logo_green.png" alt="WhiteRay Logo" class="logo">
+                
+                <div class="date-section">
+                    <div class="date-label">Дата</div>
+                    <div class="date-value">${currentDate}</div>
+                </div>
+                
+                <div class="invoice-title">
+                    <span style="font-weight: 700;">YUK XATI /</span>
+                    <span style="font-weight: 700;">НАКЛАДНАЯ</span>
+                    <span class="invoice-number">№ ${invoiceNumber}</span>
+                </div>
             </div>
-            <div class="signature-block">
-                <div class="signature-label">Получил / Oldim</div>
-                <div class="signature-line">__________________</div>
+            
+            <!-- Sender/Recipient Section -->
+            <div class="sender-recipient-section">
+                <div class="sender-recipient-content">
+                    <div class="info-block">
+                        <div class="info-label">От кого / Kimdan</div>
+                        <div class="info-value">${senderName}</div>
+                    </div>
+                    <div class="info-block">
+                        <div class="info-label">Кому / Kimga</div>
+                        <div class="info-value">${client.displayOrgName}</div>
+                        ${client.displayOrgName !== client.displayRestaurantName ? 
+                          `<div class="restaurant-name">( ${client.displayRestaurantName} )</div>` : 
+                          ''
+                        }
+                    </div>
+                </div>
             </div>
-        </div>
-        
-        <!-- Credits -->
-        <div class="credits">By D&A</div>
-        
-        <!-- Footer -->
-        <div class="footer">
-            <div class="footer-left">
-                <div class="footer-logo">W</div>
-                <div class="footer-text">www.whiteray.uz</div>
+            
+            <!-- Table Section -->
+            <div class="table-section">
+                <table class="products-table">
+                    <thead>
+                        <tr class="table-header">
+                            <th class="col-number">#</th>
+                            <th class="col-name">
+                                Наименование
+                                <span class="sub-label">Nomi</span>
+                            </th>
+                            <th class="col-unit">
+                                Ед.изм
+                                <span class="sub-label">Ulchov bir.</span>
+                            </th>
+                            <th class="col-quantity">
+                                Кол-во
+                                <span class="sub-label">Soni</span>
+                            </th>
+                            <th class="col-price">
+                                Цена
+                                <span class="sub-label">Narxi</span>
+                            </th>
+                            <th class="col-total">
+                                Сумма
+                                <span class="sub-label">Summasi</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="table-row">
+                            <td class="col-number">1.</td>
+                            <td class="col-name">
+                                <div class="product-name">${client.fetchedProductName}</div>
+                                <div class="product-description">${productDescription}</div>
+                            </td>
+                            <td class="col-unit">шт</td>
+                            <td class="col-quantity">${quantity.toLocaleString('ru-RU')}</td>
+                            <td class="col-price">${price} сум</td>
+                            <td class="col-total">${totalAmount.toLocaleString('ru-RU')} сум</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="total-section">
+                    <div class="total-box">
+                        <div class="total-label">Итого</div>
+                        <div class="total-amount">${totalAmount.toLocaleString('ru-RU')} сум</div>
+                    </div>
+                </div>
             </div>
-            <div class="footer-text">+998 97 716 61 33</div>
+            
+            <!-- Signatures Section -->
+            <div class="signatures-section">
+                <div class="signature-block">
+                    <div class="signature-label">Отпустил / Berdim</div>
+                    <div class="signature-line">__________________</div>
+                </div>
+                <div class="signature-block">
+                    <div class="signature-label">Получил / Oldim</div>
+                    <div class="signature-line">__________________</div>
+                </div>
+            </div>
+            
+            <!-- Credits -->
+            <div class="credits">By D&A</div>
+            
+            <!-- Footer -->
+            <div class="footer">
+                <div class="footer-left">
+                    <img src="https://whiteray.uz/images/favicon.png" alt="Logo" class="footer-logo">
+                    <div class="footer-text">www.whiteray.uz</div>
+                </div>
+                <div class="footer-text">+998 97 716 61 33</div>
+            </div>
         </div>
     </div>
 </body>
@@ -701,7 +825,7 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
       setInvoiceNumber(newInvoiceNumber);
 
       // Generate HTML content
-      const htmlContent = generateInvoiceHTML(selectedClient, quantityNum, priceNum, newInvoiceNumber);
+      const htmlContent = generateInvoiceHTML(selectedClient, quantityNum, priceNum, newInvoiceNumber, senderCompany);
 
       // Create blob URL
       const blob = new Blob([htmlContent], { type: 'text/html' });
@@ -718,7 +842,8 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
         packageID: selectedClient.packageID,
         invoiceNumber: newInvoiceNumber,
         userID: currentUser?.uid || 'unknown',
-        userName: currentUser?.name || 'Unknown User'
+        userName: currentUser?.name || 'Unknown User',
+        senderCompany: senderCompany
       };
 
       await addDoc(collection(db, `clients/${selectedClient.id}/invoices`), invoiceData);
@@ -761,12 +886,20 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
     setPrice('');
     setGeneratedInvoiceUrl('');
     setInvoiceNumber('');
+    setSenderCompany('White Ray');
   };
 
   // Handle opening modal
   const handleOpenModal = (client) => {
     setSelectedClient(client);
     setModalOpen(true);
+  };
+
+  // Handle sender company change
+  const handleSenderCompanyChange = (event, newCompany) => {
+    if (newCompany !== null) {
+      setSenderCompany(newCompany);
+    }
   };
 
   if (loading) {
@@ -886,13 +1019,33 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
                 <strong>Упаковка:</strong> {selectedClient.fetchedPackageType} ({selectedClient.fetchedGramm} гр)
               </Typography>
               
+              {/* Sender Company Selection */}
+              <Box sx={{ mt: 2, mb: 2 }}>
+                <Typography variant="body2" gutterBottom>
+                  <strong>От имени компании:</strong>
+                </Typography>
+                <ToggleButtonGroup
+                  value={senderCompany}
+                  exclusive
+                  onChange={handleSenderCompanyChange}
+                  aria-label="sender company"
+                >
+                  <ToggleButton value="White Ray" aria-label="white ray">
+                    White Ray
+                  </ToggleButton>
+                  <ToggleButton value="Pure Pack" aria-label="pure pack">
+                    Pure Pack
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+              
               <TextField
                 fullWidth
                 label="Количество"
                 type="number"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                sx={{ mt: 2, mb: 2 }}
+                sx={{ mb: 2 }}
                 inputProps={{ min: 1, step: 1 }}
               />
               
