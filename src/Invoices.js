@@ -1022,6 +1022,7 @@ const [isEditingRestaurant, setIsEditingRestaurant] = useState(false);
           startIcon={<Receipt />}
           sx={{
             backgroundColor: '#0F9D8C',
+            fontSize : '12px',
             '&:hover': { backgroundColor: '#0c7a6e' }
           }}
           onClick={() => handleOpenModal(client)}

@@ -113,14 +113,7 @@ const Dashboard = ({
             >
               Накладные
             </Button>
-            <Button 
-              variant="outlined" 
-              startIcon={<Description />}
-              size="small"
-              disabled
-            >
-              Другие документы
-            </Button>
+          
           </Stack>
         </Paper>
 
