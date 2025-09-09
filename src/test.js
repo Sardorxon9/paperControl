@@ -59,10 +59,6 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
     severity: 'success'
   });
 
-    const filteredClients = clients.filter(client =>
-    client.displayRestaurantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.displayOrgName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
   // Fetch clients data on component mount
   useEffect(() => {
     fetchClientsData();
@@ -72,7 +68,6 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
     try {
       setLoading(true);
       const querySnapshot = await getDocs(collection(db, "clients"));
-      
       
       const clientsArray = await Promise.all(
         querySnapshot.docs.map(async (docSnap) => {
@@ -146,7 +141,6 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
           }
         })
       );
-      
 
       const validClients = clientsArray.filter(client => 
         client !== null && 
@@ -155,7 +149,10 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
       );
       
       setClients(validClients);
-     
+       const filteredClients = clients.filter(client =>
+    client.displayRestaurantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    client.displayOrgName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
 
 
