@@ -30,7 +30,8 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Divider
+  Divider,
+  Grid
 } from '@mui/material';
 import { 
   ArrowBack, 
@@ -541,17 +542,18 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
             font-family: 'Inter', sans-serif;
             background-color: white;
             color: #000;
-            line-height: 1.52;
+            line-height: 1.4;
         }
         
         .page-container {
-            width: 297mm;
-            height: 210mm;
+            width: 210mm;
+            height: 297mm;
             margin: 0 auto;
             background: white;
             position: relative;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             display: flex;
+            flex-direction: column;
         }
         
         @media print {
@@ -561,7 +563,7 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
             }
             
             @page {
-                size: A4 landscape;
+                size: A4 portrait;
                 margin: 0;
             }
             
@@ -572,37 +574,40 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         }
         
         .invoice-container {
-            width: 148.5mm;
-            height: 210mm;
+            width: 210mm;
+            height: 148.5mm;
             position: relative;
-            border-right: 1px dashed #ccc;
-            padding: 4mm;
+            border-bottom: 2px dashed #888888;
+            padding: 3mm;
             box-sizing: border-box;
+            flex: 1;
         }
         
         .invoice-container:last-child {
-            border-right: none;
+            border-bottom: none;
         }
         
         .header-section {
-            padding: 25px 15px 20px 15px;
+            padding: 15px 12px 12px 20px;
             position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
         }
         
         .logo {
-            width: 80px;
-            height: 20px;
+            width: 84px;
+            height: 22px;
         }
         
         .date-section {
-            position: absolute;
-            top: 20px;
-            right: 15px;
-            width: 80px;
+            width: 70px;
+            margin-right: 40px;
+            text-align: right;
         }
         
         .date-label {
-            font-size: 9px;
+            font-size: 11px;
             font-weight: 500;
             color: #949494;
             margin-bottom: 2px;
@@ -610,7 +615,7 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         }
         
         .date-value {
-            font-size: 10px;
+            font-size: 12.1px;
             font-weight: 600;
             color: #28352f;
             letter-spacing: -0.1px;
@@ -619,8 +624,9 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         
         .invoice-title {
             text-align: center;
-            margin-top: 25px;
-            font-size: 12px;
+            margin-top: 15px;
+            margin-bottom: 12px;
+            font-size: 15.4px;
             font-weight: 700;
             color: black;
             letter-spacing: -0.12px;
@@ -633,7 +639,7 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         
         .sender-recipient-section {
             background-color: #eeeeee;
-            padding: 10px 20px 12px 20px;
+            padding: 8px 15px 10px 15px;
             margin: 0;
         }
         
@@ -649,7 +655,7 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         }
         
         .info-label {
-            font-size: 9px;
+            font-size: 11px;
             font-weight: 500;
             color: #5c5c5c;
             margin-bottom: 2px;
@@ -657,14 +663,14 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         }
         
         .info-value {
-            font-size: 10px;
+            font-size: 12.1px;
             font-weight: 700;
             color: #000;
             letter-spacing: -0.1px;
         }
         
         .restaurant-name {
-            font-size: 9px;
+            font-size: 11px;
             font-weight: 500;
             color: #000;
             letter-spacing: -0.09px;
@@ -672,41 +678,48 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         }
         
         .table-section {
-            padding: 0 18px;
-            margin-top: 20px;
+            padding: 0 12px;
+            margin-top: 12px;
         }
         
         .products-table {
             width: 100%;
             border-collapse: collapse;
+            border: 1px solid #888888;
         }
         
         .table-header {
             background-color: #f8f8f8;
-            height: 30px;
+            height: 32px;
             border-bottom: 1px solid black;
         }
         
         .table-header th {
-            padding: 3px 6px;
+            padding: 4px 6px;
             text-align: left;
             vertical-align: top;
-            font-size: 8px;
-            font-weight: 500;
+            font-size: 11px;
+            font-weight: 700;
             color: black;
             letter-spacing: -0.08px;
+            border-right: 1px solid #888888;
+        }
+        
+        .table-header th:last-child {
+            border-right: none;
         }
         
         .table-header .sub-label {
-            font-size: 7px;
-            color: grey;
+            font-size: 9.9px;
+            color: #666666;
             letter-spacing: -0.07px;
             margin-top: 1px;
             display: block;
+            font-weight: 500;
         }
         
         .col-number {
-            width: 20px;
+            width: 25px;
             text-align: center;
         }
         
@@ -715,67 +728,73 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         }
         
         .col-unit {
-            width: 30px;
+            width: 35px;
         }
         
         .col-quantity {
-            width: 35px;
-            text-align: center;
-        }
-        
-        .col-price {
             width: 40px;
             text-align: center;
         }
         
-        .col-total {
+        .col-price {
             width: 50px;
+            text-align: center;
+        }
+        
+        .col-total {
+            width: 60px;
             text-align: right;
         }
         
         .table-row {
-            height: 35px;
+            height: 30px;
             border-bottom: 0.5px solid #d2d2d2;
         }
         
         .table-row td {
-            padding: 6px;
+            padding: 4px 6px;
             vertical-align: center;
-            font-size: 8px;
+            font-size: 11px;
             font-weight: 500;
             color: #212121;
             letter-spacing: -0.08px;
+            border-right: 1px solid #d2d2d2;
+        }
+        
+        .table-row td:last-child {
+            border-right: none;
         }
         
         .product-name {
             font-weight: 700;
             color: black;
             margin-bottom: 1px;
+            font-size: 11px;
         }
         
         .product-description {
             color: #2d2d2d;
             font-weight: 500;
-            font-size: 7px;
+            font-size: 9.9px;
         }
         
         .total-section {
-            margin-top: 15px;
+            margin-top: 10px;
             display: flex;
             justify-content: flex-end;
-            padding-right: 18px;
+            padding-right: 12px;
         }
         
         .total-box {
             background-color: #f8f8f8;
-            border: 1px solid rgba(172,172,172,0.21);
+            border: 1px solid #888888;
             border-radius: 3px;
-            padding: 4px 6px 6px 6px;
-            width: 100px;
+            padding: 5px 8px 6px 8px;
+            width: 125px;
         }
         
         .total-label {
-            font-size: 8px;
+            font-size: 11px;
             font-weight: 500;
             color: #484848;
             margin-bottom: 1px;
@@ -783,15 +802,15 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         }
         
         .total-amount {
-            font-size: 10px;
+            font-size: 13.2px;
             font-weight: 700;
             color: black;
             letter-spacing: -0.1px;
         }
         
         .signatures-section {
-            margin-top: 40px;
-            padding: 0 25px;
+            margin-top: 15px;
+            padding: 0 20px;
             display: flex;
             justify-content: space-between;
         }
@@ -801,7 +820,7 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         }
         
         .signature-label {
-            font-size: 9px;
+            font-size: 11px;
             font-weight: 500;
             color: #282828;
             margin-bottom: 2px;
@@ -809,7 +828,7 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         }
         
         .signature-line {
-            font-size: 10px;
+            font-size: 12.1px;
             font-weight: 700;
             color: #000;
             letter-spacing: -0.1px;
@@ -817,10 +836,10 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         
         .credits {
             position: absolute;
-            bottom: 40px;
+            bottom: 38px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 8px;
+            font-size: 8.8px;
             font-weight: 500;
             color: #8d8d8d;
             letter-spacing: -0.08px;
@@ -828,15 +847,15 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         
         .footer {
             position: absolute;
-            bottom: 0;
+            bottom: 7px;
             left: 0;
             right: 0;
-            height: 30px;
+            height: 31px;
             background-color: #d6eae6;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 35px;
+            padding: 0 25px;
         }
         
         .footer-logo {
@@ -846,7 +865,7 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         }
         
         .footer-text {
-            font-size: 8px;
+            font-size: 12.1px;
             font-weight: 500;
             color: #303030;
             letter-spacing: -0.08px;
@@ -870,7 +889,7 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
             color: white;
             border: none;
             padding: 12px 24px;
-            font-size: 16px;
+            font-size: 19.4px;
             font-weight: 600;
             border-radius: 8px;
             cursor: pointer;
@@ -898,9 +917,7 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
     </div>
 
     <div class="page-container">
-        <!-- First Invoice Copy -->
         <div class="invoice-container">
-            <!-- Header Section -->
             <div class="header-section">
                 <img src="https://whiteray.uz/images/whiteray_1200px_logo_green.png" alt="WhiteRay Logo" class="logo">
                 
@@ -908,23 +925,22 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
                     <div class="date-label">Дата</div>
                     <div class="date-value">${currentDate}</div>
                 </div>
-                
-                <div class="invoice-title">
-                    <span style="font-weight: 700;">YUK XATI /</span>
-                    <span style="font-weight: 700;">НАКЛАДНАЯ</span>
-                    <span class="invoice-number">№ ${invoiceNumber}</span>
-                </div>
             </div>
             
-            <!-- Sender/Recipient Section -->
+            <div class="invoice-title">
+                <span style="font-weight: 700;">YUK XATI /</span>
+                <span style="font-weight: 700;">НАКЛАДНАЯ</span>
+                <span class="invoice-number">№ ${invoiceNumber}</span>
+            </div>
+            
             <div class="sender-recipient-section">
                 <div class="sender-recipient-content">
                     <div class="info-block">
-                        <div class="info-label">От кого / Kimdan</div>
+                        <div class="info-label">Kimdan / От кого</div>
                         <div class="info-value">${senderName}</div>
                     </div>
                     <div class="info-block">
-                        <div class="info-label">Кому / Kimga</div>
+                        <div class="info-label">Kimga / Кому</div>
                         <div class="info-value">${client.displayOrgName}</div>
                         ${
                           client.displayOrgName !== (customRestaurantName || client.displayRestaurantName)
@@ -935,31 +951,30 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
                 </div>
             </div>
             
-            <!-- Table Section -->
             <div class="table-section">
                 <table class="products-table">
                     <thead>
                         <tr class="table-header">
                             <th class="col-number">#</th>
                             <th class="col-name">
-                                Наименование
-                                <span class="sub-label">Nomi</span>
+                                Nomi
+                                <span class="sub-label">Наименование</span>
                             </th>
                             <th class="col-unit">
-                                Ед.изм
-                                <span class="sub-label">Ulchov bir.</span>
+                                O'lchov bir.
+                                <span class="sub-label">Ед.изм</span>
                             </th>
                             <th class="col-quantity">
-                                Кол-во
-                                <span class="sub-label">Soni</span>
+                                Soni
+                                <span class="sub-label">Кол-во</span>
                             </th>
                             <th class="col-price">
-                                Цена
-                                <span class="sub-label">Narxi</span>
+                                Narxi
+                                <span class="sub-label">Цена</span>
                             </th>
                             <th class="col-total">
-                                Сумма
-                                <span class="sub-label">Summasi</span>
+                                Summasi
+                                <span class="sub-label">Сумма</span>
                             </th>
                         </tr>
                     </thead>
@@ -976,22 +991,19 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
                 </div>
             </div>
             
-            <!-- Signatures Section -->
             <div class="signatures-section">
                 <div class="signature-block">
-                    <div class="signature-label">Отпустил / Berdim</div>
+                    <div class="signature-label">Berdim / Отпустил</div>
                     <div class="signature-line">__________________</div>
                 </div>
                 <div class="signature-block">
-                    <div class="signature-label">Получил / Oldim</div>
+                    <div class="signature-label">Oldim / Получил</div>
                     <div class="signature-line">__________________</div>
                 </div>
             </div>
             
-            <!-- Credits -->
             <div class="credits">By D&A</div>
             
-            <!-- Footer -->
             <div class="footer">
                 <div class="footer-left">
                     <img src="https://whiteray.uz/images/favicon.png" alt="Logo" class="footer-logo">
@@ -1001,9 +1013,7 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
             </div>
         </div>
 
-        <!-- Second Invoice Copy -->
         <div class="invoice-container">
-            <!-- Header Section -->
             <div class="header-section">
                 <img src="https://whiteray.uz/images/whiteray_1200px_logo_green.png" alt="WhiteRay Logo" class="logo">
                 
@@ -1011,23 +1021,22 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
                     <div class="date-label">Дата</div>
                     <div class="date-value">${currentDate}</div>
                 </div>
-                
-                <div class="invoice-title">
-                    <span style="font-weight: 700;">YUK XATI /</span>
-                    <span style="font-weight: 700;">НАКЛАДНАЯ</span>
-                    <span class="invoice-number">№ ${invoiceNumber}</span>
-                </div>
             </div>
             
-            <!-- Sender/Recipient Section -->
+            <div class="invoice-title">
+                <span style="font-weight: 700;">YUK XATI /</span>
+                <span style="font-weight: 700;">НАКЛАДНАЯ</span>
+                <span class="invoice-number">№ ${invoiceNumber}</span>
+            </div>
+            
             <div class="sender-recipient-section">
                 <div class="sender-recipient-content">
                     <div class="info-block">
-                        <div class="info-label">От кого / Kimdan</div>
+                        <div class="info-label">Kimdan / От кого</div>
                         <div class="info-value">${senderName}</div>
                     </div>
                     <div class="info-block">
-                        <div class="info-label">Кому / Kimga</div>
+                        <div class="info-label">Kimga / Кому</div>
                         <div class="info-value">${client.displayOrgName}</div>
                         ${
                           client.displayOrgName !== (customRestaurantName || client.displayRestaurantName)
@@ -1038,31 +1047,30 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
                 </div>
             </div>
             
-            <!-- Table Section -->
             <div class="table-section">
                 <table class="products-table">
                     <thead>
                         <tr class="table-header">
                             <th class="col-number">#</th>
                             <th class="col-name">
-                                Наименование
-                                <span class="sub-label">Nomi</span>
+                                Nomi
+                                <span class="sub-label">Наименование</span>
                             </th>
                             <th class="col-unit">
-                                Ед.изм
-                                <span class="sub-label">Ulchov bir.</span>
+                                O'lchov bir.
+                                <span class="sub-label">Ед.изм</span>
                             </th>
                             <th class="col-quantity">
-                                Кол-во
-                                <span class="sub-label">Soni</span>
+                                Soni
+                                <span class="sub-label">Кол-во</span>
                             </th>
                             <th class="col-price">
-                                Цена
-                                <span class="sub-label">Narxi</span>
+                                Narxi
+                                <span class="sub-label">Цена</span>
                             </th>
                             <th class="col-total">
-                                Сумма
-                                <span class="sub-label">Summasi</span>
+                                Summasi
+                                <span class="sub-label">Сумма</span>
                             </th>
                         </tr>
                     </thead>
@@ -1079,22 +1087,19 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
                 </div>
             </div>
             
-            <!-- Signatures Section -->
             <div class="signatures-section">
                 <div class="signature-block">
-                    <div class="signature-label">Отпустил / Berdim</div>
+                    <div class="signature-label">Berdim / Отпустил</div>
                     <div class="signature-line">__________________</div>
                 </div>
                 <div class="signature-block">
-                    <div class="signature-label">Получил / Oldim</div>
+                    <div class="signature-label">Oldim / Получил</div>
                     <div class="signature-line">__________________</div>
                 </div>
             </div>
             
-            <!-- Credits -->
             <div class="credits">By D&A</div>
             
-            <!-- Footer -->
             <div class="footer">
                 <div class="footer-left">
                     <img src="https://whiteray.uz/images/favicon.png" alt="Logo" class="footer-logo">
@@ -1247,277 +1252,456 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
           </Table>
         </TableContainer>
       </Paper>
+{/* Invoice Creation Modal */}
+<Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="md" fullWidth>
+  <DialogTitle sx={{ pb: 1.5 }}>
+    <Typography variant="h5" fontWeight="600">
+      Создание накладной
+    </Typography>
+    {selectedClient && (
+      <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 0.5 }}>
+        {selectedClient.displayOrgName} - {selectedClient.displayRestaurantName}
+      </Typography>
+    )}
+  </DialogTitle>
+  
+  <DialogContent dividers sx={{ pt: 2.5 }}>
+    {selectedClient && (
+      <Box>
+        {/* Restaurant Name (editable) */}
+        <TextField
+          label="Название ресторана"
+          fullWidth
+          value={customRestaurantName}
+          onChange={(e) => setCustomRestaurantName(e.target.value)}
+          sx={{ mb: 3 }}
+          size="medium"
+          InputProps={{
+            sx: {
+              padding: '8px 14px',
+              fontSize: '15px'
+            }
+          }}
+          InputLabelProps={{
+            sx: {
+              fontSize: '15px'
+            }
+          }}
+        />
 
-      {/* Invoice Creation Modal */}
-      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Создание накладной
-          {selectedClient && (
-            <Typography variant="subtitle2" color="text.secondary">
-              {selectedClient.displayOrgName} - {selectedClient.displayRestaurantName}
+        {/* Sender Company Selection */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" fontWeight="500" gutterBottom>
+            От имени компании:
+          </Typography>
+          <ToggleButtonGroup
+            value={senderCompany}
+            exclusive
+            onChange={handleSenderCompanyChange}
+            aria-label="sender company"
+            fullWidth
+          >
+            <ToggleButton
+              value="White Ray"
+              aria-label="white ray"
+              sx={{
+                py: 1.5,
+                "&.Mui-selected": {
+                  backgroundColor: "#e0f2f1",
+                  color: "#025249",
+                  "&:hover": {
+                    backgroundColor: "#b2dfdb"
+                  }
+                }
+              }}
+            >
+              White Ray
+            </ToggleButton>
+            <ToggleButton
+              value="Pure Pack"
+              aria-label="pure pack"
+              sx={{
+                py: 1.5,
+                "&.Mui-selected": {
+                  backgroundColor: "#e0f2f1",
+                  color: "#025249",
+                  "&:hover": {
+                    backgroundColor: "#b2dfdb"
+                  }
+                }
+              }}
+            >
+              Pure Pack
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        <Divider sx={{ 
+          my: 3, 
+          borderColor: 'rgba(0, 0, 0, 0.2)', 
+          borderWidth: '1px' 
+        }} />
+
+        {/* Products Section */}
+        <Box sx={{ mb: 2.5 }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6" fontWeight="500" color="#105f58">
+              Товары в накладной
             </Typography>
-          )}
-        </DialogTitle>
-        <DialogContent>
-          {selectedClient && (
-            <Box sx={{ mt: 2 }}>
-              {/* Restaurant Name (editable) */}
-              <Box sx={{ mb: 2 }}>
-                <TextField
-                  label="Ресторан"
-                  fullWidth
-                  value={customRestaurantName}
-                  onChange={(e) => setCustomRestaurantName(e.target.value)}
-                />
-              </Box>
+            <Button
+              variant="outlined"
+              startIcon={<Add />}
+              onClick={addProductRow}
+              size="medium"
+            >
+              Добавить товар
+            </Button>
+          </Box>
+        </Box>
 
-              {/* Sender Company Selection */}
-              <Box sx={{ mt: 2, mb: 2 }}>
-                <Typography variant="body2" gutterBottom>
-                  <strong>От имени компании:</strong>
+        {invoiceProducts.map((product, index) => (
+<Card 
+  key={product.id} 
+  sx={{ 
+    mb: 2.5, 
+    p: 3,
+    // Deeper shadow for основной товар (+15%)
+    boxShadow: product.isDefault ? '0px 4px 12px rgba(0, 0, 0, 0.12)' : 'none',
+    // Border for additional товары
+    border: product.isDefault ? 'none' : '1px solid #e0e0e0',
+    backgroundColor: product.isDefault ? 'transparent' : '#f8fdff',
+    // 25% more rounded corners for all cards
+    borderRadius: '10px'
+  }}
+>
+            <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2.5}>
+              <Box>
+                <Typography variant="subtitle1" fontWeight="500">
+                  {product.isDefault ? `Основной товар` : `Дополнительный товар`}
                 </Typography>
-                <ToggleButtonGroup
-                  value={senderCompany}
-                  exclusive
-                  onChange={handleSenderCompanyChange}
-                  aria-label="sender company"
+              </Box>
+              {!product.isDefault && (
+                <IconButton
+                  onClick={() => removeProductRow(product.id)}
+                  color="error"
+                  size="medium"
+                  sx={{ 
+                    backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                    '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.12)' }
+                  }}
                 >
-                  <ToggleButton
-                    value="White Ray"
-                    aria-label="white ray"
-                    sx={{
-                      "&.Mui-selected": {
-                        backgroundColor: "#b2ded9",
-                        color: "#025249",
-                        "&:hover": {
-                          backgroundColor: "#a0d3cd"
-                        }
-                      }
-                    }}
-                  >
-                    White Ray
-                  </ToggleButton>
-                  <ToggleButton
-                    value="Pure Pack"
-                    aria-label="pure pack"
-                    sx={{
-                      "&.Mui-selected": {
-                        backgroundColor: "#b2ded9",
-                        color: "#025249",
-                        "&:hover": {
-                          backgroundColor: "#a0d3cd"
-                        }
-                      }
-                    }}
-                  >
-                    Pure Pack
-                  </ToggleButton>
-                </ToggleButtonGroup>
-              </Box>
-
-              <Divider sx={{ my: 2 }} />
-
-              {/* Products Section */}
-              <Typography variant="h6" gutterBottom>
-                Товары в накладной
-              </Typography>
-
-              {invoiceProducts.map((product, index) => (
-                <Card key={product.id} sx={{ mb: 2, p: 2 }}>
-                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                    <Typography variant="subtitle1" fontWeight="bold">
-                      {product.isDefault ? `Основной товар` : `Дополнительный товар ${index}`}
-                    </Typography>
-                    {!product.isDefault && (
-                      <IconButton
-                        onClick={() => removeProductRow(product.id)}
-                        color="error"
-                        size="small"
-                      >
-                        <Delete />
-                      </IconButton>
-                    )}
-                  </Box>
-
-                  {product.isDefault ? (
-                    <Box>
-                      <Typography variant="body2" gutterBottom>
-                        <strong>Продукт:</strong> {selectedClient.fetchedProductName}
-                      </Typography>
-                      <Typography variant="body2" gutterBottom>
-                        <strong>Упаковка:</strong> {selectedClient.fetchedPackageType} ({selectedClient.fetchedGramm} гр)
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2, mb: 2 }}>
-                      <FormControl fullWidth>
-                        <InputLabel>Продукт</InputLabel>
-                        <Select
-                          value={product.productName}
-                          onChange={(e) => updateProductField(product.id, 'productName', e.target.value)}
-                          label="Продукт"
-                        >
-                          {products.map((prod) => (
-                            <MenuItem key={prod.id} value={prod.id}>
-                              {prod.productName}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-
-                      <FormControl fullWidth>
-                        <InputLabel>Упаковка</InputLabel>
-                        <Select
-                          value={product.packageType}
-                          onChange={(e) => updateProductField(product.id, 'packageType', e.target.value)}
-                          label="Упаковка"
-                        >
-                          {packageTypes.map((pkg) => (
-                            <MenuItem key={pkg.id} value={pkg.id}>
-                              {pkg.type}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-
-                      <FormControl fullWidth>
-                        <InputLabel>Граммаж</InputLabel>
-                        <Select
-                          value={product.gramm}
-                          onChange={(e) => updateProductField(product.id, 'gramm', e.target.value)}
-                          label="Граммаж"
-                        >
-                          {grammOptions.map((option) => (
-                            <MenuItem key={option.value} value={option.value}>
-                              {option.label}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Box>
-                  )}
-
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
-                    <NumericFormat
-                      customInput={TextField}
-                      fullWidth
-                      label="Количество"
-                      value={product.quantity}
-                      onValueChange={(values) => {
-                        updateProductField(product.id, 'quantity', values.value);
-                      }}
-                      thousandSeparator=" "
-                      allowNegative={false}
-                      decimalScale={0}
-                    />
-                    <TextField
-                      fullWidth
-                      label="Цена за единицу (сум)"
-                      type="number"
-                      value={product.price}
-                      onChange={(e) => updateProductField(product.id, 'price', e.target.value)}
-                      inputProps={{ min: 0, step: 0.01 }}
-                    />
-                  </Box>
-
-                  {product.quantity && product.price && (
-                    <Typography variant="body2" color="primary" sx={{ mt: 1 }}>
-                      Сумма: {(parseFloat(product.quantity) * parseFloat(product.price)).toLocaleString('ru-RU')} сум
-                    </Typography>
-                  )}
-                </Card>
-              ))}
-
-              {/* Add Product Button */}
-              <Button
-                variant="outlined"
-                startIcon={<Add />}
-                onClick={addProductRow}
-                sx={{ mb: 2 }}
-              >
-                Добавить товар
-              </Button>
-
-              {/* Total Amount */}
-              {calculateTotalAmount() > 0 && (
-                <Typography variant="h6" color="primary" sx={{ mt: 2, mb: 2 }}>
-                  Общая сумма: {calculateTotalAmount().toLocaleString('ru-RU')} сум
-                </Typography>
-              )}
-
-              {generatedInvoiceUrl && (
-                <Box sx={{ mt: 3, p: 2, backgroundColor: '#f0f8ff', borderRadius: 1 }}>
-                  <Typography variant="subtitle1" gutterBottom>
-                    ✅ Накладная создана успешно!
-                  </Typography>
-                  <Box display="flex" gap={2} flexWrap="wrap">
-                    <Link
-                      href={generatedInvoiceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      sx={{ textDecoration: 'none' }}
-                    >
-                      <Button
-                        variant="outlined"
-                        startIcon={<Print />}
-                        color="primary"
-                      >
-                        Открыть накладную
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="contained"
-                      startIcon={<Download />}
-                      onClick={handleDownload}
-                      sx={{
-                        backgroundColor: '#0F9D8C',
-                        '&:hover': { backgroundColor: '#0c7a6e' }
-                      }}
-                    >
-                      Скачать HTML
-                    </Button>
-                  </Box>
-                </Box>
+                  <Delete fontSize="small" />
+                </IconButton>
               )}
             </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseModal} color="inherit">
-            Отмена
-          </Button>
-          <Button
-            onClick={handleCreateInvoice}
-            variant="contained"
-            disabled={generating || !validateProducts()}
-            sx={{
-              backgroundColor: '#0F9D8C',
-              '&:hover': { backgroundColor: '#0c7a6e' }
+
+            {product.isDefault ? (
+              <Box sx={{ mb: 2.5 }}>
+                <Grid container spacing={2.5}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Продукт"
+                      value={selectedClient.fetchedProductName}
+                      fullWidth
+                      size="medium"
+                      InputProps={{ 
+                        readOnly: true,
+                        sx: {
+                          padding: '8px 14px',
+                          fontSize: '15px'
+                        }
+                      }}
+                      InputLabelProps={{
+                        sx: {
+                          fontSize: '15px'
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <TextField
+                      label="Упаковка"
+                      value={selectedClient.fetchedPackageType}
+                      fullWidth
+                      size="medium"
+                      InputProps={{ 
+                        readOnly: true,
+                        sx: {
+                          padding: '8px 14px',
+                          fontSize: '15px'
+                        }
+                      }}
+                      InputLabelProps={{
+                        sx: {
+                          fontSize: '15px'
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <TextField
+                      label="Граммаж"
+                      value={`${selectedClient.fetchedGramm} гр`}
+                      fullWidth
+                      size="medium"
+                      InputProps={{ 
+                        readOnly: true,
+                        sx: {
+                          padding: '8px 14px',
+                          fontSize: '15px'
+                        }
+                      }}
+                      InputLabelProps={{
+                        sx: {
+                          fontSize: '15px'
+                        }
+                      }}
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+            ) : (
+              <Box sx={{ mb: 2.5 }}>
+                <Grid container spacing={2.5}>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth size="medium">
+                      <InputLabel sx={{ fontSize: '15px' }}>Продукт</InputLabel>
+                      <Select
+                        value={product.productName}
+                        onChange={(e) => updateProductField(product.id, 'productName', e.target.value)}
+                        label="Продукт"
+                        sx={{
+                          fontSize: '15px',
+                          '& .MuiSelect-select': {
+                            padding: '10px 14px'
+                          }
+                        }}
+                      >
+                        {products.map((prod) => (
+                          <MenuItem key={prod.id} value={prod.id} sx={{ fontSize: '15px' }}>
+                            {prod.productName}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <FormControl fullWidth size="medium">
+                      <InputLabel sx={{ fontSize: '15px' }}>Упаковка</InputLabel>
+                      <Select
+                        value={product.packageType}
+                        onChange={(e) => updateProductField(product.id, 'packageType', e.target.value)}
+                        label="Упаковка"
+                        sx={{
+                          fontSize: '15px',
+                          '& .MuiSelect-select': {
+                            padding: '10px 14px'
+                          }
+                        }}
+                      >
+                        {packageTypes.map((pkg) => (
+                          <MenuItem key={pkg.id} value={pkg.id} sx={{ fontSize: '15px' }}>
+                            {pkg.type}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <FormControl fullWidth size="medium">
+                      <InputLabel sx={{ fontSize: '15px' }}>Граммаж</InputLabel>
+                      <Select
+                        value={product.gramm}
+                        onChange={(e) => updateProductField(product.id, 'gramm', e.target.value)}
+                        label="Граммаж"
+                        sx={{
+                          fontSize: '15px',
+                          '& .MuiSelect-select': {
+                            padding: '10px 14px'
+                          }
+                        }}
+                      >
+                        {grammOptions.map((option) => (
+                          <MenuItem key={option.value} value={option.value} sx={{ fontSize: '15px' }}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </Grid>
+              </Box>
+            )}
+
+            <Box sx={{ mt: 3 }}>
+              <Grid container spacing={2.5}>
+                <Grid item xs={12} sm={6}>
+                  <NumericFormat
+                    customInput={TextField}
+                    fullWidth
+                    label="Количество"
+                    value={product.quantity}
+                    onValueChange={(values) => {
+                      updateProductField(product.id, 'quantity', values.value);
+                    }}
+                    thousandSeparator=" "
+                    allowNegative={false}
+                    decimalScale={0}
+                    size="medium"
+                    InputProps={{
+                      sx: {
+                        padding: '8px 14px',
+                        fontSize: '15px'
+                      }
+                    }}
+                    InputLabelProps={{
+                      sx: {
+                        fontSize: '15px'
+                      }
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Цена за единицу (сум)"
+                    type="number"
+                    value={product.price}
+                    onChange={(e) => updateProductField(product.id, 'price', e.target.value)}
+                    inputProps={{ min: 0, step: 0.01 }}
+                    size="medium"
+                    InputProps={{
+                      sx: {
+                        padding: '8px 14px',
+                        fontSize: '15px'
+                      }
+                    }}
+                    InputLabelProps={{
+                      sx: {
+                        fontSize: '15px'
+                      }
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+
+            {product.quantity && product.price && (
+              <Box 
+                sx={{ 
+                  mt: 2, 
+                  p: 1.5, 
+                  backgroundColor: 'rgba(0, 128, 128, 0.06)', 
+                  borderRadius: 1,
+                  border: '1px solid rgba(0, 128, 128, 0.12)'
+                }}
+              >
+                <Typography variant="body2" fontWeight="500" color="primary">
+                  Сумма: {(parseFloat(product.quantity) * parseFloat(product.price)).toLocaleString('ru-RU')} сум
+                </Typography>
+              </Box>
+            )}
+          </Card>
+        ))}
+
+        {/* Total Amount */}
+        {calculateTotalAmount() > 0 && (
+          <Box 
+            sx={{ 
+              mt: 3.5, 
+              p: 3, 
+              backgroundColor: '#d3eeec', 
+              borderRadius: 1.5,
+              border: '1px solid #bce5e179'
             }}
           >
-            {generating ? (
-              <CircularProgress size={20} color="inherit" />
-            ) : (
-              'Создать накладную'
-            )}
-          </Button>
-        </DialogActions>
-      </Dialog>
+            <Typography variant="h6" fontWeight="600" color="#0a4540ff" align="center">
+              Общая сумма: {calculateTotalAmount().toLocaleString('ru-RU')} сум
+            </Typography>
+          </Box>
+        )}
 
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+        {generatedInvoiceUrl && (
+          <Box sx={{ mt: 3.5, p: 3, backgroundColor: '#e3f2fd', borderRadius: 1.5 }}>
+            <Typography variant="subtitle1" fontWeight="500" gutterBottom color="primary">
+              ✅ Накладная создана успешно!
+            </Typography>
+            <Box display="flex" gap={2} flexWrap="wrap" sx={{ mt: 2 }}>
+              <Link
+                href={generatedInvoiceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{ textDecoration: 'none' }}
+              >
+                <Button
+                  variant="outlined"
+                  startIcon={<Print />}
+                  color="primary"
+                  size="medium"
+                >
+                  Открыть накладную
+                </Button>
+              </Link>
+              <Button
+                variant="contained"
+                startIcon={<Download />}
+                onClick={handleDownload}
+                size="medium"
+                sx={{
+                  backgroundColor: '#0d47a1',
+                  '&:hover': { backgroundColor: '#1565c0' }
+                }}
+              >
+                Скачать HTML
+              </Button>
+            </Box>
+          </Box>
+        )}
+      </Box>
+    )}
+  </DialogContent>
+  <DialogActions sx={{ p: 2.5, borderTop: 1, borderColor: 'divider' }}>
+    <Button onClick={handleCloseModal} color="inherit" size="medium">
+      Отмена
+    </Button>
+    <Button
+      onClick={handleCreateInvoice}
+      variant="contained"
+      disabled={generating || !validateProducts()}
+      size="medium"
+      sx={{
+        backgroundColor: '#105f58',
+        color: 'white',
+        '&:hover': { backgroundColor: '#0c4a44' },
+        minWidth: 165,
+        py: 1
+      }}
+    >
+      {generating ? (
+        <CircularProgress size={20} color="inherit" />
+      ) : (
+        'Создать накладную'
+      )}
+    </Button>
+  </DialogActions>
+</Dialog>
+
+{/* Snackbar for notifications */}
+<Snackbar
+  open={snackbar.open}
+  autoHideDuration={6000}
+  onClose={() => setSnackbar({ ...snackbar, open: false })}
+  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+>
+  <Alert
+    onClose={() => setSnackbar({ ...snackbar, open: false })}
+    severity={snackbar.severity}
+    sx={{ width: '100%' }}
+    variant="filled"
+  >
+    {snackbar.message}
+  </Alert>
+</Snackbar>
     </Container>
   );
 };
