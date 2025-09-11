@@ -9,6 +9,8 @@ import Dashboard from './Dashboard';
 import Welcome from './Welcome';
 import Analytics from './Analytics';
 import Invoices from './Invoices';
+import InvoiceHistory from './InvoiceHistory'; // Add this import
+
 import { CircularProgress, Box } from '@mui/material';
 
 function App() {
@@ -83,6 +85,10 @@ const handleNavigateToInvoices = () => {
   setCurrentView('invoices');
 };
 
+ const handleNavigateToHistory = () => {
+    setCurrentView('history');
+  };
+
   const handleBackToDashboard = () => {
     setCurrentView('dashboard');
   };
@@ -134,9 +140,18 @@ switch(currentView) {
     return (
       <Invoices 
         onNavigateToWelcome={handleNavigateToWelcome}
+        onNavigateToHistory={handleNavigateToHistory} 
         currentUser={user}
       />
     );
+
+    case 'history': // Add this new case
+      return (
+        <InvoiceHistory 
+          onNavigateToInvoices={handleNavigateToInvoices}
+        />
+      );
+
   
   default: // dashboard view
     return (

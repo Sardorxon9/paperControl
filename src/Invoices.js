@@ -54,8 +54,11 @@ import {
 } from 'firebase/firestore';
 import BorderColorRoundedIcon from '@mui/icons-material/BorderColorRounded';
 import { NumericFormat } from "react-number-format";
+import { History } from '@mui/icons-material'; // Add this to existing imports
+import InvoiceHistory from './InvoiceHistory'; // Add this import
 
-const Invoices = ({ onNavigateToWelcome, currentUser }) => {
+
+const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
   const [clients, setClients] = useState([]);
   const [products, setProducts] = useState([]);
   const [packageTypes, setPackageTypes] = useState([]);
@@ -313,100 +316,113 @@ const Invoices = ({ onNavigateToWelcome, currentUser }) => {
     return true;
   };
 
-  // Handle creating invoice
-  const handleCreateInvoice = async () => {
-    if (!selectedClient || !validateProducts()) {
-      setSnackbar({
-        open: true,
-        message: 'Пожалуйста, заполните все поля',
-        severity: 'warning'
-      });
-      return;
-    }
+ const handleCreateInvoice = async () => {
+  if (!selectedClient || !validateProducts()) {
+    setSnackbar({
+      open: true,
+      message: 'Пожалуйста, заполните все поля',
+      severity: 'warning'
+    });
+    return;
+  }
 
-    setGenerating(true);
+  setGenerating(true);
 
-    try {
-      // Generate invoice number
-      const newInvoiceNumber = generateInvoiceNumber();
-      setInvoiceNumber(newInvoiceNumber);
+  try {
+    // Generate invoice number
+    const newInvoiceNumber = generateInvoiceNumber();
+    setInvoiceNumber(newInvoiceNumber);
 
-      // Prepare products data for HTML generation
-      const productsForInvoice = invoiceProducts.map(product => {
+    // Prepare products data for HTML generation (with resolved names)
+    const productsForInvoice = invoiceProducts.map(product => {
+      if (product.isDefault) {
+        return {
+          productName: selectedClient.fetchedProductName,
+          packageType: selectedClient.fetchedPackageType,
+          gramm: selectedClient.fetchedGramm,
+          quantity: parseFloat(product.quantity),
+          price: parseFloat(product.price)
+        };
+      } else {
+        const selectedProductObj = products.find(p => p.id === product.productName);
+        const selectedPackageObj = packageTypes.find(p => p.id === product.packageType);
+        
+        return {
+          productName: selectedProductObj?.productName || '',
+          packageType: selectedPackageObj?.type || '',
+          gramm: product.gramm,
+          quantity: parseFloat(product.quantity),
+          price: parseFloat(product.price)
+        };
+      }
+    });
+
+    // Generate HTML content
+    const htmlContent = generateInvoiceHTML(
+      selectedClient, 
+      productsForInvoice, 
+      newInvoiceNumber, 
+      senderCompany,
+      customRestaurantName
+    );
+
+    // Create blob URL
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    setGeneratedInvoiceUrl(url);
+
+    // Save invoice record with consistent ID structure
+    const invoiceData = {
+      dateCreated: Timestamp.now(),
+      products: invoiceProducts.map(product => {
         if (product.isDefault) {
           return {
-            productName: selectedClient.fetchedProductName,
-            packageType: selectedClient.fetchedPackageType,
+            productID_2: selectedClient.productID_2,
+            packageID: selectedClient.packageID,
             gramm: selectedClient.fetchedGramm,
             quantity: parseFloat(product.quantity),
-            price: parseFloat(product.price)
+            price: parseFloat(product.price),
+            totalPrice: parseFloat(product.quantity) * parseFloat(product.price)
           };
         } else {
-          const selectedProductObj = products.find(p => p.id === product.productName);
-          const selectedPackageObj = packageTypes.find(p => p.id === product.packageType);
-          
           return {
-            productName: selectedProductObj?.productName || '',
-            packageType: selectedPackageObj?.type || '',
+            productID_2: product.productName, // productName хранит ID
+            packageID: product.packageType,   // packageType хранит ID
             gramm: product.gramm,
             quantity: parseFloat(product.quantity),
-            price: parseFloat(product.price)
+            price: parseFloat(product.price),
+            totalPrice: parseFloat(product.quantity) * parseFloat(product.price)
           };
         }
-      });
+      }),
+      totalInvoiceAmount: calculateTotalAmount(),
+      invoiceNumber: newInvoiceNumber,
+      userID: currentUser?.uid || "unknown",
+      userName: currentUser?.name || "Unknown User",
+      senderCompany: senderCompany,
+      customRestaurantName: customRestaurantName || selectedClient.displayRestaurantName
+    };
 
-      // Generate HTML content
-      const htmlContent = generateInvoiceHTML(
-        selectedClient, 
-        productsForInvoice, 
-        newInvoiceNumber, 
-        senderCompany,
-        customRestaurantName
-      );
+    await addDoc(collection(db, `clients/${selectedClient.id}/invoices`), invoiceData);
 
-      // Create blob URL
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      setGeneratedInvoiceUrl(url);
+    setSnackbar({
+      open: true,
+      message: 'Накладная успешно создана!',
+      severity: 'success'
+    });
 
-      // Save invoice record to Firestore with multiple products
-      const invoiceData = {
-        dateCreated: Timestamp.now(),
-        products: productsForInvoice.map(product => ({
-          productName: product.productName,
-          packageType: product.packageType,
-          gramm: product.gramm,
-          quantity: product.quantity,
-          price: product.price,
-          totalPrice: product.quantity * product.price
-        })),
-        totalInvoiceAmount: calculateTotalAmount(),
-        invoiceNumber: newInvoiceNumber,
-        userID: currentUser?.uid || 'unknown',
-        userName: currentUser?.name || 'Unknown User',
-        senderCompany: senderCompany,
-        customRestaurantName: customRestaurantName || selectedClient.displayRestaurantName
-      };
+  } catch (error) {
+    console.error('Error creating invoice:', error);
+    setSnackbar({
+      open: true,
+      message: 'Ошибка при создании накладной',
+      severity: 'error'
+    });
+  } finally {
+    setGenerating(false);
+  }
+};
 
-      await addDoc(collection(db, `clients/${selectedClient.id}/invoices`), invoiceData);
-
-      setSnackbar({
-        open: true,
-        message: 'Накладная успешно создана!',
-        severity: 'success'
-      });
-
-    } catch (error) {
-      console.error('Error creating invoice:', error);
-      setSnackbar({
-        open: true,
-        message: 'Ошибка при создании накладной',
-        severity: 'error'
-      });
-    } finally {
-      setGenerating(false);
-    }
-  };
 
   // Handle download
   const handleDownload = () => {
@@ -1114,22 +1130,42 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         </Typography>
       </Box>
 
+     
       {/* Info Card */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box display="flex" alignItems="center" gap={2}>
-            <Receipt color="primary" />
-            <Box>
-              <Typography variant="h6">
-                Создание накладных для клиентов
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Выберите клиента из списка и создайте накладную с указанием количества и цены
-              </Typography>
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
+{/* Info Card */}
+<Card sx={{ mb: 3 }}>
+  <CardContent>
+    <Box display="flex" justifyContent="space-between" alignItems="center">
+      <Box display="flex" alignItems="center" gap={2}>
+        <Receipt color="primary" />
+        <Box>
+          <Typography variant="h6">
+            Создание накладных для клиентов
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Выберите клиента из списка и создайте накладную с указанием количества и цены
+          </Typography>
+        </Box>
+      </Box>
+      <Button
+        variant="outlined"
+        startIcon={<History />}
+        onClick={onNavigateToHistory}
+        sx={{
+          borderColor: '#3c7570ff',
+          color: '#3c7570ff',
+          '&:hover': {
+            backgroundColor: '#3c75701a',
+            borderColor: '#2c5954'
+          }
+        }}
+      >
+        История созданных накладных
+      </Button>
+    </Box>
+  </CardContent>
+</Card>
+
 
       {/* Search Input */}
       <Box mb={2}>
