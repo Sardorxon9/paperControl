@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
+  FormControlLabel,
   Paper,
+  Radio,
+  RadioGroup,
   Table,
   TableBody,
   TableCell,
@@ -78,6 +81,8 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
     message: '',
     severity: 'success'
   });
+  // Payment type for entire invoice
+  const [paymentType, setPaymentType] = useState('cash');
 
   // New state for multiple products
   const [invoiceProducts, setInvoiceProducts] = useState([
@@ -99,6 +104,12 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
     { value: '4', label: '4 гр' },
     { value: '5', label: '5 гр' },
     { value: '6', label: '6 гр' }
+  ];
+
+  // Payment type options
+  const paymentTypeOptions = [
+    { value: 'cash', label: 'Наличные' },
+    { value: 'transfer', label: 'Перечисление' }
   ];
 
   const filteredClients = clients.filter(client =>
@@ -364,7 +375,8 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
       productsForInvoice, 
       newInvoiceNumber, 
       senderCompany,
-      customRestaurantName
+      customRestaurantName,
+      paymentType
     );
 
     // Create blob URL
@@ -401,7 +413,8 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
       userID: currentUser?.uid || "unknown",
       userName: currentUser?.name || "Unknown User",
       senderCompany: senderCompany,
-      customRestaurantName: customRestaurantName || selectedClient.displayRestaurantName
+      customRestaurantName: customRestaurantName || selectedClient.displayRestaurantName,
+      paymentType: paymentType
     };
 
     await addDoc(collection(db, `clients/${selectedClient.id}/invoices`), invoiceData);
@@ -423,7 +436,6 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
     setGenerating(false);
   }
 };
-
 
   // Handle download
   const handleDownload = () => {
@@ -456,6 +468,7 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
     setInvoiceNumber('');
     setSenderCompany('White Ray');
     setCustomRestaurantName('');
+    setPaymentType('cash');
   };
 
   // Handle opening modal
@@ -463,6 +476,7 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
     setSelectedClient(client);
     setCustomRestaurantName(client.displayRestaurantName || "");
     setIsEditingRestaurant(false);
+    setPaymentType('cash');
     setInvoiceProducts([
       {
         id: 1,
@@ -484,46 +498,52 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
     }
   };
 
-  // This function will be replaced with the HTML template from the second artifact
- // Replace the generateInvoiceHTML function in your Invoices.js with this:
-
-const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany, customRestaurantName) => {
-  const totalAmount = productsData.reduce((sum, product) => sum + (product.quantity * product.price), 0);
-  const senderName = senderCompany === 'White Ray' ? '"WHITE RAY" MCHJ' : '"PURE PACK" MCHJ';
-  
-  // Manual date formatting
-  const now = new Date();
-  const months = [
-    'Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня',
-    'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'
-  ];
-  const currentDate = `${now.getDate()} ${months[now.getMonth()]}, ${now.getFullYear()}`;
-
-  // Generate table rows for multiple products
-  const generateProductRows = (products) => {
-    return products.map((product, index) => {
-      const productDescription = `( В ${product.packageType} упаковках ${product.gramm} гр )`;
-      const productTotal = product.quantity * product.price;
-      
-      return `
-        <tr class="table-row">
-          <td class="col-number">${index + 1}.</td>
-          <td class="col-name">
-            <div class="product-name">${product.productName}</div>
-            <div class="product-description">${productDescription}</div>
-          </td>
-          <td class="col-unit">шт</td>
-          <td class="col-quantity">${product.quantity.toLocaleString('ru-RU')}</td>
-          <td class="col-price">${product.price} сум</td>
-          <td class="col-total">${productTotal.toLocaleString('ru-RU')} сум</td>
-        </tr>
-      `;
-    }).join('');
+  // Handle payment type change
+  const handlePaymentTypeChange = (event, newPaymentType) => {
+    if (newPaymentType !== null) {
+      setPaymentType(newPaymentType);
+    }
   };
 
-  const productRowsHtml = generateProductRows(productsData);
+  // This function will be replaced with the HTML template from the second artifact
+  const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany, customRestaurantName, paymentType) => {
+    const totalAmount = productsData.reduce((sum, product) => sum + (product.quantity * product.price), 0);
+    const senderName = senderCompany === 'White Ray' ? '"WHITE RAY" MCHJ' : '"PURE PACK" MCHJ';
+    const paymentTypeDisplay = paymentType === 'cash' ? 'Наличные' : 'Перечисление';
+    
+    // Manual date formatting
+    const now = new Date();
+    const months = [
+      'Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня',
+      'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'
+    ];
+    const currentDate = `${now.getDate()} ${months[now.getMonth()]}, ${now.getFullYear()}`;
 
-  const htmlTemplate = `<!DOCTYPE html>
+    // Generate table rows for multiple products
+    const generateProductRows = (products) => {
+      return products.map((product, index) => {
+        const productDescription = `( В ${product.packageType} упаковках ${product.gramm} гр )`;
+        const productTotal = product.quantity * product.price;
+        
+        return `
+          <tr class="table-row">
+            <td class="col-number">${index + 1}.</td>
+            <td class="col-name">
+              <div class="product-name">${product.productName}</div>
+              <div class="product-description">${productDescription}</div>
+            </td>
+            <td class="col-unit">шт</td>
+            <td class="col-quantity">${product.quantity.toLocaleString('ru-RU')}</td>
+            <td class="col-price">${product.price} сум</td>
+            <td class="col-total">${productTotal.toLocaleString('ru-RU')} сум</td>
+          </tr>
+        `;
+      }).join('');
+    };
+
+    const productRowsHtml = generateProductRows(productsData);
+
+   const htmlTemplate = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1135,42 +1155,39 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
         </Typography>
       </Box>
 
-     
       {/* Info Card */}
-{/* Info Card */}
-<Card sx={{ mb: 3 }}>
-  <CardContent>
-    <Box display="flex" justifyContent="space-between" alignItems="center">
-      <Box display="flex" alignItems="center" gap={2}>
-        <Receipt color="primary" />
-        <Box>
-          <Typography variant="h6">
-            Создание накладных для клиентов
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Выберите клиента из списка и создайте накладную с указанием количества и цены
-          </Typography>
-        </Box>
-      </Box>
-      <Button
-        variant="outlined"
-        startIcon={<History />}
-        onClick={onNavigateToHistory}
-        sx={{
-          borderColor: '#3c7570ff',
-          color: '#3c7570ff',
-          '&:hover': {
-            backgroundColor: '#3c75701a',
-            borderColor: '#2c5954'
-          }
-        }}
-      >
-        История созданных накладных
-      </Button>
-    </Box>
-  </CardContent>
-</Card>
-
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Box display="flex" alignItems="center" gap={2}>
+              <Receipt color="primary" />
+              <Box>
+                <Typography variant="h6">
+                  Создание накладных для клиентов
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Выберите клиента из списка и создайте накладную с указанием количества и цены
+                </Typography>
+              </Box>
+            </Box>
+            <Button
+              variant="outlined"
+              startIcon={<History />}
+              onClick={onNavigateToHistory}
+              sx={{
+                borderColor: '#3c7570ff',
+                color: '#3c7570ff',
+                '&:hover': {
+                  backgroundColor: '#3c75701a',
+                  borderColor: '#2c5954'
+                }
+              }}
+            >
+              История созданных накладных
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
 
       {/* Search Input */}
       <Box mb={2}>
@@ -1252,456 +1269,488 @@ const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany,
           </Table>
         </TableContainer>
       </Paper>
-{/* Invoice Creation Modal */}
-<Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="md" fullWidth>
-  <DialogTitle sx={{ pb: 1.5 }}>
-    <Typography variant="h5" fontWeight="600">
-      Создание накладной
-    </Typography>
-    {selectedClient && (
-      <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 0.5 }}>
-        {selectedClient.displayOrgName} - {selectedClient.displayRestaurantName}
-      </Typography>
-    )}
-  </DialogTitle>
-  
-  <DialogContent dividers sx={{ pt: 2.5 }}>
-    {selectedClient && (
-      <Box>
-        {/* Restaurant Name (editable) */}
-        <TextField
-          label="Название ресторана"
-          fullWidth
-          value={customRestaurantName}
-          onChange={(e) => setCustomRestaurantName(e.target.value)}
-          sx={{ mb: 3 }}
-          size="medium"
-          InputProps={{
-            sx: {
-              padding: '8px 14px',
-              fontSize: '15px'
-            }
-          }}
-          InputLabelProps={{
-            sx: {
-              fontSize: '15px'
-            }
-          }}
-        />
 
-        {/* Sender Company Selection */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" fontWeight="500" gutterBottom>
-            От имени компании:
+      {/* Invoice Creation Modal */}
+      <Dialog open={modalOpen} onClose={handleCloseModal} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ pb: 1.5 }}>
+          <Typography variant="h5" fontWeight="600">
+            Создание накладной
           </Typography>
-          <ToggleButtonGroup
-            value={senderCompany}
-            exclusive
-            onChange={handleSenderCompanyChange}
-            aria-label="sender company"
-            fullWidth
-          >
-            <ToggleButton
-              value="White Ray"
-              aria-label="white ray"
-              sx={{
-                py: 1.5,
-                "&.Mui-selected": {
-                  backgroundColor: "#e0f2f1",
-                  color: "#025249",
-                  "&:hover": {
-                    backgroundColor: "#b2dfdb"
-                  }
-                }
-              }}
-            >
-              White Ray
-            </ToggleButton>
-            <ToggleButton
-              value="Pure Pack"
-              aria-label="pure pack"
-              sx={{
-                py: 1.5,
-                "&.Mui-selected": {
-                  backgroundColor: "#e0f2f1",
-                  color: "#025249",
-                  "&:hover": {
-                    backgroundColor: "#b2dfdb"
-                  }
-                }
-              }}
-            >
-              Pure Pack
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
-
-        <Divider sx={{ 
-          my: 3, 
-          borderColor: 'rgba(0, 0, 0, 0.2)', 
-          borderWidth: '1px' 
-        }} />
-
-        {/* Products Section */}
-        <Box sx={{ mb: 2.5 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h6" fontWeight="500" color="#105f58">
-              Товары в накладной
+          {selectedClient && (
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {selectedClient.displayOrgName} - {selectedClient.displayRestaurantName}
             </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<Add />}
-              onClick={addProductRow}
-              size="medium"
-            >
-              Добавить товар
-            </Button>
-          </Box>
-        </Box>
+          )}
+        </DialogTitle>
+        
+        <DialogContent dividers sx={{ pt: 2.5 }}>
+          {selectedClient && (
+            <Box>
+              {/* Restaurant Name (editable) */}
+              <TextField
+                label="Название ресторана"
+                fullWidth
+                value={customRestaurantName}
+                onChange={(e) => setCustomRestaurantName(e.target.value)}
+                sx={{ mb: 3 }}
+                size="medium"
+                InputProps={{
+                  sx: {
+                    padding: '8px 14px',
+                    fontSize: '15px'
+                  }
+                }}
+                InputLabelProps={{
+                  sx: {
+                    fontSize: '15px'
+                  }
+                }}
+              />
 
-        {invoiceProducts.map((product, index) => (
-<Card 
-  key={product.id} 
-  sx={{ 
-    mb: 2.5, 
-    p: 3,
-    // Deeper shadow for основной товар (+15%)
-    boxShadow: product.isDefault ? '0px 4px 12px rgba(0, 0, 0, 0.12)' : 'none',
-    // Border for additional товары
-    border: product.isDefault ? 'none' : '1px solid #e0e0e0',
-    backgroundColor: product.isDefault ? 'transparent' : '#f8fdff',
-    // 25% more rounded corners for all cards
-    borderRadius: '10px'
-  }}
->
-            <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2.5}>
-              <Box>
-                <Typography variant="subtitle1" fontWeight="500">
-                  {product.isDefault ? `Основной товар` : `Дополнительный товар`}
+              {/* Sender Company Selection */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle2" fontWeight="500" gutterBottom>
+                  От имени компании:
                 </Typography>
+                <ToggleButtonGroup
+                  value={senderCompany}
+                  exclusive
+                  onChange={handleSenderCompanyChange}
+                  aria-label="sender company"
+                  fullWidth
+                >
+                  <ToggleButton
+                    value="White Ray"
+                    aria-label="white ray"
+                    sx={{
+                      py: 1.5,
+                      "&.Mui-selected": {
+                        backgroundColor: "#e0f2f1",
+                        color: "#025249",
+                        "&:hover": {
+                          backgroundColor: "#b2dfdb"
+                        }
+                      }
+                    }}
+                  >
+                    White Ray
+                  </ToggleButton>
+                  <ToggleButton
+                    value="Pure Pack"
+                    aria-label="pure pack"
+                    sx={{
+                      py: 1.5,
+                      "&.Mui-selected": {
+                        backgroundColor: "#e0f2f1",
+                        color: "#025249",
+                        "&:hover": {
+                          backgroundColor: "#b2dfdb"
+                        }
+                      }
+                    }}
+                  >
+                    Pure Pack
+                  </ToggleButton>
+                </ToggleButtonGroup>
               </Box>
-              {!product.isDefault && (
-                <IconButton
-                  onClick={() => removeProductRow(product.id)}
-                  color="error"
-                  size="medium"
+
+              {/* Payment Type Selection */}
+             <Box sx={{ mb: 3 }}>
+  <Typography variant="subtitle2" fontWeight="500" gutterBottom>
+    Тип оплаты:
+  </Typography>
+  <RadioGroup
+    row
+    value={paymentType}
+    onChange={handlePaymentTypeChange}
+    name="payment-type"
+  >
+    <FormControlLabel
+      value="cash"
+      control={<Radio />}
+      label="Наличные"
+    />
+    <FormControlLabel
+      value="transfer"
+      control={<Radio />}
+      label="Перечисление"
+    />
+  </RadioGroup>
+</Box>
+
+
+              <Divider sx={{ 
+                my: 3, 
+                borderColor: 'rgba(0, 0, 0, 0.2)', 
+                borderWidth: '1px' 
+              }} />
+
+              {/* Products Section */}
+              <Box sx={{ mb: 2.5 }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Typography variant="h6" fontWeight="500" color="#105f58">
+                    Товары в накладной
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Add />}
+                    onClick={addProductRow}
+                    size="medium"
+                  >
+                    Добавить товар
+                  </Button>
+                </Box>
+              </Box>
+
+              {invoiceProducts.map((product, index) => (
+                <Card 
+                  key={product.id} 
                   sx={{ 
-                    backgroundColor: 'rgba(244, 67, 54, 0.08)',
-                    '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.12)' }
+                    mb: 2.5, 
+                    p: 3,
+                    // Deeper shadow for основной товар (+15%)
+                    boxShadow: product.isDefault ? '0px 4px 12px rgba(0, 0, 0, 0.12)' : 'none',
+                    // Border for additional товары
+                    border: product.isDefault ? 'none' : '1px solid #e0e0e0',
+                    backgroundColor: product.isDefault ? 'transparent' : '#f8fdff',
+                    // 25% more rounded corners for all cards
+                    borderRadius: '10px'
                   }}
                 >
-                  <Delete fontSize="small" />
-                </IconButton>
+                  <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2.5}>
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight="500">
+                        {product.isDefault ? `Основной товар` : `Дополнительный товар`}
+                      </Typography>
+                    </Box>
+                    {!product.isDefault && (
+                      <IconButton
+                        onClick={() => removeProductRow(product.id)}
+                        color="error"
+                        size="medium"
+                        sx={{ 
+                          backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                          '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.12)' }
+                        }}
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Box>
+
+                  {product.isDefault ? (
+                    <Box sx={{ mb: 2.5 }}>
+                      <Grid container spacing={2.5}>
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            label="Продукт"
+                            value={selectedClient.fetchedProductName}
+                            fullWidth
+                            size="medium"
+                            InputProps={{ 
+                              readOnly: true,
+                              sx: {
+                                padding: '8px 14px',
+                                fontSize: '15px'
+                              }
+                            }}
+                            InputLabelProps={{
+                              sx: {
+                                fontSize: '15px'
+                              }
+                            }}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={3}>
+                          <TextField
+                            label="Упаковка"
+                            value={selectedClient.fetchedPackageType}
+                            fullWidth
+                            size="medium"
+                            InputProps={{ 
+                              readOnly: true,
+                              sx: {
+                                padding: '8px 14px',
+                                fontSize: '15px'
+                              }
+                            }}
+                            InputLabelProps={{
+                              sx: {
+                                fontSize: '15px'
+                              }
+                            }}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={3}>
+                          <TextField
+                            label="Граммаж"
+                            value={`${selectedClient.fetchedGramm} гр`}
+                            fullWidth
+                            size="medium"
+                            InputProps={{ 
+                              readOnly: true,
+                              sx: {
+                                padding: '8px 14px',
+                                fontSize: '15px'
+                              }
+                            }}
+                            InputLabelProps={{
+                              sx: {
+                                fontSize: '15px'
+                              }
+                            }}
+                          />
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  ) : (
+                    <Box sx={{ mb: 2.5 }}>
+                      <Grid container spacing={2.5}>
+                        <Grid item xs={12} sm={6}>
+                          <FormControl fullWidth size="medium">
+                            <InputLabel sx={{ fontSize: '15px' }}>Продукт</InputLabel>
+                            <Select
+                              value={product.productName}
+                              onChange={(e) => updateProductField(product.id, 'productName', e.target.value)}
+                              label="Продукт"
+                              sx={{
+                                fontSize: '15px',
+                                '& .MuiSelect-select': {
+                                  padding: '10px 14px'
+                                }
+                              }}
+                            >
+                              {products.map((prod) => (
+                                <MenuItem key={prod.id} value={prod.id} sx={{ fontSize: '15px' }}>
+                                  {prod.productName}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12} sm={3}>
+                          <FormControl fullWidth size="medium">
+                            <InputLabel sx={{ fontSize: '15px' }}>Упаковка</InputLabel>
+                            <Select
+                              value={product.packageType}
+                              onChange={(e) => updateProductField(product.id, 'packageType', e.target.value)}
+                              label="Упаковка"
+                              sx={{
+                                fontSize: '15px',
+                                '& .MuiSelect-select': {
+                                  padding: '10px 14px'
+                                }
+                              }}
+                            >
+                              {packageTypes.map((pkg) => (
+                                <MenuItem key={pkg.id} value={pkg.id} sx={{ fontSize: '15px' }}>
+                                  {pkg.type}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12} sm={3}>
+                          <FormControl fullWidth size="medium">
+                            <InputLabel sx={{ fontSize: '15px' }}>Граммаж</InputLabel>
+                            <Select
+                              value={product.gramm}
+                              onChange={(e) => updateProductField(product.id, 'gramm', e.target.value)}
+                              label="Граммаж"
+                              sx={{
+                                fontSize: '15px',
+                                '& .MuiSelect-select': {
+                                  padding: '10px 14px'
+                                }
+                              }}
+                            >
+                              {grammOptions.map((option) => (
+                                <MenuItem key={option.value} value={option.value} sx={{ fontSize: '15px' }}>
+                                  {option.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  )}
+
+                  <Box sx={{ mt: 3 }}>
+                    <Grid container spacing={2.5}>
+                      <Grid item xs={12} sm={4}>
+                        <NumericFormat
+                          customInput={TextField}
+                          fullWidth
+                          label="Количество"
+                          value={product.quantity}
+                          onValueChange={(values) => {
+                            updateProductField(product.id, 'quantity', values.value);
+                          }}
+                          thousandSeparator=" "
+                          allowNegative={false}
+                          decimalScale={0}
+                          size="medium"
+                          InputProps={{
+                            sx: {
+                              padding: '8px 14px',
+                              fontSize: '15px'
+                            }
+                          }}
+                          InputLabelProps={{
+                            sx: {
+                              fontSize: '15px'
+                            }
+                          }}
+                        />
+                      </Grid>
+                      
+                      <Grid item xs={12} sm={4}>
+                        <TextField
+                          fullWidth
+                          label="Цена за единицу (сум)"
+                          type="number"
+                          value={product.price}
+                          onChange={(e) => updateProductField(product.id, 'price', e.target.value)}
+                          inputProps={{ min: 0, step: 0.01 }}
+                          size="medium"
+                          InputProps={{
+                            sx: {
+                              padding: '8px 14px',
+                              fontSize: '15px'
+                            }
+                          }}
+                          InputLabelProps={{
+                            sx: {
+                              fontSize: '15px'
+                            }
+                          }}
+                        />
+                      </Grid>
+                    </Grid>
+                  </Box>
+
+                  {product.quantity && product.price && (
+                    <Box 
+                      sx={{ 
+                        mt: 2, 
+                        p: 1.5, 
+                        backgroundColor: 'rgba(0, 128, 128, 0.06)', 
+                        borderRadius: 1,
+                        border: '1px solid rgba(0, 128, 128, 0.12)'
+                      }}
+                    >
+                      <Typography variant="body2" fontWeight="500" color="primary">
+                        Сумма: {(parseFloat(product.quantity) * parseFloat(product.price)).toLocaleString('ru-RU')} сум
+                        {product.paymentType && (
+                          <span style={{ marginLeft: '10px', fontSize: '12px', color: '#666' }}>
+                            ({paymentTypeOptions.find(opt => opt.value === product.paymentType)?.label})
+                          </span>
+                        )}
+                      </Typography>
+                    </Box>
+                  )}
+                </Card>
+              ))}
+
+              {/* Total Amount */}
+              {calculateTotalAmount() > 0 && (
+                <Box 
+                  sx={{ 
+                    mt: 3.5, 
+                    p: 3, 
+                    backgroundColor: '#d3eeec', 
+                    borderRadius: 1.5,
+                    border: '1px solid #bce5e179'
+                  }}
+                >
+                  <Typography variant="h6" fontWeight="600" color="#0a4540ff" align="center">
+                    Общая сумма: {calculateTotalAmount().toLocaleString('ru-RU')} сум
+                  </Typography>
+                </Box>
+              )}
+
+              {generatedInvoiceUrl && (
+                <Box sx={{ mt: 3.5, p: 3, backgroundColor: '#e3f2fd', borderRadius: 1.5 }}>
+                  <Typography variant="subtitle1" fontWeight="500" gutterBottom color="primary">
+                    ✅ Накладная создана успешно!
+                  </Typography>
+                  <Box display="flex" gap={2} flexWrap="wrap" sx={{ mt: 2 }}>
+                    <Link
+                      href={generatedInvoiceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ textDecoration: 'none' }}
+                    >
+                      <Button
+                        variant="outlined"
+                        startIcon={<Print />}
+                        color="primary"
+                        size="medium"
+                      >
+                        Открыть накладную
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="contained"
+                      startIcon={<Download />}
+                      onClick={handleDownload}
+                      size="medium"
+                      sx={{
+                        backgroundColor: '#0d47a1',
+                        '&:hover': { backgroundColor: '#1565c0' }
+                      }}
+                    >
+                      Скачать HTML
+                    </Button>
+                  </Box>
+                </Box>
               )}
             </Box>
-
-            {product.isDefault ? (
-              <Box sx={{ mb: 2.5 }}>
-                <Grid container spacing={2.5}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Продукт"
-                      value={selectedClient.fetchedProductName}
-                      fullWidth
-                      size="medium"
-                      InputProps={{ 
-                        readOnly: true,
-                        sx: {
-                          padding: '8px 14px',
-                          fontSize: '15px'
-                        }
-                      }}
-                      InputLabelProps={{
-                        sx: {
-                          fontSize: '15px'
-                        }
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={3}>
-                    <TextField
-                      label="Упаковка"
-                      value={selectedClient.fetchedPackageType}
-                      fullWidth
-                      size="medium"
-                      InputProps={{ 
-                        readOnly: true,
-                        sx: {
-                          padding: '8px 14px',
-                          fontSize: '15px'
-                        }
-                      }}
-                      InputLabelProps={{
-                        sx: {
-                          fontSize: '15px'
-                        }
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={3}>
-                    <TextField
-                      label="Граммаж"
-                      value={`${selectedClient.fetchedGramm} гр`}
-                      fullWidth
-                      size="medium"
-                      InputProps={{ 
-                        readOnly: true,
-                        sx: {
-                          padding: '8px 14px',
-                          fontSize: '15px'
-                        }
-                      }}
-                      InputLabelProps={{
-                        sx: {
-                          fontSize: '15px'
-                        }
-                      }}
-                    />
-                  </Grid>
-                </Grid>
-              </Box>
-            ) : (
-              <Box sx={{ mb: 2.5 }}>
-                <Grid container spacing={2.5}>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth size="medium">
-                      <InputLabel sx={{ fontSize: '15px' }}>Продукт</InputLabel>
-                      <Select
-                        value={product.productName}
-                        onChange={(e) => updateProductField(product.id, 'productName', e.target.value)}
-                        label="Продукт"
-                        sx={{
-                          fontSize: '15px',
-                          '& .MuiSelect-select': {
-                            padding: '10px 14px'
-                          }
-                        }}
-                      >
-                        {products.map((prod) => (
-                          <MenuItem key={prod.id} value={prod.id} sx={{ fontSize: '15px' }}>
-                            {prod.productName}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} sm={3}>
-                    <FormControl fullWidth size="medium">
-                      <InputLabel sx={{ fontSize: '15px' }}>Упаковка</InputLabel>
-                      <Select
-                        value={product.packageType}
-                        onChange={(e) => updateProductField(product.id, 'packageType', e.target.value)}
-                        label="Упаковка"
-                        sx={{
-                          fontSize: '15px',
-                          '& .MuiSelect-select': {
-                            padding: '10px 14px'
-                          }
-                        }}
-                      >
-                        {packageTypes.map((pkg) => (
-                          <MenuItem key={pkg.id} value={pkg.id} sx={{ fontSize: '15px' }}>
-                            {pkg.type}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} sm={3}>
-                    <FormControl fullWidth size="medium">
-                      <InputLabel sx={{ fontSize: '15px' }}>Граммаж</InputLabel>
-                      <Select
-                        value={product.gramm}
-                        onChange={(e) => updateProductField(product.id, 'gramm', e.target.value)}
-                        label="Граммаж"
-                        sx={{
-                          fontSize: '15px',
-                          '& .MuiSelect-select': {
-                            padding: '10px 14px'
-                          }
-                        }}
-                      >
-                        {grammOptions.map((option) => (
-                          <MenuItem key={option.value} value={option.value} sx={{ fontSize: '15px' }}>
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                </Grid>
-              </Box>
-            )}
-
-            <Box sx={{ mt: 3 }}>
-              <Grid container spacing={2.5}>
-                <Grid item xs={12} sm={6}>
-                  <NumericFormat
-                    customInput={TextField}
-                    fullWidth
-                    label="Количество"
-                    value={product.quantity}
-                    onValueChange={(values) => {
-                      updateProductField(product.id, 'quantity', values.value);
-                    }}
-                    thousandSeparator=" "
-                    allowNegative={false}
-                    decimalScale={0}
-                    size="medium"
-                    InputProps={{
-                      sx: {
-                        padding: '8px 14px',
-                        fontSize: '15px'
-                      }
-                    }}
-                    InputLabelProps={{
-                      sx: {
-                        fontSize: '15px'
-                      }
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Цена за единицу (сум)"
-                    type="number"
-                    value={product.price}
-                    onChange={(e) => updateProductField(product.id, 'price', e.target.value)}
-                    inputProps={{ min: 0, step: 0.01 }}
-                    size="medium"
-                    InputProps={{
-                      sx: {
-                        padding: '8px 14px',
-                        fontSize: '15px'
-                      }
-                    }}
-                    InputLabelProps={{
-                      sx: {
-                        fontSize: '15px'
-                      }
-                    }}
-                  />
-                </Grid>
-              </Grid>
-            </Box>
-
-            {product.quantity && product.price && (
-              <Box 
-                sx={{ 
-                  mt: 2, 
-                  p: 1.5, 
-                  backgroundColor: 'rgba(0, 128, 128, 0.06)', 
-                  borderRadius: 1,
-                  border: '1px solid rgba(0, 128, 128, 0.12)'
-                }}
-              >
-                <Typography variant="body2" fontWeight="500" color="primary">
-                  Сумма: {(parseFloat(product.quantity) * parseFloat(product.price)).toLocaleString('ru-RU')} сум
-                </Typography>
-              </Box>
-            )}
-          </Card>
-        ))}
-
-        {/* Total Amount */}
-        {calculateTotalAmount() > 0 && (
-          <Box 
-            sx={{ 
-              mt: 3.5, 
-              p: 3, 
-              backgroundColor: '#d3eeec', 
-              borderRadius: 1.5,
-              border: '1px solid #bce5e179'
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, borderTop: 1, borderColor: 'divider' }}>
+          <Button onClick={handleCloseModal} color="inherit" size="medium">
+            Отмена
+          </Button>
+          <Button
+            onClick={handleCreateInvoice}
+            variant="contained"
+            disabled={generating || !validateProducts()}
+            size="medium"
+            sx={{
+              backgroundColor: '#105f58',
+              color: 'white',
+              '&:hover': { backgroundColor: '#0c4a44' },
+              minWidth: 165,
+              py: 1
             }}
           >
-            <Typography variant="h6" fontWeight="600" color="#0a4540ff" align="center">
-              Общая сумма: {calculateTotalAmount().toLocaleString('ru-RU')} сум
-            </Typography>
-          </Box>
-        )}
+            {generating ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              'Создать накладную'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-        {generatedInvoiceUrl && (
-          <Box sx={{ mt: 3.5, p: 3, backgroundColor: '#e3f2fd', borderRadius: 1.5 }}>
-            <Typography variant="subtitle1" fontWeight="500" gutterBottom color="primary">
-              ✅ Накладная создана успешно!
-            </Typography>
-            <Box display="flex" gap={2} flexWrap="wrap" sx={{ mt: 2 }}>
-              <Link
-                href={generatedInvoiceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{ textDecoration: 'none' }}
-              >
-                <Button
-                  variant="outlined"
-                  startIcon={<Print />}
-                  color="primary"
-                  size="medium"
-                >
-                  Открыть накладную
-                </Button>
-              </Link>
-              <Button
-                variant="contained"
-                startIcon={<Download />}
-                onClick={handleDownload}
-                size="medium"
-                sx={{
-                  backgroundColor: '#0d47a1',
-                  '&:hover': { backgroundColor: '#1565c0' }
-                }}
-              >
-                Скачать HTML
-              </Button>
-            </Box>
-          </Box>
-        )}
-      </Box>
-    )}
-  </DialogContent>
-  <DialogActions sx={{ p: 2.5, borderTop: 1, borderColor: 'divider' }}>
-    <Button onClick={handleCloseModal} color="inherit" size="medium">
-      Отмена
-    </Button>
-    <Button
-      onClick={handleCreateInvoice}
-      variant="contained"
-      disabled={generating || !validateProducts()}
-      size="medium"
-      sx={{
-        backgroundColor: '#105f58',
-        color: 'white',
-        '&:hover': { backgroundColor: '#0c4a44' },
-        minWidth: 165,
-        py: 1
-      }}
-    >
-      {generating ? (
-        <CircularProgress size={20} color="inherit" />
-      ) : (
-        'Создать накладную'
-      )}
-    </Button>
-  </DialogActions>
-</Dialog>
-
-{/* Snackbar for notifications */}
-<Snackbar
-  open={snackbar.open}
-  autoHideDuration={6000}
-  onClose={() => setSnackbar({ ...snackbar, open: false })}
-  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
->
-  <Alert
-    onClose={() => setSnackbar({ ...snackbar, open: false })}
-    severity={snackbar.severity}
-    sx={{ width: '100%' }}
-    variant="filled"
-  >
-    {snackbar.message}
-  </Alert>
-</Snackbar>
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+          variant="filled"
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

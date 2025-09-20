@@ -18,7 +18,9 @@ import {
   Collapse,
   Card,
   CardContent,
-  Chip
+  Chip,
+  Tabs,
+  Tab
 } from '@mui/material';
 import {
   ArrowBack,
@@ -50,6 +52,7 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
   const [users, setUsers] = useState({});
   const [productsMap, setProductsMap] = useState({});
   const [packagesMap, setPackagesMap] = useState({});
+  const [activeTab, setActiveTab] = useState('cash'); // Default to 'cash' tab
 
   useEffect(() => {
     fetchReferenceData();
@@ -63,8 +66,8 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
   }, [productsMap, packagesMap]);
 
   useEffect(() => {
-    handleSearch();
-  }, [searchQuery, invoices]);
+    handleSearchAndFilter();
+  }, [searchQuery, invoices, activeTab]);
 
   const fetchReferenceData = async () => {
     try {
@@ -170,15 +173,16 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
     });
   };
 
-  const handleSearch = () => {
-    if (!searchQuery.trim()) {
-      setFilteredInvoices(invoices);
-      return;
-    }
+  const handleSearchAndFilter = () => {
+    let filtered = invoices;
 
-    const filtered = invoices.filter(invoice => {
+    // Filter by paymentType based on active tab
+    filtered = filtered.filter(invoice => invoice.paymentType === activeTab);
+
+    // Apply search query
+    if (searchQuery.trim()) {
       const searchLower = searchQuery.toLowerCase();
-      return (
+      filtered = filtered.filter(invoice => (
         invoice.invoiceNumber?.toLowerCase().includes(searchLower) ||
         invoice.clientRestaurant?.toLowerCase().includes(searchLower) ||
         invoice.clientOrgName?.toLowerCase().includes(searchLower) ||
@@ -187,7 +191,26 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
         invoice.userName?.toLowerCase().includes(searchLower) ||
         invoice.clientProductName?.toLowerCase().includes(searchLower) ||
         invoice.clientPackageType?.toLowerCase().includes(searchLower)
-      );
+      ));
+    }
+
+    // Apply sorting
+    filtered = [...filtered].sort((a, b) => {
+      let aValue = a[sortConfig.key];
+      let bValue = b[sortConfig.key];
+
+      if (sortConfig.key === 'dateCreated') {
+        aValue = aValue?.seconds ? aValue.seconds : new Date(aValue).getTime() / 1000;
+        bValue = bValue?.seconds ? bValue.seconds : new Date(bValue).getTime() / 1000;
+      }
+
+      if (aValue < bValue) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
     });
 
     setFilteredInvoices(filtered);
@@ -199,26 +222,6 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
       direction = 'desc';
     }
     setSortConfig({ key, direction });
-
-    const sortedInvoices = [...filteredInvoices].sort((a, b) => {
-      let aValue = a[key];
-      let bValue = b[key];
-
-      if (key === 'dateCreated') {
-        aValue = aValue?.seconds ? aValue.seconds : new Date(aValue).getTime() / 1000;
-        bValue = bValue?.seconds ? bValue.seconds : new Date(bValue).getTime() / 1000;
-      }
-
-      if (aValue < bValue) {
-        return direction === 'asc' ? -1 : 1;
-      }
-      if (aValue > bValue) {
-        return direction === 'asc' ? 1 : -1;
-      }
-      return 0;
-    });
-
-    setFilteredInvoices(sortedInvoices);
   };
 
   const toggleRowExpansion = (invoiceId) => {
@@ -238,102 +241,94 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
     return sortConfig.direction === 'asc' ? <KeyboardArrowUp /> : <KeyboardArrowDown />;
   };
 
- const renderProductsCell = (invoice) => {
-  // Check if we have products array and it has more than 1 product
-  if (invoice.products && Array.isArray(invoice.products) && invoice.products.length > 1) {
-    return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Box>
-          <Typography variant="body2" fontWeight="600">
-            {invoice.products.length} продуктов
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Смешанная накладная
-          </Typography>
+  const renderProductsCell = (invoice) => {
+    if (invoice.products && Array.isArray(invoice.products) && invoice.products.length > 1) {
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box>
+            <Typography variant="body2" fontWeight="600">
+              {invoice.products.length} продуктов
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Смешанная накладная
+            </Typography>
+          </Box>
+          <IconButton
+            size="small"
+            onClick={() => toggleRowExpansion(invoice.id)}
+            sx={{ ml: 'auto' }}
+          >
+            {expandedRows.has(invoice.id) ? <ExpandLess /> : <ExpandMore />}
+          </IconButton>
         </Box>
-        <IconButton
-          size="small"
-          onClick={() => toggleRowExpansion(invoice.id)}
-          sx={{ ml: 'auto' }}
-        >
-          {expandedRows.has(invoice.id) ? <ExpandLess /> : <ExpandMore />}
-        </IconButton>
+      );
+    }
+
+    let productName = 'Неизвестный продукт';
+    let packageType = 'Неизвестная упаковка';
+    let gramm = '';
+
+    if (invoice.products && Array.isArray(invoice.products) && invoice.products.length === 1) {
+      const product = invoice.products[0];
+      productName = productsMap[product.productID_2] || 'Неизвестный продукт';
+      packageType = packagesMap[product.packageID] || 'Неизвестная упаковка';
+      gramm = product.gramm;
+    } else {
+      productName = invoice.clientProductName || 'Неизвестный продукт';
+      packageType = invoice.clientPackageType || 'Неизвестная упаковка';
+      gramm = invoice.gramm;
+    }
+
+    return (
+      <Box>
+        <Typography variant="body2" fontWeight="600">
+          {productName}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {packageType}{gramm ? ` • ${gramm} гр` : ''}
+        </Typography>
       </Box>
     );
-  }
+  };
 
-  // For single product invoices - resolve from products array or fallback to old structure
-  let productName = 'Неизвестный продукт';
-  let packageType = 'Неизвестная упаковка';
-  let gramm = '';
-
-  if (invoice.products && Array.isArray(invoice.products) && invoice.products.length === 1) {
-    // New structure: products array with single product
-    const product = invoice.products[0];
-    productName = productsMap[product.productID_2] || 'Неизвестный продукт';
-    packageType = packagesMap[product.packageID] || 'Неизвестная упаковка';
-    gramm = product.gramm;
-  } else {
-    // Fallback to old structure for backwards compatibility
-    productName = invoice.clientProductName || 'Неизвестный продукт';
-    packageType = invoice.clientPackageType || 'Неизвестная упаковка';
-    gramm = invoice.gramm;
-  }
-
-  return (
-    <Box>
-      <Typography variant="body2" fontWeight="600">
-        {productName}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        {packageType}{gramm ? ` • ${gramm} гр` : ''}
-      </Typography>
-    </Box>
-  );
-};
-
-// Replace the renderExpandedProducts function in your InvoiceHistory.js with this:
-
-const renderExpandedProducts = (products) => {
-  return (
-    <Box sx={{ p: 2 }}>
-      <Typography variant="subtitle2" fontWeight="600" gutterBottom>
-        Продукты в накладной:
-      </Typography>
-      {products.map((product, index) => {
-        // Resolve product name and package type from IDs
-        const productName = productsMap[product.productID_2] || 'Неизвестный продукт';
-        const packageType = packagesMap[product.packageID] || 'Неизвестная упаковка';
-        
-        return (
-          <Card key={index} sx={{ mb: 1, backgroundColor: '#f8f9fa' }}>
-            <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Box>
-                  <Typography variant="body2" fontWeight="600">
-                    {productName}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {packageType} • {product.gramm} гр
-                  </Typography>
+  const renderExpandedProducts = (products) => {
+    return (
+      <Box sx={{ p: 2 }}>
+        <Typography variant="subtitle2" fontWeight="600" gutterBottom>
+          Продукты в накладной:
+        </Typography>
+        {products.map((product, index) => {
+          const productName = productsMap[product.productID_2] || 'Неизвестный продукт';
+          const packageType = packagesMap[product.packageID] || 'Неизвестная упаковка';
+          
+          return (
+            <Card key={index} sx={{ mb: 1, backgroundColor: '#f8f9fa' }}>
+              <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Typography variant="body2" fontWeight="600">
+                      {productName}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {packageType} • {product.gramm} гр
+                    </Typography>
+                  </Box>
+                  <Box textAlign="right">
+                    <Typography variant="body2">
+                      {product.quantity?.toLocaleString('ru-RU')} шт × {product.price} сум
+                    </Typography>
+                    <Typography variant="body2" fontWeight="600" color="primary">
+                      = {product.totalPrice?.toLocaleString('ru-RU')} сум
+                    </Typography>
+                  </Box>
                 </Box>
-                <Box textAlign="right">
-                  <Typography variant="body2">
-                    {product.quantity?.toLocaleString('ru-RU')} шт × {product.price} сум
-                  </Typography>
-                  <Typography variant="body2" fontWeight="600" color="primary">
-                    = {product.totalPrice?.toLocaleString('ru-RU')} сум
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </Box>
-  );
-};
-
+              </CardContent>
+            </Card>
+          );
+        })}
+      </Box>
+    );
+  };
 
   if (loading) {
     return (
@@ -376,6 +371,44 @@ const renderExpandedProducts = (products) => {
           </Box>
         </CardContent>
       </Card>
+
+      {/* Tabs */}
+      <Box mb={3}>
+      <Tabs
+          value={activeTab}
+          onChange={(event, newValue) => setActiveTab(newValue)}
+          centered
+          sx={{
+            bgcolor: 'background.paper',
+            borderRadius: 1,
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '1rem',
+            },
+            '& .MuiTabs-indicator': {
+              backgroundColor: '#078570',
+            },
+          }}
+        >
+          <Tab
+            label="Наличные"
+            value="cash"
+            sx={{
+              color: activeTab === 'cash' ? '#2e7d32 !important' : 'text.primary',
+              bgcolor: activeTab === 'cash' ? '#e8f5e9' : 'transparent',
+            }}
+          />
+          <Tab
+            label="Перечисление"
+            value="transfer"
+            sx={{
+              color: activeTab === 'transfer' ? '#078570 !important' : 'text.primary',
+              bgcolor: activeTab === 'transfer' ? '#e3f2fd' : 'transparent',
+            }}
+          />
+        </Tabs>
+      </Box>
 
       {/* Search */}
       <Box mb={3}>
