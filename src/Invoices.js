@@ -58,9 +58,8 @@ import {
 } from 'firebase/firestore';
 import BorderColorRoundedIcon from '@mui/icons-material/BorderColorRounded';
 import { NumericFormat } from "react-number-format";
-import { History } from '@mui/icons-material'; // Add this to existing imports
-import InvoiceHistory from './InvoiceHistory'; // Add this import
-
+import { History } from '@mui/icons-material';
+import InvoiceHistory from './InvoiceHistory';
 
 const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
   const [clients, setClients] = useState([]);
@@ -81,21 +80,12 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
     message: '',
     severity: 'success'
   });
-  // Payment type for entire invoice
-  const [paymentType, setPaymentType] = useState('cash');
+  
+  // Payment type for entire invoice - NOT pre-selected
+  const [paymentType, setPaymentType] = useState('');
 
-  // New state for multiple products
-  const [invoiceProducts, setInvoiceProducts] = useState([
-    {
-      id: 1,
-      isDefault: true,
-      productName: '',
-      packageType: '',
-      gramm: '',
-      quantity: '',
-      price: ''
-    }
-  ]);
+  // New state for multiple products - starts empty
+  const [invoiceProducts, setInvoiceProducts] = useState([]);
 
   const grammOptions = [
     { value: '1', label: '1 гр' },
@@ -281,11 +271,9 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
     setInvoiceProducts([...invoiceProducts, newProduct]);
   };
 
-  // Remove product row
+  // Remove product row - now works for all products including default
   const removeProductRow = (productId) => {
-    if (invoiceProducts.length > 1) {
-      setInvoiceProducts(invoiceProducts.filter(product => product.id !== productId));
-    }
+    setInvoiceProducts(invoiceProducts.filter(product => product.id !== productId));
   };
 
   // Update product field
@@ -304,8 +292,18 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
     }, 0);
   };
 
-  // Validate all products
+  // Validate all products and payment type
   const validateProducts = () => {
+    // Check if payment type is selected
+    if (!paymentType) {
+      return false;
+    }
+
+    // Check if there are any products
+    if (invoiceProducts.length === 0) {
+      return false;
+    }
+
     for (const product of invoiceProducts) {
       if (product.isDefault) {
         // For default product, it uses client's existing data
@@ -329,113 +327,120 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
   };
 
  const handleCreateInvoice = async () => {
-  if (!selectedClient || !validateProducts()) {
-    setSnackbar({
-      open: true,
-      message: 'Пожалуйста, заполните все поля',
-      severity: 'warning'
-    });
-    return;
-  }
-
-  setGenerating(true);
-
-  try {
-    // Generate invoice number
-    const newInvoiceNumber = generateInvoiceNumber();
-    setInvoiceNumber(newInvoiceNumber);
-
-    // Prepare products data for HTML generation (with resolved names)
-    const productsForInvoice = invoiceProducts.map(product => {
-      if (product.isDefault) {
-        return {
-          productName: selectedClient.fetchedProductName,
-          packageType: selectedClient.fetchedPackageType,
-          gramm: selectedClient.fetchedGramm,
-          quantity: parseFloat(product.quantity),
-          price: parseFloat(product.price)
-        };
-      } else {
-        const selectedProductObj = products.find(p => p.id === product.productName);
-        const selectedPackageObj = packageTypes.find(p => p.id === product.packageType);
-        
-        return {
-          productName: selectedProductObj?.productName || '',
-          packageType: selectedPackageObj?.type || '',
-          gramm: product.gramm,
-          quantity: parseFloat(product.quantity),
-          price: parseFloat(product.price)
-        };
+    if (!selectedClient || !validateProducts()) {
+      let message = 'Пожалуйста, заполните все поля';
+      if (!paymentType) {
+        message = 'Пожалуйста, выберите тип оплаты';
+      } else if (invoiceProducts.length === 0) {
+        message = 'Пожалуйста, добавьте хотя бы один товар';
       }
-    });
+      
+      setSnackbar({
+        open: true,
+        message: message,
+        severity: 'warning'
+      });
+      return;
+    }
 
-    // Generate HTML content
-    const htmlContent = generateInvoiceHTML(
-      selectedClient, 
-      productsForInvoice, 
-      newInvoiceNumber, 
-      senderCompany,
-      customRestaurantName,
-      paymentType
-    );
+    setGenerating(true);
 
-    // Create blob URL
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    setGeneratedInvoiceUrl(url);
+    try {
+      // Generate invoice number
+      const newInvoiceNumber = generateInvoiceNumber();
+      setInvoiceNumber(newInvoiceNumber);
 
-    // Save invoice record with consistent ID structure
-    const invoiceData = {
-      dateCreated: Timestamp.now(),
-      products: invoiceProducts.map(product => {
+      // Prepare products data for HTML generation (with resolved names)
+      const productsForInvoice = invoiceProducts.map(product => {
         if (product.isDefault) {
           return {
-            productID_2: selectedClient.productID_2,
-            packageID: selectedClient.packageID,
+            productName: selectedClient.fetchedProductName,
+            packageType: selectedClient.fetchedPackageType,
             gramm: selectedClient.fetchedGramm,
             quantity: parseFloat(product.quantity),
-            price: parseFloat(product.price),
-            totalPrice: parseFloat(product.quantity) * parseFloat(product.price)
+            price: parseFloat(product.price)
           };
         } else {
+          const selectedProductObj = products.find(p => p.id === product.productName);
+          const selectedPackageObj = packageTypes.find(p => p.id === product.packageType);
+          
           return {
-            productID_2: product.productName, // productName хранит ID
-            packageID: product.packageType,   // packageType хранит ID
+            productName: selectedProductObj?.productName || '',
+            packageType: selectedPackageObj?.type || '',
             gramm: product.gramm,
             quantity: parseFloat(product.quantity),
-            price: parseFloat(product.price),
-            totalPrice: parseFloat(product.quantity) * parseFloat(product.price)
+            price: parseFloat(product.price)
           };
         }
-      }),
-      totalInvoiceAmount: calculateTotalAmount(),
-      invoiceNumber: newInvoiceNumber,
-      userID: currentUser?.uid || "unknown",
-      userName: currentUser?.name || "Unknown User",
-      senderCompany: senderCompany,
-      customRestaurantName: customRestaurantName || selectedClient.displayRestaurantName,
-      paymentType: paymentType
-    };
+      });
 
-    await addDoc(collection(db, `clients/${selectedClient.id}/invoices`), invoiceData);
+      // Generate HTML content
+      const htmlContent = generateInvoiceHTML(
+        selectedClient, 
+        productsForInvoice, 
+        newInvoiceNumber, 
+        senderCompany,
+        customRestaurantName,
+        paymentType
+      );
 
-    setSnackbar({
-      open: true,
-      message: 'Накладная успешно создана!',
-      severity: 'success'
-    });
+      // Create blob URL
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      setGeneratedInvoiceUrl(url);
 
-  } catch (error) {
-    console.error('Error creating invoice:', error);
-    setSnackbar({
-      open: true,
-      message: 'Ошибка при создании накладной',
-      severity: 'error'
-    });
-  } finally {
-    setGenerating(false);
-  }
-};
+      // Save invoice record with consistent ID structure
+      const invoiceData = {
+        dateCreated: Timestamp.now(),
+        products: invoiceProducts.map(product => {
+          if (product.isDefault) {
+            return {
+              productID_2: selectedClient.productID_2,
+              packageID: selectedClient.packageID,
+              gramm: selectedClient.fetchedGramm,
+              quantity: parseFloat(product.quantity),
+              price: parseFloat(product.price),
+              totalPrice: parseFloat(product.quantity) * parseFloat(product.price)
+            };
+          } else {
+            return {
+              productID_2: product.productName,
+              packageID: product.packageType,
+              gramm: product.gramm,
+              quantity: parseFloat(product.quantity),
+              price: parseFloat(product.price),
+              totalPrice: parseFloat(product.quantity) * parseFloat(product.price)
+            };
+          }
+        }),
+        totalInvoiceAmount: calculateTotalAmount(),
+        invoiceNumber: newInvoiceNumber,
+        userID: currentUser?.uid || "unknown",
+        userName: currentUser?.name || "Unknown User",
+        senderCompany: senderCompany,
+        customRestaurantName: customRestaurantName || selectedClient.displayRestaurantName,
+        paymentType: paymentType
+      };
+
+      await addDoc(collection(db, `clients/${selectedClient.id}/invoices`), invoiceData);
+
+      setSnackbar({
+        open: true,
+        message: 'Накладная успешно создана!',
+        severity: 'success'
+      });
+
+    } catch (error) {
+      console.error('Error creating invoice:', error);
+      setSnackbar({
+        open: true,
+        message: 'Ошибка при создании накладной',
+        severity: 'error'
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   // Handle download
   const handleDownload = () => {
@@ -453,30 +458,20 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
   const handleCloseModal = () => {
     setModalOpen(false);
     setSelectedClient(null);
-    setInvoiceProducts([
-      {
-        id: 1,
-        isDefault: true,
-        productName: '',
-        packageType: '',
-        gramm: '',
-        quantity: '',
-        price: ''
-      }
-    ]);
+    setInvoiceProducts([]);
     setGeneratedInvoiceUrl('');
     setInvoiceNumber('');
     setSenderCompany('White Ray');
     setCustomRestaurantName('');
-    setPaymentType('cash');
+    setPaymentType(''); // Reset to unselected
   };
 
-  // Handle opening modal
+  // Handle opening modal - now adds default product automatically
   const handleOpenModal = (client) => {
     setSelectedClient(client);
     setCustomRestaurantName(client.displayRestaurantName || "");
     setIsEditingRestaurant(false);
-    setPaymentType('cash');
+    setPaymentType(''); // Reset to unselected
     setInvoiceProducts([
       {
         id: 1,
@@ -498,11 +493,9 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
     }
   };
 
-  // Handle payment type change
-  const handlePaymentTypeChange = (event, newPaymentType) => {
-    if (newPaymentType !== null) {
-      setPaymentType(newPaymentType);
-    }
+  // Handle payment type change - now uses regular event handler
+  const handlePaymentTypeChange = (event) => {
+    setPaymentType(event.target.value);
   };
 
   // This function will be replaced with the HTML template from the second artifact
@@ -1135,6 +1128,7 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
     return htmlTemplate;
 };
 
+
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
@@ -1354,30 +1348,29 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
                 </ToggleButtonGroup>
               </Box>
 
-              {/* Payment Type Selection */}
-             <Box sx={{ mb: 3 }}>
-  <Typography variant="subtitle2" fontWeight="500" gutterBottom>
-    Тип оплаты:
-  </Typography>
-  <RadioGroup
-    row
-    value={paymentType}
-    onChange={handlePaymentTypeChange}
-    name="payment-type"
-  >
-    <FormControlLabel
-      value="cash"
-      control={<Radio />}
-      label="Наличные"
-    />
-    <FormControlLabel
-      value="transfer"
-      control={<Radio />}
-      label="Перечисление"
-    />
-  </RadioGroup>
-</Box>
-
+              {/* Payment Type Selection - NOT pre-selected */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle2" fontWeight="500" gutterBottom>
+                  Тип оплаты:
+                </Typography>
+                <RadioGroup
+                  row
+                  value={paymentType}
+                  onChange={handlePaymentTypeChange}
+                  name="payment-type"
+                >
+                  <FormControlLabel
+                    value="cash"
+                    control={<Radio />}
+                    label="Наличные"
+                  />
+                  <FormControlLabel
+                    value="transfer"
+                    control={<Radio />}
+                    label="Перечисление"
+                  />
+                </RadioGroup>
+              </Box>
 
               <Divider sx={{ 
                 my: 3, 
@@ -1402,18 +1395,32 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
                 </Box>
               </Box>
 
+              {/* No Products Message */}
+              {invoiceProducts.length === 0 && (
+                <Box 
+                  sx={{ 
+                    mt: 3.5, 
+                    p: 4, 
+                    backgroundColor: '#f5f5f5', 
+                    borderRadius: 2,
+                    textAlign: 'center'
+                  }}
+                >
+                  <Typography variant="body1" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    Товары не добавлены. Пожалуйста, нажмите кнопку "Добавить товар" и укажите товар
+                  </Typography>
+                </Box>
+              )}
+
               {invoiceProducts.map((product, index) => (
                 <Card 
                   key={product.id} 
                   sx={{ 
                     mb: 2.5, 
                     p: 3,
-                    // Deeper shadow for основной товар (+15%)
                     boxShadow: product.isDefault ? '0px 4px 12px rgba(0, 0, 0, 0.12)' : 'none',
-                    // Border for additional товары
                     border: product.isDefault ? 'none' : '1px solid #e0e0e0',
                     backgroundColor: product.isDefault ? 'transparent' : '#f8fdff',
-                    // 25% more rounded corners for all cards
                     borderRadius: '10px'
                   }}
                 >
@@ -1423,19 +1430,17 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
                         {product.isDefault ? `Основной товар` : `Дополнительный товар`}
                       </Typography>
                     </Box>
-                    {!product.isDefault && (
-                      <IconButton
-                        onClick={() => removeProductRow(product.id)}
-                        color="error"
-                        size="medium"
-                        sx={{ 
-                          backgroundColor: 'rgba(244, 67, 54, 0.08)',
-                          '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.12)' }
-                        }}
-                      >
-                        <Delete fontSize="small" />
-                      </IconButton>
-                    )}
+                    <IconButton
+                      onClick={() => removeProductRow(product.id)}
+                      color="error"
+                      size="medium"
+                      sx={{ 
+                        backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                        '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.12)' }
+                      }}
+                    >
+                      <Delete fontSize="small" />
+                    </IconButton>
                   </Box>
 
                   {product.isDefault ? (
@@ -1507,12 +1512,16 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
                     <Box sx={{ mb: 2.5 }}>
                       <Grid container spacing={2.5}>
                         <Grid item xs={12} sm={6}>
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="body2" fontWeight="500" color="text.secondary">
+                              Продукт
+                            </Typography>
+                          </Box>
                           <FormControl fullWidth size="medium">
-                            <InputLabel sx={{ fontSize: '15px' }}>Продукт</InputLabel>
                             <Select
                               value={product.productName}
                               onChange={(e) => updateProductField(product.id, 'productName', e.target.value)}
-                              label="Продукт"
+                              displayEmpty
                               sx={{
                                 fontSize: '15px',
                                 '& .MuiSelect-select': {
@@ -1520,6 +1529,9 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
                                 }
                               }}
                             >
+                              <MenuItem value="" disabled sx={{ fontSize: '15px', color: '#999' }}>
+                                Выберите продукт
+                              </MenuItem>
                               {products.map((prod) => (
                                 <MenuItem key={prod.id} value={prod.id} sx={{ fontSize: '15px' }}>
                                   {prod.productName}
@@ -1529,12 +1541,16 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
                           </FormControl>
                         </Grid>
                         <Grid item xs={12} sm={3}>
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="body2" fontWeight="500" color="text.secondary">
+                              Упаковка
+                            </Typography>
+                          </Box>
                           <FormControl fullWidth size="medium">
-                            <InputLabel sx={{ fontSize: '15px' }}>Упаковка</InputLabel>
                             <Select
                               value={product.packageType}
                               onChange={(e) => updateProductField(product.id, 'packageType', e.target.value)}
-                              label="Упаковка"
+                              displayEmpty
                               sx={{
                                 fontSize: '15px',
                                 '& .MuiSelect-select': {
@@ -1542,6 +1558,9 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
                                 }
                               }}
                             >
+                              <MenuItem value="" disabled sx={{ fontSize: '15px', color: '#999' }}>
+                                Выберите упаковку
+                              </MenuItem>
                               {packageTypes.map((pkg) => (
                                 <MenuItem key={pkg.id} value={pkg.id} sx={{ fontSize: '15px' }}>
                                   {pkg.type}
@@ -1551,12 +1570,16 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
                           </FormControl>
                         </Grid>
                         <Grid item xs={12} sm={3}>
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="body2" fontWeight="500" color="text.secondary">
+                              Граммаж
+                            </Typography>
+                          </Box>
                           <FormControl fullWidth size="medium">
-                            <InputLabel sx={{ fontSize: '15px' }}>Граммаж</InputLabel>
                             <Select
                               value={product.gramm}
                               onChange={(e) => updateProductField(product.id, 'gramm', e.target.value)}
-                              label="Граммаж"
+                              displayEmpty
                               sx={{
                                 fontSize: '15px',
                                 '& .MuiSelect-select': {
@@ -1564,6 +1587,9 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
                                 }
                               }}
                             >
+                              <MenuItem value="" disabled sx={{ fontSize: '15px', color: '#999' }}>
+                                Выберите граммаж
+                              </MenuItem>
                               {grammOptions.map((option) => (
                                 <MenuItem key={option.value} value={option.value} sx={{ fontSize: '15px' }}>
                                   {option.label}
@@ -1642,11 +1668,6 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
                     >
                       <Typography variant="body2" fontWeight="500" color="primary">
                         Сумма: {(parseFloat(product.quantity) * parseFloat(product.price)).toLocaleString('ru-RU')} сум
-                        {product.paymentType && (
-                          <span style={{ marginLeft: '10px', fontSize: '12px', color: '#666' }}>
-                            ({paymentTypeOptions.find(opt => opt.value === product.paymentType)?.label})
-                          </span>
-                        )}
                       </Typography>
                     </Box>
                   )}
