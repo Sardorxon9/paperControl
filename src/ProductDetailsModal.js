@@ -48,6 +48,8 @@ import {
   increment
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { PhotoProvider, PhotoView } from 'react-photo-view';
+import EditStandardDesignModal from './EditStandardDesignModal';
 
 const modalStyle = {
   position: 'absolute',
@@ -87,6 +89,8 @@ const ProductDetailsModal = ({ open, onClose, product, currentUser }) => {
   const [showFtulkaModal, setShowFtulkaModal] = useState(false);
   const [ftulkaWeight, setFtulkaWeight] = useState('');
   const [rollToDelete, setRollToDelete] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
 
   useEffect(() => {
     if (!open) {
@@ -393,6 +397,20 @@ const ProductDetailsModal = ({ open, onClose, product, currentUser }) => {
           <IconButton onClick={onClose} sx={{ position: 'absolute', right: 16, top: 16 }}>
             <CloseIcon />
           </IconButton>
+          {/* ADD THIS EDIT BUTTON */}
+<IconButton 
+  onClick={() => setShowEditModal(true)}
+  sx={{ 
+    position: 'absolute', 
+    right: 60, 
+    top: 16,
+    bgcolor: 'primary.main',
+    color: 'white',
+    '&:hover': { bgcolor: 'primary.dark' }
+  }}
+>
+  <EditIcon />
+</IconButton>
 
           <Typography variant="h4" gutterBottom fontWeight="bold">
             {productData?.type || "Продукт"}- 
@@ -438,9 +456,62 @@ const ProductDetailsModal = ({ open, onClose, product, currentUser }) => {
                         {paperInfo?.paperRemaining?.toFixed(2) || '0.00'} кг
                       </Typography>
                     </Box>
+{/* --- Product Image Block --- */}
+{productData?.imageURL1 && (
+  <PhotoProvider
+    toolbarRender={({ rotate, onRotate, scale, onScale, onClose }) => (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '8px',
+        position: 'absolute',
+        top: '20px',
+        right: '20px',
+        background: 'rgba(0, 0, 0, 0.6)',
+        borderRadius: '8px',
+        zIndex: 1000
+      }}>
+        {/* Rotate */}
+        <button onClick={() => onRotate(rotate + 90)} style={{ border: 'none', background: 'transparent', color: '#fff', cursor: 'pointer' }}>
+          ⟳
+        </button>
+        {/* Zoom out */}
+        <button onClick={() => onScale(scale - 0.5)} style={{ border: 'none', background: 'transparent', color: '#fff', cursor: 'pointer' }}>
+          ➖
+        </button>
+        {/* Zoom in */}
+        <button onClick={() => onScale(scale + 0.5)} style={{ border: 'none', background: 'transparent', color: '#fff', cursor: 'pointer' }}>
+          ➕
+        </button>
+        {/* Close */}
+        <button onClick={onClose} style={{ border: 'none', background: 'transparent', color: '#fff', cursor: 'pointer' }}>
+          ✕
+        </button>
+      </div>
+    )}
+  >
+    <PhotoView src={productData.imageURL1}>
+      <Box
+        component="img"
+        src={productData.imageURL1}
+        alt="Product Image"
+        sx={{
+          width: 120,
+          height: 120,
+          objectFit: 'cover',
+          borderRadius: 2,
+          cursor: 'pointer',
+          border: '1px solid #ddd',
+          mt: 2
+        }}
+      />
+    </PhotoView>
+  </PhotoProvider>
+)}
 
                     {/* Shelf Number */}
-                    <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, justifyContent: 'center', mb: 3 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, justifyContent: 'left', mb: 3 }}>
                       <Box display="flex" flexDirection="column" alignItems="center">
                         <Typography variant="body1" color="#9fb1af" sx={{ fontSize: '1.125rem', mb: 1 }}>
                           Номер полки
@@ -750,6 +821,13 @@ const ProductDetailsModal = ({ open, onClose, product, currentUser }) => {
           </Button>
         </DialogActions>
       </Dialog>
+       {/* Edit Standard Design Modal */}
+     <EditStandardDesignModal
+  open={showEditModal}
+  onClose={() => setShowEditModal(false)}
+  productId={product?.id}
+  onSaveSuccess={fetchProductDetails}
+/>
     </>
   );
 };
