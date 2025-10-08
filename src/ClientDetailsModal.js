@@ -51,7 +51,7 @@ import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
 import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
 import EditClientForm from "./EditClientForm";
 import { PhotoProvider, PhotoView } from 'react-photo-view';
-
+import '../src/style/ClientDetailsUI.css'
 const modalStyle = {
   position: 'absolute',
   top: '50%',
@@ -743,6 +743,7 @@ const handleSendViaTelegram = async () => {
   aria-labelledby="client-details-modal"
 >
         <Box
+        className="modal-box"
           sx={{
             ...modalStyle,
             width: '90%',
@@ -784,6 +785,7 @@ const handleSendViaTelegram = async () => {
             <Grid item xs={12} md={4}> {/* <-- Changed sm to md */}
               <Paper
                 elevation={2}
+                 className="paper-section"
                 sx={{
                   p: 2.5,
                   height: '100%',
@@ -1066,7 +1068,7 @@ const handleSendViaTelegram = async () => {
       }}
     >
       {/* Shelf Number */}
-      <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, justifyContent: 'center', mb: 3 }}>
+      <Box  sx={{ display: 'flex', flexDirection: 'row', gap: 3, justifyContent: 'center', mb: 3 }}>
         {/* Номер полки бокс */}
         <Box display="flex" flexDirection="column" alignItems="center">
           <Typography variant="body1" color="#9fb1af" sx={{ fontSize: '1.125rem', mb: 1 }}>
@@ -1126,7 +1128,7 @@ const handleSendViaTelegram = async () => {
       {/* Paper Rolls List */}
       <Box flex={1} sx={{ overflow: 'auto' }}>
         {paperRolls.map((roll, index) => (
-          <Card key={roll.id} sx={{ mb: 2, bgcolor: '#E2F0EE', border: '1px solid #BDDCD8' }}>
+          <Card className="roll-card" key={roll.id} sx={{ mb: 2, bgcolor: '#E2F0EE', border: '1px solid #BDDCD8' }}>
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
               <Box display="flex" justifyContent="space-between" alignItems="flex-start">
                 {/* Left side - Рулон name and weight stacked vertically */}
@@ -1398,6 +1400,7 @@ const handleSendViaTelegram = async () => {
               /* Non-tracking clients get a placeholder */
               <Grid item xs={12} sm={8}>
                 <Paper
+                className="placeholder-paper"
                   elevation={2}
                   sx={{
                     p: 3,
