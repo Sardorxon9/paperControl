@@ -2,7 +2,6 @@
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 export default async function handler(req, res) {
-  // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -22,12 +21,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log('Request body:', req.body);
-    console.log('Bot token exists:', !!TELEGRAM_BOT_TOKEN);
+    const { chatId, userName, firstName, restaurantName, latitude, longitude } = req.body;
 
-    const { chatId, restaurantName, latitude, longitude } = req.body;
-
-    // Validate required fields
     if (!chatId || !restaurantName || !latitude || !longitude) {
       return res.status(400).json({ 
         success: false, 
@@ -36,7 +31,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Validate coordinates
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
     
@@ -49,7 +43,6 @@ export default async function handler(req, res) {
     }
 
     if (!TELEGRAM_BOT_TOKEN) {
-      console.error('TELEGRAM_BOT_TOKEN is not set');
       return res.status(500).json({
         success: false,
         error: 'Server configuration error'
@@ -57,15 +50,12 @@ export default async function handler(req, res) {
     }
 
     const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
+    const ADMIN_CHAT_ID = 685385466;
 
-    console.log('Sending location to Telegram API...');
-
-    // Send location message using fetch
-    const locationResponse = await fetch(`${TELEGRAM_API_URL}/sendLocation`, {
+    // 1️⃣ Send location to user
+    await fetch(`${TELEGRAM_API_URL}/sendLocation`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
         latitude: lat,
@@ -73,41 +63,47 @@ export default async function handler(req, res) {
       })
     });
 
-    const locationData = await locationResponse.json();
-    console.log('Location sent, response:', locationData);
-
-    if (!locationResponse.ok || !locationData.ok) {
-      throw new Error(`Location send failed: ${locationData.description || 'Unknown error'}`);
-    }
-
-    // Send restaurant name as a follow-up message
-    const textResponse = await fetch(`${TELEGRAM_API_URL}/sendMessage`, {
+    // 2️⃣ Send restaurant name
+    await fetch(`${TELEGRAM_API_URL}/sendMessage`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: ` Ресторан: ${restaurantName} ⬆️`,
+        text: `📍 Ресторан: ${restaurantName} ⬆️`,
         parse_mode: 'HTML'
       })
     });
 
-    const textData = await textResponse.json();
-    console.log('Text message sent, response:', textData);
+    // 3️⃣ Notify admin — only if user is not admin himself
+    if (String(chatId) !== String(ADMIN_CHAT_ID)) {
+      const now = new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Tashkent' });
+      const notifyText = `📡 <b>Send Location Triggered</b>\n\n👤 Пользователь: <b>${firstName || '—'}</b> ${userName ? `(@${userName})` : ''}\n🆔 <code>${chatId}</code>\n🏠 <b>Ресторан:</b> ${restaurantName}\n🌍 <b>Координаты:</b> ${lat}, ${lng}\n🕒 <i>${now}</i>`;
 
-    if (!textResponse.ok || !textData.ok) {
-      throw new Error(`Text send failed: ${textData.description || 'Unknown error'}`);
+      await fetch(`${TELEGRAM_API_URL}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: ADMIN_CHAT_ID,
+          text: notifyText,
+          parse_mode: 'HTML'
+        })
+      });
+
+      await fetch(`${TELEGRAM_API_URL}/sendLocation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: ADMIN_CHAT_ID,
+          latitude: lat,
+          longitude: lng
+        })
+      });
     }
 
-    res.json({ 
-      success: true, 
-      message: 'Location sent successfully' 
-    });
+    res.json({ success: true, message: 'Location sent successfully (user + admin notified)' });
 
   } catch (error) {
     console.error('Error in send-location handler:', error);
-    
     res.status(500).json({ 
       success: false, 
       error: 'Failed to send location via Telegram',
