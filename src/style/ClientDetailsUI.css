@@ -3,7 +3,7 @@
   border-radius: 18px !important; /* было ~8–12 */
   box-shadow: 0 6px 22px rgba(0, 0, 0, 0.18) !important; /* мягкая глубокая тень */
   transition: box-shadow 0.25s ease, transform 0.2s ease;
-  margin: 10px;
+ 
 }
 
 .paper-section:hover {
