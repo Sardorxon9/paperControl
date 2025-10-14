@@ -621,7 +621,7 @@ const handleSendViaTelegram = async () => {
     return;
   }
 
-  const { chatId } = currentUser || {};
+   const { chatId, username: userName, first_name: firstName } = currentUser || {};
   if (!chatId) {
     setSnackbar({
       open: true,
@@ -633,34 +633,34 @@ const handleSendViaTelegram = async () => {
 
   setSendingTelegram(true);
 
-  try {
-    // Fixed URL construction - make sure to include https:// for production
+try {
     const serverUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://paper-control.vercel.app'  // Add https:// protocol
+      ? 'https://paper-control.vercel.app'
       : 'http://localhost:3001';
 
     const url = `${serverUrl}/api/send-location`;
-    
+
     console.log('Sending request to:', url); // Debug log
 
     const response = await fetch(url, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'Accept': 'application/json'  // Explicitly request JSON response
+        'Accept': 'application/json'
       },
       body: JSON.stringify({
         chatId,
+        userName,
+        firstName,
         restaurantName: client.restaurant || client.name,
         latitude: client.addressLong.latitude,
         longitude: client.addressLong.longitude,
       }),
     });
 
-    console.log('Response status:', response.status); // Debug log
-    console.log('Response headers:', response.headers); // Debug log
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
 
-    // Check if the response is actually JSON
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
       const textResponse = await response.text();
@@ -677,7 +677,6 @@ const handleSendViaTelegram = async () => {
         severity: 'success',
       });
     } else {
-      // Better error handling for result.error which might be an object
       const errorMessage = typeof result.error === 'string' 
         ? result.error 
         : (result.details || result.message || `HTTP ${response.status}: ${response.statusText}`);
@@ -685,8 +684,7 @@ const handleSendViaTelegram = async () => {
     }
   } catch (error) {
     console.error('Error sending via Telegram:', error);
-    
-    // Better error message handling
+
     let errorMessage = 'Неизвестная ошибка';
     if (error instanceof Error) {
       errorMessage = error.message;
