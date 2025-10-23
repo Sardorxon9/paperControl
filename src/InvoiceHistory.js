@@ -291,6 +291,47 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
     );
   };
 
+  const renderQuantityCell = (invoice) => {
+    if (invoice.products && Array.isArray(invoice.products) && invoice.products.length > 1) {
+      return (
+        <Box>
+          <Typography variant="body2" fontWeight="600">
+            Несколько товаров
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            См. детали
+          </Typography>
+        </Box>
+      );
+    }
+
+    let quantity = 0;
+    let price = 0;
+
+    if (invoice.products && Array.isArray(invoice.products) && invoice.products.length === 1) {
+      const product = invoice.products[0];
+      quantity = product.quantity || 0;
+      price = product.price || 0;
+    } else {
+      quantity = invoice.quantity || 0;
+      price = invoice.price || 0;
+    }
+
+    const boxes = Math.floor(quantity / 1000);
+
+    return (
+      <Box>
+        <Typography variant="body2" fontWeight="600">
+          {quantity.toLocaleString('ru-RU')} шт
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+          {price.toLocaleString('ru-RU')} сум
+        </Typography>
+        
+      </Box>
+    );
+  };
+
   const renderExpandedProducts = (products) => {
     return (
       <Box sx={{ p: 2 }}>
@@ -317,7 +358,7 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
                     <Typography variant="body2">
                       {product.quantity?.toLocaleString('ru-RU')} шт × {product.price} сум
                     </Typography>
-                    <Typography variant="body2" fontWeight="600" color="primary">
+                    <Typography variant="body2" fontWeight="700" color="primary">
                       = {product.totalPrice?.toLocaleString('ru-RU')} сум
                     </Typography>
                   </Box>
@@ -374,7 +415,7 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
 
       {/* Tabs */}
       <Box mb={3}>
-      <Tabs
+        <Tabs
           value={activeTab}
           onChange={(event, newValue) => setActiveTab(newValue)}
           centered
@@ -459,6 +500,9 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
                   </Box>
                 </TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
+                  Количество
+                </TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
                   Общая сумма
                 </TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
@@ -498,6 +542,9 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
                       {renderProductsCell(invoice)}
                     </TableCell>
                     <TableCell>
+                      {renderQuantityCell(invoice)}
+                    </TableCell>
+                    <TableCell>
                       <Typography variant="body2" fontWeight="600" color="primary">
                         {invoice.totalInvoiceAmount?.toLocaleString('ru-RU')} сум
                       </Typography>
@@ -518,7 +565,7 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
                   </TableRow>
                   {expandedRows.has(invoice.id) && invoice.products && invoice.products.length > 1 && (
                     <TableRow>
-                      <TableCell colSpan={7} sx={{ py: 0 }}>
+                      <TableCell colSpan={8} sx={{ py: 0 }}>
                         <Collapse in={expandedRows.has(invoice.id)}>
                           {renderExpandedProducts(invoice.products)}
                         </Collapse>
