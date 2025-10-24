@@ -109,46 +109,37 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
     try {
       setLoading(true);
 
-      const clientsSnapshot = await getDocs(collection(db, "clients"));
-      const allInvoices = [];
+      // Fetch all invoices from the new "all-invoices" collection
+      const allInvoicesSnapshot = await getDocs(
+        query(
+          collection(db, "all-invoices"),
+          orderBy('dateCreated', 'desc')
+        )
+      );
 
-      // загружаем все invoices для каждого клиента
-      const invoicesPromises = clientsSnapshot.docs.map(async (clientDoc) => {
-        const clientData = clientDoc.data();
+      const allInvoices = allInvoicesSnapshot.docs.map(invoiceDoc => {
+        const invoiceData = invoiceDoc.data();
 
-        const invoicesSnapshot = await getDocs(
-          query(
-            collection(db, `clients/${clientDoc.id}/invoices`),
-            orderBy('dateCreated', 'desc')
-          )
-        );
+        // Get product/package from reference map
+        const productName = invoiceData.productID_2
+          ? productsMap[invoiceData.productID_2] || ''
+          : '';
+        const packageType = invoiceData.packageID
+          ? packagesMap[invoiceData.packageID] || ''
+          : '';
 
-        return invoicesSnapshot.docs.map(invoiceDoc => {
-          const invoiceData = invoiceDoc.data();
-
-          // Получаем продукт/упаковку из reference map
-          const productName = invoiceData.productID_2
-            ? productsMap[invoiceData.productID_2] || ''
-            : '';
-          const packageType = invoiceData.packageID
-            ? packagesMap[invoiceData.packageID] || ''
-            : '';
-
-          return {
-            id: invoiceDoc.id,
-            clientId: clientDoc.id,
-            clientOrgName: clientData.orgName || clientData.name || clientData.restaurant || '',
-            clientRestaurant: clientData.name || clientData.restaurant || '',
-            clientProductName: productName,
-            clientPackageType: packageType,
-            ...invoiceData
-          };
-        });
+        return {
+          id: invoiceDoc.id,
+          clientId: invoiceData.clientId || '',
+          clientOrgName: invoiceData.orgName || '',
+          clientRestaurant: invoiceData.customRestaurantName || '',
+          clientProductName: productName,
+          clientPackageType: packageType,
+          ...invoiceData
+        };
       });
 
-      const resolved = await Promise.all(invoicesPromises);
-      const flattened = resolved.flat();
-      setInvoices(flattened);
+      setInvoices(allInvoices);
     } catch (error) {
       console.error("Error fetching invoices:", error);
     } finally {
@@ -190,7 +181,8 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
         invoice.senderCompany?.toLowerCase().includes(searchLower) ||
         invoice.userName?.toLowerCase().includes(searchLower) ||
         invoice.clientProductName?.toLowerCase().includes(searchLower) ||
-        invoice.clientPackageType?.toLowerCase().includes(searchLower)
+        invoice.clientPackageType?.toLowerCase().includes(searchLower) ||
+        invoice.orgName?.toLowerCase().includes(searchLower)
       ));
     }
 
@@ -317,8 +309,6 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
       price = invoice.price || 0;
     }
 
-    const boxes = Math.floor(quantity / 1000);
-
     return (
       <Box>
         <Typography variant="body2" fontWeight="600">
@@ -327,7 +317,6 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
           {price.toLocaleString('ru-RU')} сум
         </Typography>
-        
       </Box>
     );
   };
@@ -475,6 +464,9 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
+                <TableCell sx={{ color: '#fff', fontWeight: 'bold', width: '40px' }}>
+                  №
+                </TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
                   № Накладной
                 </TableCell>
@@ -514,7 +506,7 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredInvoices.map((invoice) => (
+              {filteredInvoices.map((invoice, index) => (
                 <React.Fragment key={invoice.id}>
                   <TableRow
                     sx={{
@@ -522,6 +514,9 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
                       '&:hover': { backgroundColor: '#e3f2fd' }
                     }}
                   >
+                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                      {index + 1}
+                    </TableCell>
                     <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>
                       {invoice.invoiceNumber}
                     </TableCell>
@@ -534,7 +529,7 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
                           {invoice.customRestaurantName || invoice.clientRestaurant}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {invoice.clientOrgName}
+                          {invoice.clientOrgName || invoice.orgName}
                         </Typography>
                       </Box>
                     </TableCell>
@@ -565,7 +560,7 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
                   </TableRow>
                   {expandedRows.has(invoice.id) && invoice.products && invoice.products.length > 1 && (
                     <TableRow>
-                      <TableCell colSpan={8} sx={{ py: 0 }}>
+                      <TableCell colSpan={9} sx={{ py: 0 }}>
                         <Collapse in={expandedRows.has(invoice.id)}>
                           {renderExpandedProducts(invoice.products)}
                         </Collapse>
@@ -594,5 +589,4 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
     </Container>
   );
 };
-
 export default InvoiceHistory;
