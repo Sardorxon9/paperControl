@@ -48,6 +48,12 @@ export default function Analytics({ user, userRole, onBackToDashboard, onLogout 
   const [loading, setLoading] = useState(true);
   const [productStats, setProductStats] = useState({});
   const [topClients, setTopClients] = useState([]);
+  const [paymentStats, setPaymentStats] = useState({
+    cash: 0,
+    transfer: 0,
+    total: 0
+  });
+  const [senderCompanyStats, setSenderCompanyStats] = useState([]);
 
   const [packageStats, setPackageStats] = useState({
     stick: 0,
@@ -113,19 +119,36 @@ export default function Analytics({ user, userRole, onBackToDashboard, onLogout 
         productStats[productName] = (productStats[productName] || 0) + 1;
       });
 
-      // --- Fetch Top Clients by Invoice Total ---
+      // --- Fetch Invoices for Payment Stats and Sender Company Stats ---
       const invoicesSnapshot = await getDocs(collection(db, "all-invoices"));
       const clientTotals = {};
+      const paymentTotals = { cash: 0, transfer: 0 };
+      const senderCompanyTotals = {};
 
       invoicesSnapshot.docs.forEach((doc) => {
         const invoice = doc.data();
         const clientId = invoice.clientId;
         const totalAmount = invoice.totalInvoiceAmount || 0;
+        const paymentType = invoice.paymentType;
+        const senderCompany = invoice.senderCompany || "Неизвестная организация";
 
+        // Client totals
         if (clientId) {
           clientTotals[clientId] = (clientTotals[clientId] || 0) + totalAmount;
         }
+
+        // Payment type totals
+        if (paymentType === "cash") {
+          paymentTotals.cash += totalAmount;
+        } else if (paymentType === "transfer") {
+          paymentTotals.transfer += totalAmount;
+        }
+
+        // Sender company totals
+        senderCompanyTotals[senderCompany] = (senderCompanyTotals[senderCompany] || 0) + totalAmount;
       });
+
+      const totalPayments = paymentTotals.cash + paymentTotals.transfer;
 
       // Create array of clients with totals and sort
       const clientsWithTotals = Object.entries(clientTotals).map(([clientId, total]) => {
@@ -142,6 +165,12 @@ export default function Analytics({ user, userRole, onBackToDashboard, onLogout 
         .sort((a, b) => b.total - a.total)
         .slice(0, 10);
 
+      // Create array of sender companies with totals
+      const senderCompanyData = Object.entries(senderCompanyTotals).map(([company, total]) => ({
+        company,
+        total
+      })).sort((a, b) => b.total - a.total);
+
       // --- Sort logs (latest first) ---
       logsList.sort((a, b) => b.date - a.date);
 
@@ -151,6 +180,12 @@ export default function Analytics({ user, userRole, onBackToDashboard, onLogout 
       setProductStats(productStats);
       setRecentLogs(logsList);
       setTopClients(topClientsData);
+      setPaymentStats({
+        cash: paymentTotals.cash,
+        transfer: paymentTotals.transfer,
+        total: totalPayments
+      });
+      setSenderCompanyStats(senderCompanyData);
     } catch (err) {
       console.error("Error fetching data:", err);
     } finally {
@@ -177,14 +212,14 @@ export default function Analytics({ user, userRole, onBackToDashboard, onLogout 
 
  const chartOptions = {
   cutout: '70%',
-  devicePixelRatio: 3,  // Changed from 2 to 3
+  devicePixelRatio: 3,
   plugins: {
     legend: {
       position: 'bottom',
       labels: {
         padding: 20,
         font: { 
-          size: 16,  // Changed from 14 to 16
+          size: 16,
           family: 'system-ui, -apple-system, sans-serif'
         }
       }
@@ -218,14 +253,14 @@ export default function Analytics({ user, userRole, onBackToDashboard, onLogout 
   };
 
  const productChartOptions = {
-  devicePixelRatio: 3,  // Changed from 2 to 3
+  devicePixelRatio: 3,
   plugins: {
     legend: {
       position: 'bottom',
       labels: {
         padding: 20,
         font: { 
-          size: 14,  // Changed from 12 to 14
+          size: 14,
           family: 'system-ui, -apple-system, sans-serif'
         }
       }
@@ -246,6 +281,51 @@ export default function Analytics({ user, userRole, onBackToDashboard, onLogout 
   maintainAspectRatio: false
 };
 
+  // Payment Stats Chart Data
+  const paymentChartData = {
+    labels: ['Наличные', 'Перечисление'],
+    datasets: [
+      {
+        data: [paymentStats.cash, paymentStats.transfer],
+        backgroundColor: ['#34A853', '#FBBC04'],
+        borderColor: ['#2d8e47', '#d99e00'],
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const paymentChartOptions = {
+    cutout: '70%',
+    devicePixelRatio: 3,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 20,
+          font: { 
+            size: 16,
+            family: 'system-ui, -apple-system, sans-serif'
+          }
+        }
+      },
+      tooltip: {
+        bodyFont: { size: 14 },
+        titleFont: { size: 15 },
+        callbacks: {
+          label: function(context) {
+            const label = context.label || '';
+            const value = context.raw || 0;
+            const percentage = paymentStats.total > 0 
+              ? Math.round((value / paymentStats.total) * 100) 
+              : 0;
+            return `${label}: ${formatNumber(value)} сум (${percentage}%)`;
+          }
+        }
+      }
+    },
+    maintainAspectRatio: false
+  };
+
   // Top Clients Bar Chart Data
   const topClientsChartData = {
     labels: topClients.map(c => c.name),
@@ -264,7 +344,7 @@ export default function Analytics({ user, userRole, onBackToDashboard, onLogout 
   indexAxis: 'y',
   responsive: true,
   maintainAspectRatio: false,
-  devicePixelRatio: 3,  // Changed from 2 to 3
+  devicePixelRatio: 3,
   plugins: {
     legend: {
       display: false
@@ -283,7 +363,7 @@ export default function Analytics({ user, userRole, onBackToDashboard, onLogout 
     x: {
       beginAtZero: true,
       ticks: {
-        font: { size: 13 },  // Added font size
+        font: { size: 13 },
         callback: function(value) {
           return formatNumber(value);
         }
@@ -294,7 +374,7 @@ export default function Analytics({ user, userRole, onBackToDashboard, onLogout 
     },
     y: {
       ticks: {
-        font: { size: 14 }  // Added font size for client names
+        font: { size: 14 }
       },
       grid: {
         display: false
@@ -313,15 +393,38 @@ const centerTextPlugin = {
       const centerY = (top + bottom) / 2;
 
       ctx.save();
-      ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';  // Increased from 24px to 32px
-      ctx.fillStyle = '#000';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(packageStats.total.toString(), centerX, centerY - 15);
+      
+      // Check if this is the payment chart by looking at the data
+      const isPaymentChart = chart.data.labels && 
+        (chart.data.labels.includes('Наличные') || chart.data.labels.includes('Перечисление'));
+      
+      if (isPaymentChart) {
+        // Payment chart - show total with "сум"
+        ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = '#000';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(formatNumber(paymentStats.total), centerX, centerY - 15);
 
-      ctx.font = '16px system-ui, -apple-system, sans-serif';  // Increased from 14px to 16px
-      ctx.fillStyle = '#666';
-      ctx.fillText('Всего клиентов', centerX, centerY + 20);  // Adjusted positioning
+        ctx.font = '14px system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = '#666';
+        ctx.fillText('Всего накладных', centerX, centerY + 15);
+        
+        ctx.font = '13px system-ui, -apple-system, sans-serif';
+        ctx.fillText('сум', centerX, centerY + 35);
+      } else {
+        // Package chart - show total clients
+        ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = '#000';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(packageStats.total.toString(), centerX, centerY - 15);
+
+        ctx.font = '16px system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = '#666';
+        ctx.fillText('Всего клиентов', centerX, centerY + 20);
+      }
+      
       ctx.restore();
     }
   }
@@ -504,10 +607,10 @@ const centerTextPlugin = {
             </Grid>
           </Card>
 
-          {/* 2nd Container - Two Donut Charts */}
+          {/* 2nd Container - Three Donut Charts */}
           <Card elevation={2} sx={{ borderRadius: 3, p: 3 }}>
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={4}>
                 <Box>
                   <Typography variant="h6" fontWeight="bold" gutterBottom>
                     Распределение клиентов по типам упаковки
@@ -518,13 +621,24 @@ const centerTextPlugin = {
                 </Box>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={4}>
                 <Box>
                   <Typography variant="h6" fontWeight="bold" gutterBottom>
                     Распределение клиентов по продуктам
                   </Typography>
                   <Box sx={{ position: 'relative', height: 350, mt: 2 }}>
                     <Doughnut data={productChartData} options={productChartOptions} />
+                  </Box>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <Box>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    Форма оплаты
+                  </Typography>
+                  <Box sx={{ position: 'relative', height: 350, mt: 2 }}>
+                    <Doughnut data={paymentChartData} options={paymentChartOptions} plugins={[centerTextPlugin]} />
                   </Box>
                 </Box>
               </Grid>
@@ -541,7 +655,42 @@ const centerTextPlugin = {
             </Box>
           </Card>
 
-          {/* 4th Container - Recent Logs (Full Width) */}
+          {/* 4th Container - Sender Company Mini Table */}
+          <Card elevation={2} sx={{ borderRadius: 3, p: 3 }}>
+            <Typography variant="h6" fontWeight="bold" gutterBottom>
+              Накладные по организациям
+            </Typography>
+            <TableContainer component={MuiPaper} sx={{ mt: 2 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell><strong>Организация</strong></TableCell>
+                    <TableCell align="right"><strong>Сумма накладных</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {senderCompanyStats.length > 0 ? (
+                    senderCompanyStats.map((item, index) => (
+                      <TableRow key={index} hover>
+                        <TableCell>{item.company}</TableCell>
+                        <TableCell align="right">{formatNumber(item.total)} сум</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={2} align="center">
+                        <Typography variant="body2" color="text.secondary" py={2}>
+                          Нет данных
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Card>
+
+          {/* 5th Container - Recent Logs (Full Width) */}
           <Card elevation={2} sx={{ borderRadius: 3, p: 3 }}>
             <Typography variant="h6" fontWeight="bold" gutterBottom>
               Недавние лог-записи (последние 7 дней)
