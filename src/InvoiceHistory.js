@@ -52,7 +52,7 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
   const [users, setUsers] = useState({});
   const [productsMap, setProductsMap] = useState({});
   const [packagesMap, setPackagesMap] = useState({});
-  const [activeTab, setActiveTab] = useState('cash'); // Default to 'cash' tab
+  const [activeTab, setActiveTab] = useState('all'); // Default to 'all' tab to show all invoices
 
   useEffect(() => {
     fetchReferenceData();
@@ -167,8 +167,10 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
   const handleSearchAndFilter = () => {
     let filtered = invoices;
 
-    // Filter by paymentType based on active tab
-    filtered = filtered.filter(invoice => invoice.paymentType === activeTab);
+    // Filter by paymentType based on active tab (unless 'all' is selected)
+    if (activeTab !== 'all') {
+      filtered = filtered.filter(invoice => invoice.paymentType === activeTab);
+    }
 
     // Apply search query
     if (searchQuery.trim()) {
@@ -421,6 +423,14 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
             },
           }}
         >
+          <Tab
+            label="Все"
+            value="all"
+            sx={{
+              color: activeTab === 'all' ? '#1976d2 !important' : 'text.primary',
+              bgcolor: activeTab === 'all' ? '#e3f2fd' : 'transparent',
+            }}
+          />
           <Tab
             label="Наличные"
             value="cash"

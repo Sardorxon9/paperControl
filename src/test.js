@@ -417,7 +417,16 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
       paymentType: paymentType
     };
 
+    // Save to client's invoices subcollection
     await addDoc(collection(db, `clients/${selectedClient.id}/invoices`), invoiceData);
+
+    // Also save to all-invoices collection for centralized history
+    const allInvoicesData = {
+      ...invoiceData,
+      clientId: selectedClient.id,
+      orgName: selectedClient.displayOrgName || ''
+    };
+    await addDoc(collection(db, 'all-invoices'), allInvoicesData);
 
     setSnackbar({
       open: true,
