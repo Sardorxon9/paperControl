@@ -231,15 +231,41 @@ const [productInputs, setProductInputs] = useState({
   };
 
   const handleAddBranch = () => {
-    const newId = Math.max(...branches.map(b => b.id), 0) + 1;
-    setBranches(prev => [...prev, {
-      id: newId,
-      orgName: "",
-      addressShort: "",
-      geoPoint: "",
-      comment: "",
-      isNew: true // Mark as new branch for saving
-    }]);
+    // If this is the first branch being added and there's existing client data,
+    // convert the existing client data to "Филиал 1" first
+    if (branches.length === 0 && (formData.orgName || formData.addressShort || formData.geoPoint)) {
+      const existingDataAsBranch = {
+        id: 1,
+        orgName: formData.orgName || "",
+        addressShort: formData.addressShort || "",
+        geoPoint: formData.geoPoint || "",
+        comment: formData.comment || "",
+        isNew: true,
+        isConvertedFromClient: true // Mark this as converted from existing client data
+      };
+
+      const newBranch = {
+        id: 2,
+        orgName: "",
+        addressShort: "",
+        geoPoint: "",
+        comment: "",
+        isNew: true
+      };
+
+      setBranches([existingDataAsBranch, newBranch]);
+    } else {
+      // Normal add branch logic
+      const newId = Math.max(...branches.map(b => b.id), 0) + 1;
+      setBranches(prev => [...prev, {
+        id: newId,
+        orgName: "",
+        addressShort: "",
+        geoPoint: "",
+        comment: "",
+        isNew: true
+      }]);
+    }
   };
 
   const handleRemoveBranch = (branchId) => {

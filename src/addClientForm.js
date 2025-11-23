@@ -320,14 +320,46 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
   };
 
   const handleAddBranch = () => {
-    const newId = Math.max(...branches.map(b => b.id), 0) + 1;
-    setBranches(prev => [...prev, {
-      id: newId,
-      orgName: "",
-      addressShort: "",
-      geoPoint: "",
-      comment: ""
-    }]);
+    // If this is the first branch being added and there's existing data in the old fields,
+    // convert the existing data to "Филиал 1" first
+    if (branches.length === 0 && (formData.orgName || formData.addressShort || formData.geoPoint)) {
+      const existingDataAsBranch = {
+        id: 1,
+        orgName: formData.orgName || "",
+        addressShort: formData.addressShort || "",
+        geoPoint: formData.geoPoint || "",
+        comment: formData.comment || ""
+      };
+
+      const newBranch = {
+        id: 2,
+        orgName: "",
+        addressShort: "",
+        geoPoint: "",
+        comment: ""
+      };
+
+      setBranches([existingDataAsBranch, newBranch]);
+
+      // Clear the old form fields since they're now in branches
+      setFormData(prev => ({
+        ...prev,
+        orgName: "",
+        addressShort: "",
+        geoPoint: "",
+        comment: ""
+      }));
+    } else {
+      // Normal add branch logic
+      const newId = Math.max(...branches.map(b => b.id), 0) + 1;
+      setBranches(prev => [...prev, {
+        id: newId,
+        orgName: "",
+        addressShort: "",
+        geoPoint: "",
+        comment: ""
+      }]);
+    }
   };
 
   const handleRemoveBranch = (branchId) => {
