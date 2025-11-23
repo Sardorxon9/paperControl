@@ -1,5 +1,6 @@
 // Dashboard.js
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Button,
@@ -21,14 +22,12 @@ import {
   Receipt
 } from '@mui/icons-material';
 
-const Dashboard = ({ 
-  user, 
-  userRole, 
-  onNavigateToWelcome, 
-  onNavigateToAnalytics, 
-  onNavigateToInvoices, 
-  onLogout 
+const Dashboard = ({
+  user,
+  userRole,
+  onLogout
 }) => {
+  const navigate = useNavigate();
   return (
     <Container maxWidth="md" sx={{ mt: 6 }}>
       <Paper elevation={4} sx={{ p: 4, mb: 4 }}>
@@ -68,7 +67,7 @@ const Dashboard = ({
               '&:hover': { backgroundColor: '#0c7a6e' }
             }}
             startIcon={<Assignment />}
-            onClick={onNavigateToWelcome}
+            onClick={() => navigate('/welcome')}
           >
             Открыть
           </Button>
@@ -88,7 +87,7 @@ const Dashboard = ({
                 '&:hover': { backgroundColor: '#3367d6' }
               }}
               startIcon={<AnalyticsIcon />}
-              onClick={onNavigateToAnalytics}
+              onClick={() => navigate('/analytics')}
             >
               Открыть
             </Button>
@@ -109,7 +108,7 @@ const Dashboard = ({
                 backgroundColor: '#0F9D8C',
                 '&:hover': { backgroundColor: '#0c7a6e' }
               }}
-              onClick={onNavigateToInvoices}
+              onClick={() => navigate('/invoices')}
             >
               Накладные
             </Button>

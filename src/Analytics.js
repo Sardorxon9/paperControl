@@ -1,5 +1,6 @@
 // Analytics.js
 import { useEffect, useState } from "react";
+import { useNavigate } from 'react-router-dom';
 import {
   collection,
   getDocs,
@@ -41,8 +42,8 @@ import { subDays } from "date-fns";
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
-export default function Analytics({ user, userRole, onBackToDashboard, onLogout }) {
-    
+export default function Analytics({ user, userRole, onLogout }) {
+  const navigate = useNavigate();
   const [clientData, setClientData] = useState([]);
   const [recentLogs, setRecentLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -452,7 +453,7 @@ const centerTextPlugin = {
               cursor: 'pointer',
               "&:hover": { opacity: 0.8 }
             }}
-            onClick={onBackToDashboard}
+            onClick={() => navigate('/')}
           >
             <img
               src="https://whiteray.uz/images/whiteray_1200px_logo_green.png"
@@ -465,7 +466,7 @@ const centerTextPlugin = {
             <Button
               variant="outlined"
               startIcon={<ArrowBackIcon />}
-              onClick={onBackToDashboard}
+              onClick={() => navigate('/')}
               sx={{
                 color: '#0F9D8C',
                 borderColor: '#0F9D8C',

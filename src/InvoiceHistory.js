@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Typography,
@@ -39,7 +40,8 @@ import {
   orderBy
 } from 'firebase/firestore';
 
-const InvoiceHistory = ({ onNavigateToInvoices }) => {
+const InvoiceHistory = () => {
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState([]);
   const [filteredInvoices, setFilteredInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -374,7 +376,7 @@ const InvoiceHistory = ({ onNavigateToInvoices }) => {
     <Container maxWidth="xl" sx={{ mt: 4 }}>
       {/* Header */}
       <Box display="flex" alignItems="center" gap={2} mb={3}>
-        <IconButton onClick={onNavigateToInvoices} color="primary">
+        <IconButton onClick={() => navigate('/invoices')} color="primary">
           <ArrowBack />
         </IconButton>
         <History color="primary" sx={{ fontSize: 32 }} />

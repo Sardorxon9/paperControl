@@ -1,6 +1,7 @@
 // Welcome.js - Fixed version with proper productID_2 usage
 
 import { useEffect, useState } from "react";
+import { useNavigate } from 'react-router-dom';
 import {
   collection,
   getDocs,
@@ -93,7 +94,8 @@ const getColumnHeaders = (userRole) => {
   }
 };
 
-export default function Welcome({ user, userRole, onBackToDashboard, onLogout }) {
+export default function Welcome({ user, userRole, onLogout }) {
+  const navigate = useNavigate();
   const [clientData, setClientData] = useState([]);
   const [productTypesData, setProductTypesData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1164,7 +1166,7 @@ const ClientsTable = () => (
                 cursor: 'pointer',
                 "&:hover": { opacity: 0.8 }
               }}
-              onClick={onBackToDashboard}
+              onClick={() => navigate('/')}
             >
               <img
                 src="https://whiteray.uz/images/whiteray_1200px_logo_green.png"

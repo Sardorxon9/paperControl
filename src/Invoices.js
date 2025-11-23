@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Typography,
@@ -61,7 +62,8 @@ import { NumericFormat } from "react-number-format";
 import { History } from '@mui/icons-material';
 import InvoiceHistory from './InvoiceHistory';
 
-const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
+const Invoices = ({ currentUser }) => {
+  const navigate = useNavigate();
   const [clients, setClients] = useState([]);
   const [products, setProducts] = useState([]);
   const [packageTypes, setPackageTypes] = useState([]);
@@ -1150,7 +1152,7 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
     <Container maxWidth="lg" sx={{ mt: 4 }}>
       {/* Header */}
       <Box display="flex" alignItems="center" gap={2} mb={3}>
-        <IconButton onClick={onNavigateToWelcome} color="primary">
+        <IconButton onClick={() => navigate('/welcome')} color="primary">
           <ArrowBack />
         </IconButton>
         <Typography variant="h4" color="primary">
@@ -1176,7 +1178,7 @@ const Invoices = ({ onNavigateToWelcome,onNavigateToHistory,currentUser }) => {
             <Button
               variant="outlined"
               startIcon={<History />}
-              onClick={onNavigateToHistory}
+              onClick={() => navigate('/invoices/history')}
               sx={{
                 borderColor: '#3c7570ff',
                 color: '#3c7570ff',
