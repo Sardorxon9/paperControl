@@ -938,7 +938,7 @@ const ClientsTable = () => (
                               <Typography
                                 variant="body2"
                                 sx={{
-                                  color: '#0F9D8C',
+                                  color: '#04907F',
                                   fontWeight: 400,
                                   fontSize: '0.85rem'
                                 }}
@@ -950,7 +950,7 @@ const ClientsTable = () => (
                                 <Typography
                                   variant="body2"
                                   sx={{
-                                    color: '#0F9D8C',
+                                    color: '#04907F',
                                     fontWeight: 400,
                                     fontSize: '0.85rem'
                                   }}
@@ -967,11 +967,11 @@ const ClientsTable = () => (
                           color="primary"
                           size="small"
                           sx={{
-                            color: '#0F9D8C',
-                            borderColor: '#0F9D8C',
+                            color: '#04907F',
+                            borderColor: '#04907F',
                             '&:hover': {
-                              borderColor: '#0c7a6e',
-                              color: '#0c7a6e'
+                              borderColor: '#037569',
+                              color: '#037569'
                             }
                           }}
                           onClick={() => handleOpenModal(client)}
@@ -1168,11 +1168,11 @@ const ClientsTable = () => (
                     color="primary"
                     size="small"
                     sx={{
-                      color: '#0F9D8C',
-                      borderColor: '#0F9D8C',
+                      color: '#04907F',
+                      borderColor: '#04907F',
                       '&:hover': {
-                        borderColor: '#0c7a6e',
-                        color: '#0c7a6e'
+                        borderColor: '#037569',
+                        color: '#037569'
                       }
                     }}
                     onClick={() => handleOpenProductModal(product)}
@@ -1279,8 +1279,8 @@ const ClientsTable = () => (
                       startIcon={<AddIcon />}
                       onClick={handleOpenAddClientModal}
                       sx={{
-                        backgroundColor: '#0F9D8C',
-                        '&:hover': { backgroundColor: '#0c7a6e' },
+                        backgroundColor: '#04907F',
+                        '&:hover': { backgroundColor: '#037569' },
                         fontSize: '0.85rem',
                         px: 2.5,
                         py: 0.8,
@@ -1297,8 +1297,8 @@ const ClientsTable = () => (
                       startIcon={<AddIcon />}
                       onClick={() => setShowAddStandardDesignModal(true)}
                       sx={{
-                        backgroundColor: '#0F9D8C',
-                        '&:hover': { backgroundColor: '#0c7a6e' },
+                        backgroundColor: '#04907F',
+                        '&:hover': { backgroundColor: '#037569' },
                         fontSize: '0.85rem',
                         px: 2.5,
                         py: 0.8,
@@ -1362,10 +1362,10 @@ const ClientsTable = () => (
             onChange={handleTabChange}
             sx={{
               '& .MuiTab-root.Mui-selected': {
-                color: '#0F9D8C',
+                color: '#04907F',
               },
               '& .MuiTabs-indicator': {
-                backgroundColor: '#0F9D8C',
+                backgroundColor: '#04907F',
                 fontWeight: '700',
               },
             }}

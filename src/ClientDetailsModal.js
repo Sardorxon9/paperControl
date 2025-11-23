@@ -52,7 +52,8 @@ import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
 import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
 import EditClientForm from "./EditClientForm";
 import { PhotoProvider, PhotoView } from 'react-photo-view';
-import '../src/style/ClientDetailsUI.css'
+import '../src/style/ClientDetailsUI.css';
+import './components/ui/css/ClientDetailsModal.css';
 const modalStyle = {
   position: 'absolute',
   top: '50%',
@@ -81,10 +82,6 @@ export default function ClientDetailsModal({
   const [paperRolls, setPaperRolls] = useState([]);
   const [logs, setLogs] = useState([]);
   const [productType, setProductType] = useState(null);
-
-  // Branch state
-  const [branches, setBranches] = useState([]);
-  const [selectedBranchIndex, setSelectedBranchIndex] = useState(0);
   
   // Paper addition state
   const [addingPaper, setAddingPaper] = useState(false);
@@ -132,9 +129,6 @@ const [openEdit, setOpenEdit] = useState(false);
     if (hasTracking) {
       fetchPaperRolls();
     }
-
-    // Fetch branches
-    fetchBranches();
 
     // NEW: Fetch product name and package type data in parallel
     const fetchProductDetails = async () => {
@@ -240,66 +234,38 @@ const fetchPackageType = async (packageID) => {
 };
 
 // Fetch branches from subcollection
-const fetchBranches = async () => {
-  if (!client?.id) return;
-
-  try {
-    const branchesRef = collection(db, `clients/${client.id}/branches`);
-    const branchesQuery = query(branchesRef, orderBy('branchIndex', 'asc'));
-    const branchesSnapshot = await getDocs(branchesQuery);
-
-    if (!branchesSnapshot.empty) {
-      const branchesData = branchesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setBranches(branchesData);
-      setSelectedBranchIndex(0); // Default to first branch
-    } else {
-      setBranches([]);
-    }
-  } catch (error) {
-    console.error('Error fetching branches:', error);
-    setBranches([]);
-  }
-};
-
-  
-
 const calculateTotalPaper = () => {
   return paperRolls.reduce((total, roll) => total + (roll.paperRemaining || 0), 0);
 };
 
-// Get current branch data or fallback to client data
-const getCurrentBranchData = () => {
-  if (branches.length > 0 && branches[selectedBranchIndex]) {
-    return branches[selectedBranchIndex];
-  }
-  return null;
-};
-
-// Display values based on branch selection
+// Display values from client data (branches are now separate rows in the table)
 const displayOrgName = () => {
-  const branchData = getCurrentBranchData();
-  return branchData ? branchData.orgName : (client?.orgName || 'Не указано');
+  // Check if this is a branch row (from table)
+  if (client?.branchOrgName) {
+    return client.branchOrgName;
+  }
+  return client?.orgName || 'Не указано';
 };
 
 const displayAddressShort = () => {
-  const branchData = getCurrentBranchData();
-  return branchData ? branchData.addressShort : (client?.addressShort || 'Не указан');
+  if (client?.branchAddress) {
+    return client.branchAddress;
+  }
+  return client?.addressShort || 'Не указан';
 };
 
 const displayGeoPoint = () => {
-  const branchData = getCurrentBranchData();
-  if (branchData && branchData.addressLong) {
-    return `${branchData.addressLong.latitude}, ${branchData.addressLong.longitude}`;
+  if (client?.branchLocation) {
+    return `${client.branchLocation.latitude}, ${client.branchLocation.longitude}`;
   }
   return client?.addressLong ? `${client.addressLong.latitude}, ${client.addressLong.longitude}` : 'Не указан';
 };
 
 const displayComment = () => {
-  const branchData = getCurrentBranchData();
-  return branchData ? (branchData.comment || 'Нет комментария') : (client?.comment || 'Нет комментария');
+  if (client?.branchComment) {
+    return client.branchComment || 'Нет комментария';
+  }
+  return client?.comment || 'Нет комментария';
 };
 
   // Handle adding new paper (Priyemka functionality)
@@ -788,10 +754,6 @@ try {
   setFtulkaWeight('');
   setRollToDelete(null);
 
-  // Reset branch states
-  setBranches([]);
-  setSelectedBranchIndex(0);
-
   onClose();
 };
 
@@ -861,11 +823,11 @@ try {
                   bgcolor: '#fafafa',
                 }}
               >
-                <Box textAlign="left" mb={3}>
-                  <Typography variant="h4" fontWeight="bold" mb={1} sx={{ fontSize: '1.6rem' }}>
+                <Box textAlign="left" mb={3.5}>
+                  <Typography variant="h4" fontWeight="bold" mb={1.5} sx={{ fontSize: '1.9rem' }}>
                     {client.restaurant || client.name}
                   </Typography>
-              <Typography variant="h6" color="#0F9D8C" mb={2} sx={{ fontSize: '1.2rem' }}>
+              <Typography variant="h6" color="#04907F" mb={2.5} sx={{ fontSize: '1.45rem' }}>
   {packageType || productName 
     ? `${packageType || ''}${packageType && productName ? ', ' : ''}${productName || ''}`
     : 'Загрузка...'
@@ -1026,40 +988,10 @@ try {
 
                 </Box>
 
-                {/* Branch tabs */}
-                {branches.length > 0 && (
-                  <Box sx={{ mt: 2, mb: 2 }}>
-                    <Typography variant="body2" color="#727d7b" sx={{ fontSize: '0.9rem', mb: 1 }}>
-                      Филиалы:
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      {branches.map((branch, index) => (
-                        <Chip
-                          key={branch.id}
-                          label={branch.branchName ? `Филиал ${branch.branchName}` : `Филиал ${index + 1}`}
-                          onClick={() => setSelectedBranchIndex(index)}
-                          color={selectedBranchIndex === index ? "primary" : "default"}
-                          variant={selectedBranchIndex === index ? "filled" : "outlined"}
-                          sx={{
-                            cursor: 'pointer',
-                            fontWeight: selectedBranchIndex === index ? 600 : 400,
-                            backgroundColor: selectedBranchIndex === index ? '#0F9D8C' : 'transparent',
-                            borderColor: selectedBranchIndex === index ? '#0F9D8C' : '#0F9D8C',
-                            color: selectedBranchIndex === index ? 'white' : '#0F9D8C',
-                            '&:hover': {
-                              backgroundColor: selectedBranchIndex === index ? '#0c7a6e' : 'rgba(15, 157, 140, 0.08)'
-                            }
-                          }}
-                        />
-                      ))}
-                    </Box>
-                  </Box>
-                )}
-
-                <Stack spacing={2}>
+                <Stack spacing={3} sx={{ mt: 3 }}>
                   <Box>
-                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-                      <Typography variant="body1" color="#727d7b" sx={{ fontSize: '1.125rem' }}>
+                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5}>
+                      <Typography variant="body1" color="#727d7b" sx={{ fontSize: '1.35rem' }}>
                         Гео-локация :
                       </Typography>
                       {client.addressLong?.latitude && client.addressLong?.longitude && (
@@ -1088,58 +1020,58 @@ try {
                     <Typography
                       variant="h6"
                       color="#3b403fff"
-                      sx={{ fontSize: '1.25rem', fontWeight: '600' }}
+                      sx={{ fontSize: '1.5rem', fontWeight: '600' }}
                     >
                       {displayGeoPoint()}
                     </Typography>
                   </Box>
 
                   <Box>
-                    <Typography variant="body1" color="#727d7b" sx={{ fontSize: '1.125rem' }}>
+                    <Typography variant="body1" color="#727d7b" sx={{ fontSize: '1.35rem' }}>
                       Название фирмы:
                     </Typography>
                     <Typography
                       variant="h6"
                       color="#3b403fff"
-                      sx={{ fontSize: '1.25rem', fontWeight: '600' }}
+                      sx={{ fontSize: '1.5rem', fontWeight: '600' }}
                     >
                       {displayOrgName()}
                     </Typography>
                   </Box>
 
                   <Box>
-                    <Typography variant="body1" color="#727d7b" sx={{ fontSize: '1.125rem' }}>
+                    <Typography variant="body1" color="#727d7b" sx={{ fontSize: '1.35rem' }}>
                       Адрес:
                     </Typography>
                     <Typography
                       variant="h6"
                       color="#3b403fff"
-                      sx={{ fontSize: '1.25rem', fontWeight: '600' }}
+                      sx={{ fontSize: '1.5rem', fontWeight: '600' }}
                     >
                       {displayAddressShort()}
                     </Typography>
                   </Box>
 
                   <Box>
-                    <Typography variant="body1" color="#727d7b" sx={{ fontSize: '1.125rem' }}>
+                    <Typography variant="body1" color="#727d7b" sx={{ fontSize: '1.35rem' }}>
                       Комментарий:
                     </Typography>
                     <Typography
                       variant="h6"
                       color="#3b403fff"
-                      sx={{ fontSize: '1.25rem', fontWeight: '600' }}
+                      sx={{ fontSize: '1.5rem', fontWeight: '600' }}
                     >
                       {displayComment()}
                     </Typography>
                   </Box>
                     <Box>
-                   <Typography variant="body1" color="#727d7b" sx={{ fontSize: '1.125rem' }}>
+                   <Typography variant="body1" color="#727d7b" sx={{ fontSize: '1.35rem' }}>
   Куплено за все время:
 </Typography>
 <Typography
   variant="h6"
   color="#3b403fff"
-  sx={{ fontSize: '1.25rem', fontWeight: '600' }}
+  sx={{ fontSize: '1.5rem', fontWeight: '600' }}
 >
  {client.totalKg ? `${client.totalKg.toFixed(2)} кг` : '0.00 кг'}
 </Typography>
@@ -1166,7 +1098,7 @@ try {
       <Box  sx={{ display: 'flex', flexDirection: 'row', gap: 3, justifyContent: 'center', mb: 3 }}>
         {/* Номер полки бокс */}
         <Box display="flex" flexDirection="column" alignItems="center">
-          <Typography variant="body1" color="#9fb1af" sx={{ fontSize: '1.125rem', mb: 1 }}>
+          <Typography variant="body1" color="#9fb1af" sx={{ fontSize: '1.35rem', mb: 1 }}>
             Номер полки
           </Typography>
           <Box
@@ -1190,7 +1122,7 @@ try {
 
         {/* В наличии бокс */}
         <Box display="flex" flexDirection="column" alignItems="center">
-          <Typography variant="body1" color="#9fb1af" sx={{ fontSize: '1.125rem', mb: 1 }}>
+          <Typography variant="body1" color="#9fb1af" sx={{ fontSize: '1.35rem', mb: 1 }}>
             В наличии имеется
           </Typography>
           <Box
@@ -1316,7 +1248,7 @@ try {
                       size="small"
                       variant="contained"
                       sx={{
-                        backgroundColor: '#0F9D8C',
+                        backgroundColor: '#04907F',
                         '&:hover': { backgroundColor: '#0b7f73' }
                       }}
                       onClick={() => handleStartEditRoll(roll.id, roll.paperRemaining)}
@@ -1347,12 +1279,12 @@ try {
                     height: '100%'
                   }}
                 >
-                  <Typography variant="h6" textAlign="center" mb={2}>
+                  <Typography variant="h6" textAlign="center" mb={2.5}>
                     Приемка новой бумаги
                   </Typography>
 
                   {/* Add Paper Section */}
-                  <Box mb={3}>
+                  <Box mb={3.5}>
                     {showAddPaperInput ? (
                       <Stack spacing={2}>
                       <TextField
@@ -1473,7 +1405,7 @@ try {
           </TableCell>
           <TableCell>
             <Box display="flex" alignItems="center" gap={1}>
-              <Typography sx={{ fontSize: '1.2rem' }}>
+              <Typography sx={{ fontSize: '1.45rem' }}>
                 {actionDisplay.icon}
               </Typography>
             </Box>

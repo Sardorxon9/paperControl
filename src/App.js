@@ -13,6 +13,7 @@ import Invoices from './Invoices';
 import InvoiceHistory from './InvoiceHistory';
 
 import { CircularProgress, Box } from '@mui/material';
+import './styles/mobile-responsive.css';
 
 function App() {
   const [user, setUser] = useState(null);

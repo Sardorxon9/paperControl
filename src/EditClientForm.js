@@ -626,11 +626,11 @@ const handleSubmit = async (e) => {
                     startIcon={<AddIcon />}
                     onClick={handleAddBranch}
                     sx={{
-                      borderColor: '#0F9D8C',
-                      color: '#0F9D8C',
+                      borderColor: '#04907F',
+                      color: '#04907F',
                       '&:hover': {
-                        borderColor: '#0c7a6e',
-                        backgroundColor: 'rgba(15, 157, 140, 0.04)'
+                        borderColor: '#037569',
+                        backgroundColor: 'rgba(4, 144, 127, 0.04)'
                       }
                     }}
                   >
@@ -658,12 +658,12 @@ const handleSubmit = async (e) => {
                       sx={{
                         p: 2,
                         backgroundColor: '#f0faf9',
-                        border: '1.5px solid #0F9D8C',
+                        border: '1.5px solid #04907F',
                         borderRadius: 2
                       }}
                     >
                       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                        <Typography variant="h6" sx={{ fontWeight: 600, color: '#0F9D8C' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 600, color: '#04907F' }}>
                           Филиал {index + 1}
                         </Typography>
                         <IconButton

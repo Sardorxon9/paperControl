@@ -1,0 +1,170 @@
+/* Mobile Responsive Styles for Paper Control App */
+/* Optimized for 50+ users with easy readability */
+
+/* Base responsive improvements */
+@media (max-width: 900px) {
+  /* Better table scrolling on mobile */
+  .MuiTableContainer-root {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Larger tap targets for buttons */
+  .MuiButton-root {
+    min-height: 48px;
+    font-size: 1.1rem !important;
+    padding: 12px 20px !important;
+  }
+
+  /* Better card spacing on mobile */
+  .MuiCard-root {
+    margin-bottom: 1.5rem;
+  }
+
+  /* Paper roll cards - stacked layout */
+  .paper-roll-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .paper-roll-card {
+    width: 100% !important;
+    padding: 1.5rem !important;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Make text inputs larger on mobile */
+  .MuiTextField-root input {
+    font-size: 1.2rem !important;
+    padding: 14px !important;
+  }
+
+  .MuiInputLabel-root {
+    font-size: 1.1rem !important;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 600px) {
+  /* Hide less critical table columns on small screens */
+  .hide-mobile {
+    display: none !important;
+  }
+
+  /* Stack table cells vertically */
+  .mobile-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* Larger modal titles */
+  .MuiDialogTitle-root {
+    font-size: 1.75rem !important;
+    padding: 20px !important;
+  }
+
+  /* Better modal content spacing */
+  .MuiDialogContent-root {
+    padding: 20px !important;
+  }
+
+  /* Paper rolls - mobile optimized cards */
+  .paper-roll-mobile-card {
+    background: #fafafa;
+    border: 2px solid #04907F;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 3px 10px rgba(4, 144, 127, 0.15);
+  }
+
+  .paper-roll-mobile-card:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 5px rgba(4, 144, 127, 0.2);
+  }
+
+  .paper-weight-large {
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    color: #04907F !important;
+    margin-bottom: 0.5rem;
+  }
+
+  .paper-date-mobile {
+    font-size: 1.1rem !important;
+    color: #727d7b !important;
+  }
+
+  /* Action buttons in mobile cards */
+  .mobile-action-buttons {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .mobile-action-buttons button {
+    flex: 1;
+    min-width: 120px;
+    font-size: 1.1rem !important;
+    padding: 12px 16px !important;
+  }
+
+  /* Client table mobile improvements */
+  .client-table-mobile {
+    font-size: 1.1rem;
+  }
+
+  .client-name-mobile {
+    font-size: 1.3rem !important;
+    font-weight: 600 !important;
+    margin-bottom: 0.5rem;
+  }
+
+  .client-org-mobile {
+    font-size: 1.05rem !important;
+    color: #04907F !important;
+  }
+
+  /* Make search input larger */
+  .search-input-mobile input {
+    font-size: 1.2rem !important;
+    padding: 16px !important;
+  }
+
+  /* Tabs mobile */
+  .MuiTab-root {
+    font-size: 1.1rem !important;
+    min-height: 56px !important;
+  }
+}
+
+/* Landscape mobile */
+@media (max-width: 900px) and (orientation: landscape) {
+  .MuiDialog-paper {
+    max-height: 85vh !important;
+  }
+}
+
+/* Touch-friendly improvements for all mobile */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger click targets */
+  .MuiIconButton-root {
+    padding: 14px !important;
+  }
+
+  /* Better spacing between interactive elements */
+  .MuiButton-root + .MuiButton-root {
+    margin-left: 12px;
+  }
+
+  /* Prevent text selection on buttons */
+  button {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}

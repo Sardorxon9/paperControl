@@ -1322,9 +1322,9 @@ const Invoices = ({ currentUser }) => {
                       variant="contained"
                       startIcon={<Receipt />}
                       sx={{
-                        backgroundColor: '#0F9D8C',
+                        backgroundColor: '#04907F',
                         fontSize: '12px',
-                        '&:hover': { backgroundColor: '#0c7a6e' }
+                        '&:hover': { backgroundColor: '#037569' }
                       }}
                       onClick={() => handleOpenModal(client)}
                     >

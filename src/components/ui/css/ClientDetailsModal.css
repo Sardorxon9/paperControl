@@ -1,0 +1,102 @@
+/* Enhanced Client Details Modal Styles for Better Readability (50+ users) */
+
+.client-details-modal {
+  font-size: 16px;
+}
+
+.client-details-modal .modal-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #3b403f;
+}
+
+.client-details-modal .modal-subtitle {
+  font-size: 1.4rem;
+  color: #04907F;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.client-details-modal .info-label {
+  font-size: 1.1rem;
+  color: #727d7b;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.client-details-modal .info-value {
+  font-size: 1.3rem;
+  color: #3b403f;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.client-details-modal .section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #04907F;
+  margin-top: 2rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #04907F;
+  padding-bottom: 0.5rem;
+}
+
+.client-details-modal .paper-roll-item {
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #fafafa;
+}
+
+.client-details-modal .paper-roll-item:hover {
+  border-color: #04907F;
+  background-color: #e8f5f3;
+}
+
+.client-details-modal .paper-weight {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #04907F;
+}
+
+.client-details-modal .paper-date {
+  font-size: 1rem;
+  color: #727d7b;
+}
+
+.client-details-modal .btn-primary {
+  font-size: 1.1rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.client-details-modal .btn-secondary {
+  font-size: 1rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+}
+
+@media (max-width: 768px) {
+  .client-details-modal .modal-title {
+    font-size: 1.75rem;
+  }
+
+  .client-details-modal .modal-subtitle {
+    font-size: 1.2rem;
+  }
+
+  .client-details-modal .info-value {
+    font-size: 1.2rem;
+  }
+
+  .client-details-modal .paper-weight {
+    font-size: 1.3rem;
+  }
+
+  .client-details-modal .section-title {
+    font-size: 1.3rem;
+  }
+}
