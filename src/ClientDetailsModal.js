@@ -1036,7 +1036,7 @@ try {
                       {branches.map((branch, index) => (
                         <Chip
                           key={branch.id}
-                          label={`Филиал ${index + 1}`}
+                          label={branch.branchName ? `Филиал ${branch.branchName}` : `Филиал ${index + 1}`}
                           onClick={() => setSelectedBranchIndex(index)}
                           color={selectedBranchIndex === index ? "primary" : "default"}
                           variant={selectedBranchIndex === index ? "filled" : "outlined"}

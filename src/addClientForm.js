@@ -325,6 +325,7 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
     if (branches.length === 0 && (formData.orgName || formData.addressShort || formData.geoPoint)) {
       const existingDataAsBranch = {
         id: 1,
+        branchName: "",
         orgName: formData.orgName || "",
         addressShort: formData.addressShort || "",
         geoPoint: formData.geoPoint || "",
@@ -333,6 +334,7 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
 
       const newBranch = {
         id: 2,
+        branchName: "",
         orgName: "",
         addressShort: "",
         geoPoint: "",
@@ -354,6 +356,7 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
       const newId = Math.max(...branches.map(b => b.id), 0) + 1;
       setBranches(prev => [...prev, {
         id: newId,
+        branchName: "",
         orgName: "",
         addressShort: "",
         geoPoint: "",
@@ -377,6 +380,7 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
     if (branches.length > 0) {
       // Validate each branch
       branches.forEach((branch, index) => {
+        if (!branch.branchName.trim()) errors.push(`Филиал ${index + 1}: Название филиала обязательно`);
         if (!branch.orgName.trim()) errors.push(`Филиал ${index + 1}: Наименование организации обязательно`);
         if (!branch.addressShort.trim()) errors.push(`Филиал ${index + 1}: Адрес обязателен`);
         if (!branch.geoPoint.trim()) errors.push(`Филиал ${index + 1}: Координаты обязательны`);
@@ -572,7 +576,7 @@ const handleSubmit = async (event) => {
       const branchesPromises = branches.map(async (branch, index) => {
         const [branchLat, branchLng] = branch.geoPoint.split(',').map(coord => parseFloat(coord.trim()));
         return await addDoc(collection(db, `clients/${clientId}/branches`), {
-          branchName: `Филиал ${index + 1}`,
+          branchName: branch.branchName.trim(),
           orgName: branch.orgName.trim(),
           addressShort: branch.addressShort.trim(),
           addressLong: new GeoPoint(branchLat, branchLng),
@@ -916,6 +920,20 @@ return (
                         </Box>
 
                         <Grid container spacing={2}>
+                          <Grid item xs={12}>
+                            <TextField
+                              fullWidth
+                              label="Название филиала"
+                              variant="outlined"
+                              value={branch.branchName}
+                              onChange={(e) => handleBranchChange(branch.id, 'branchName', e.target.value)}
+                              required
+                              size="small"
+                              placeholder="например: Центральный, Юнусабад, Чилонзор"
+                              sx={{ fontSize: '1.15em' }}
+                            />
+                          </Grid>
+
                           <Grid item xs={12} sm={6}>
                             <TextField
                               fullWidth

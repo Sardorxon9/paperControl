@@ -236,6 +236,7 @@ const [productInputs, setProductInputs] = useState({
     if (branches.length === 0 && (formData.orgName || formData.addressShort || formData.geoPoint)) {
       const existingDataAsBranch = {
         id: 1,
+        branchName: "",
         orgName: formData.orgName || "",
         addressShort: formData.addressShort || "",
         geoPoint: formData.geoPoint || "",
@@ -246,6 +247,7 @@ const [productInputs, setProductInputs] = useState({
 
       const newBranch = {
         id: 2,
+        branchName: "",
         orgName: "",
         addressShort: "",
         geoPoint: "",
@@ -259,6 +261,7 @@ const [productInputs, setProductInputs] = useState({
       const newId = Math.max(...branches.map(b => b.id), 0) + 1;
       setBranches(prev => [...prev, {
         id: newId,
+        branchName: "",
         orgName: "",
         addressShort: "",
         geoPoint: "",
@@ -353,6 +356,7 @@ const [productInputs, setProductInputs] = useState({
       const branchesData = branchesSnapshot.docs.map((doc, index) => ({
         id: doc.id,
         dbId: doc.id, // Store Firestore doc ID
+        branchName: doc.data().branchName || "",
         orgName: doc.data().orgName || "",
         addressShort: doc.data().addressShort || "",
         geoPoint: doc.data().addressLong
@@ -533,7 +537,7 @@ const handleSubmit = async (e) => {
       const branchPromises = branches.map(async (branch, index) => {
         const [branchLat, branchLng] = branch.geoPoint.split(',').map(coord => parseFloat(coord.trim()));
         const branchData = {
-          branchName: `Филиал ${index + 1}`,
+          branchName: branch.branchName.trim(),
           orgName: branch.orgName.trim(),
           addressShort: branch.addressShort.trim(),
           addressLong: new GeoPoint(branchLat, branchLng),
@@ -672,6 +676,19 @@ const handleSubmit = async (e) => {
                       </Box>
 
                       <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                          <TextField
+                            fullWidth
+                            label="Название филиала"
+                            variant="outlined"
+                            value={branch.branchName}
+                            onChange={(e) => handleBranchChange(branch.id, 'branchName', e.target.value)}
+                            required
+                            size="small"
+                            placeholder="например: Центральный, Юнусабад, Чилонзор"
+                          />
+                        </Grid>
+
                         <Grid item xs={12} sm={6}>
                           <TextField
                             fullWidth

@@ -1342,7 +1342,7 @@ const Invoices = ({ currentUser }) => {
                     {clientBranches.map((branch, index) => (
                       <Chip
                         key={branch.id}
-                        label={`Филиал ${index + 1}`}
+                        label={branch.branchName ? `Филиал ${branch.branchName}` : `Филиал ${index + 1}`}
                         onClick={() => setSelectedBranch(branch)}
                         color={selectedBranch?.id === branch.id ? "primary" : "default"}
                         variant={selectedBranch?.id === branch.id ? "filled" : "outlined"}
