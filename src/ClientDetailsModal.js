@@ -42,6 +42,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Chip
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import { checkAndNotifyLowPaper } from "./notificationService";
@@ -68,10 +69,10 @@ const modalStyle = {
   overflowY: 'auto' // <-- Changed to auto to allow scrolling if needed
 };
 
-export default function ClientDetailsModal({ 
-  open, 
-  onClose, 
-  client, 
+export default function ClientDetailsModal({
+  open,
+  onClose,
+  client,
   onClientUpdate,
   currentUser,
   hasTracking
@@ -80,6 +81,10 @@ export default function ClientDetailsModal({
   const [paperRolls, setPaperRolls] = useState([]);
   const [logs, setLogs] = useState([]);
   const [productType, setProductType] = useState(null);
+
+  // Branch state
+  const [branches, setBranches] = useState([]);
+  const [selectedBranchIndex, setSelectedBranchIndex] = useState(0);
   
   // Paper addition state
   const [addingPaper, setAddingPaper] = useState(false);
@@ -123,11 +128,14 @@ const [openEdit, setOpenEdit] = useState(false);
   if (client) {
     // Always fetch logs for all clients
     fetchLogs();
-    
+
     if (hasTracking) {
       fetchPaperRolls();
     }
-    
+
+    // Fetch branches
+    fetchBranches();
+
     // NEW: Fetch product name and package type data in parallel
     const fetchProductDetails = async () => {
       // Use Promise.all to fetch both pieces of data at the same time
@@ -135,7 +143,7 @@ const [openEdit, setOpenEdit] = useState(false);
         fetchProductName(client.productID_2),
         fetchPackageType(client.packageID)
       ]);
-      
+
       setProductName(nameResult);
       setPackageType(typeResult);
     };
@@ -231,10 +239,67 @@ const fetchPackageType = async (packageID) => {
   }
 };
 
+// Fetch branches from subcollection
+const fetchBranches = async () => {
+  if (!client?.id) return;
+
+  try {
+    const branchesRef = collection(db, `clients/${client.id}/branches`);
+    const branchesQuery = query(branchesRef, orderBy('branchIndex', 'asc'));
+    const branchesSnapshot = await getDocs(branchesQuery);
+
+    if (!branchesSnapshot.empty) {
+      const branchesData = branchesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setBranches(branchesData);
+      setSelectedBranchIndex(0); // Default to first branch
+    } else {
+      setBranches([]);
+    }
+  } catch (error) {
+    console.error('Error fetching branches:', error);
+    setBranches([]);
+  }
+};
+
   
 
 const calculateTotalPaper = () => {
   return paperRolls.reduce((total, roll) => total + (roll.paperRemaining || 0), 0);
+};
+
+// Get current branch data or fallback to client data
+const getCurrentBranchData = () => {
+  if (branches.length > 0 && branches[selectedBranchIndex]) {
+    return branches[selectedBranchIndex];
+  }
+  return null;
+};
+
+// Display values based on branch selection
+const displayOrgName = () => {
+  const branchData = getCurrentBranchData();
+  return branchData ? branchData.orgName : (client?.orgName || 'Не указано');
+};
+
+const displayAddressShort = () => {
+  const branchData = getCurrentBranchData();
+  return branchData ? branchData.addressShort : (client?.addressShort || 'Не указан');
+};
+
+const displayGeoPoint = () => {
+  const branchData = getCurrentBranchData();
+  if (branchData && branchData.addressLong) {
+    return `${branchData.addressLong.latitude}, ${branchData.addressLong.longitude}`;
+  }
+  return client?.addressLong ? `${client.addressLong.latitude}, ${client.addressLong.longitude}` : 'Не указан';
+};
+
+const displayComment = () => {
+  const branchData = getCurrentBranchData();
+  return branchData ? (branchData.comment || 'Нет комментария') : (client?.comment || 'Нет комментария');
 };
 
   // Handle adding new paper (Priyemka functionality)
@@ -715,14 +780,18 @@ try {
   setAddingPaper(false);
   setUpdatingRoll(false);
   setSendingTelegram(false);
-  
-  // Add these new lines:
+
+  // Reset correction and deletion states
   setIsCorrection(false);
   setCorrectWeight('');
   setShowFtulkaModal(false);
   setFtulkaWeight('');
   setRollToDelete(null);
-  
+
+  // Reset branch states
+  setBranches([]);
+  setSelectedBranchIndex(0);
+
   onClose();
 };
 
@@ -957,6 +1026,36 @@ try {
 
                 </Box>
 
+                {/* Branch tabs */}
+                {branches.length > 0 && (
+                  <Box sx={{ mt: 2, mb: 2 }}>
+                    <Typography variant="body2" color="#727d7b" sx={{ fontSize: '0.9rem', mb: 1 }}>
+                      Филиалы:
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      {branches.map((branch, index) => (
+                        <Chip
+                          key={branch.id}
+                          label={`Филиал ${index + 1}`}
+                          onClick={() => setSelectedBranchIndex(index)}
+                          color={selectedBranchIndex === index ? "primary" : "default"}
+                          variant={selectedBranchIndex === index ? "filled" : "outlined"}
+                          sx={{
+                            cursor: 'pointer',
+                            fontWeight: selectedBranchIndex === index ? 600 : 400,
+                            backgroundColor: selectedBranchIndex === index ? '#0F9D8C' : 'transparent',
+                            borderColor: selectedBranchIndex === index ? '#0F9D8C' : '#0F9D8C',
+                            color: selectedBranchIndex === index ? 'white' : '#0F9D8C',
+                            '&:hover': {
+                              backgroundColor: selectedBranchIndex === index ? '#0c7a6e' : 'rgba(15, 157, 140, 0.08)'
+                            }
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+                )}
+
                 <Stack spacing={2}>
                   <Box>
                     <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
@@ -991,9 +1090,7 @@ try {
                       color="#3b403fff"
                       sx={{ fontSize: '1.25rem', fontWeight: '600' }}
                     >
-                      {client.addressLong
-                        ? `${client.addressLong.latitude}, ${client.addressLong.longitude}`
-                        : 'Не указан'}
+                      {displayGeoPoint()}
                     </Typography>
                   </Box>
 
@@ -1006,7 +1103,7 @@ try {
                       color="#3b403fff"
                       sx={{ fontSize: '1.25rem', fontWeight: '600' }}
                     >
-                      {client.orgName || 'Не указано'}
+                      {displayOrgName()}
                     </Typography>
                   </Box>
 
@@ -1019,7 +1116,7 @@ try {
                       color="#3b403fff"
                       sx={{ fontSize: '1.25rem', fontWeight: '600' }}
                     >
-                      {client.addressShort || 'Не указан'}
+                      {displayAddressShort()}
                     </Typography>
                   </Box>
 
@@ -1032,7 +1129,7 @@ try {
                       color="#3b403fff"
                       sx={{ fontSize: '1.25rem', fontWeight: '600' }}
                     >
-                      {client.comment || 'Нет комментария'}
+                      {displayComment()}
                     </Typography>
                   </Box>
                     <Box>

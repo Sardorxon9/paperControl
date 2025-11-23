@@ -35,7 +35,8 @@ import {
   FormControl,
   InputLabel,
   Divider,
-  Grid
+  Grid,
+  Chip
 } from '@mui/material';
 import { 
   ArrowBack, 
@@ -88,6 +89,10 @@ const Invoices = ({ currentUser }) => {
 
   // New state for multiple products - starts empty
   const [invoiceProducts, setInvoiceProducts] = useState([]);
+
+  // Branch selection state
+  const [clientBranches, setClientBranches] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState(null);
 
   const grammOptions = [
     { value: '1', label: '1 гр' },
@@ -301,6 +306,11 @@ const Invoices = ({ currentUser }) => {
       return false;
     }
 
+    // Check if branch is selected when branches exist
+    if (clientBranches.length > 0 && !selectedBranch) {
+      return false;
+    }
+
     // Check if there are any products
     if (invoiceProducts.length === 0) {
       return false;
@@ -333,10 +343,12 @@ const Invoices = ({ currentUser }) => {
       let message = 'Пожалуйста, заполните все поля';
       if (!paymentType) {
         message = 'Пожалуйста, выберите тип оплаты';
+      } else if (clientBranches.length > 0 && !selectedBranch) {
+        message = 'Пожалуйста, выберите филиал';
       } else if (invoiceProducts.length === 0) {
         message = 'Пожалуйста, добавьте хотя бы один товар';
       }
-      
+
       setSnackbar({
         open: true,
         message: message,
@@ -376,14 +388,18 @@ const Invoices = ({ currentUser }) => {
         }
       });
 
+      // Use selected branch orgName if branch is selected, otherwise use client's orgName
+      const orgNameToUse = selectedBranch ? selectedBranch.orgName : selectedClient.displayOrgName;
+
       // Generate HTML content
       const htmlContent = generateInvoiceHTML(
-        selectedClient, 
-        productsForInvoice, 
-        newInvoiceNumber, 
+        selectedClient,
+        productsForInvoice,
+        newInvoiceNumber,
         senderCompany,
         customRestaurantName,
-        paymentType
+        paymentType,
+        orgNameToUse // Pass the selected branch orgName
       );
 
       // Create blob URL
@@ -475,14 +491,17 @@ const Invoices = ({ currentUser }) => {
     setSenderCompany('White Ray');
     setCustomRestaurantName('');
     setPaymentType(''); // Reset to unselected
+    setClientBranches([]);
+    setSelectedBranch(null);
   };
 
-  // Handle opening modal - now adds default product automatically
-  const handleOpenModal = (client) => {
+  // Handle opening modal - now adds default product automatically and fetches branches
+  const handleOpenModal = async (client) => {
     setSelectedClient(client);
     setCustomRestaurantName(client.displayRestaurantName || "");
     setIsEditingRestaurant(false);
     setPaymentType(''); // Reset to unselected
+    setSelectedBranch(null); // Reset branch selection
     setInvoiceProducts([
       {
         id: 1,
@@ -494,6 +513,27 @@ const Invoices = ({ currentUser }) => {
         price: ''
       }
     ]);
+
+    // Fetch branches for the selected client
+    try {
+      const branchesRef = collection(db, `clients/${client.id}/branches`);
+      const branchesQuery = query(branchesRef, orderBy('branchIndex', 'asc'));
+      const branchesSnapshot = await getDocs(branchesQuery);
+
+      if (!branchesSnapshot.empty) {
+        const branchesData = branchesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setClientBranches(branchesData);
+      } else {
+        setClientBranches([]);
+      }
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+      setClientBranches([]);
+    }
+
     setModalOpen(true);
   };
 
@@ -510,10 +550,11 @@ const Invoices = ({ currentUser }) => {
   };
 
   // This function will be replaced with the HTML template from the second artifact
-  const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany, customRestaurantName, paymentType) => {
+  const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany, customRestaurantName, paymentType, orgName) => {
     const totalAmount = productsData.reduce((sum, product) => sum + (product.quantity * product.price), 0);
     const senderName = senderCompany === 'White Ray' ? '"WHITE RAY" MCHJ' : '"PURE PACK" MCHJ';
     const paymentTypeDisplay = paymentType === 'cash' ? 'Наличные' : 'Перечисление';
+    const orgNameToDisplay = orgName || client.displayOrgName;
     
     // Manual date formatting
     const now = new Date();
@@ -965,9 +1006,9 @@ const Invoices = ({ currentUser }) => {
                     </div>
                     <div class="info-block">
                         <div class="info-label">Kimga / Кому</div>
-                        <div class="info-value">${client.displayOrgName}</div>
+                        <div class="info-value">${orgNameToDisplay}</div>
                         ${
-                          client.displayOrgName !== (customRestaurantName || client.displayRestaurantName)
+                          orgNameToDisplay !== (customRestaurantName || client.displayRestaurantName)
                             ? `<div class="restaurant-name">( ${customRestaurantName || client.displayRestaurantName} )</div>`
                             : ''
                         }
@@ -1061,9 +1102,9 @@ const Invoices = ({ currentUser }) => {
                     </div>
                     <div class="info-block">
                         <div class="info-label">Kimga / Кому</div>
-                        <div class="info-value">${client.displayOrgName}</div>
+                        <div class="info-value">${orgNameToDisplay}</div>
                         ${
-                          client.displayOrgName !== (customRestaurantName || client.displayRestaurantName)
+                          orgNameToDisplay !== (customRestaurantName || client.displayRestaurantName)
                             ? `<div class="restaurant-name">( ${customRestaurantName || client.displayRestaurantName} )</div>`
                             : ''
                         }
@@ -1291,26 +1332,80 @@ const Invoices = ({ currentUser }) => {
         <DialogContent dividers sx={{ pt: 2.5 }}>
           {selectedClient && (
             <Box>
-              {/* Restaurant Name (editable) */}
-              <TextField
-                label="Название ресторана"
-                fullWidth
-                value={customRestaurantName}
-                onChange={(e) => setCustomRestaurantName(e.target.value)}
-                sx={{ mb: 3 }}
-                size="medium"
-                InputProps={{
-                  sx: {
-                    padding: '8px 14px',
-                    fontSize: '15px'
-                  }
-                }}
-                InputLabelProps={{
-                  sx: {
-                    fontSize: '15px'
-                  }
-                }}
-              />
+              {/* Branch Selection - shows if client has branches */}
+              {clientBranches.length > 0 ? (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle2" fontWeight="500" gutterBottom color="error">
+                    Выберите филиал: *
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                    {clientBranches.map((branch, index) => (
+                      <Chip
+                        key={branch.id}
+                        label={`Филиал ${index + 1}`}
+                        onClick={() => setSelectedBranch(branch)}
+                        color={selectedBranch?.id === branch.id ? "primary" : "default"}
+                        variant={selectedBranch?.id === branch.id ? "filled" : "outlined"}
+                        sx={{
+                          cursor: 'pointer',
+                          fontWeight: selectedBranch?.id === branch.id ? 600 : 400,
+                          backgroundColor: selectedBranch?.id === branch.id ? '#0F9D8C' : 'transparent',
+                          borderColor: '#0F9D8C',
+                          color: selectedBranch?.id === branch.id ? 'white' : '#0F9D8C',
+                          fontSize: '0.95rem',
+                          '&:hover': {
+                            backgroundColor: selectedBranch?.id === branch.id ? '#0c7a6e' : 'rgba(15, 157, 140, 0.08)'
+                          }
+                        }}
+                      />
+                    ))}
+                  </Box>
+
+                  {/* Display selected branch info */}
+                  {selectedBranch && (
+                    <Box sx={{ p: 2, backgroundColor: '#f0faf9', borderRadius: 1, border: '1px solid #0F9D8C' }}>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            Наименование организации:
+                          </Typography>
+                          <Typography variant="body1" fontWeight={600}>
+                            {selectedBranch.orgName}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            Название ресторана:
+                          </Typography>
+                          <Typography variant="body1" fontWeight={600}>
+                            {customRestaurantName || selectedClient.displayRestaurantName}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  )}
+
+                  {/* Restaurant Name (editable) */}
+                  <TextField
+                    label="Название ресторана (можно изменить)"
+                    fullWidth
+                    value={customRestaurantName}
+                    onChange={(e) => setCustomRestaurantName(e.target.value)}
+                    sx={{ mt: 2 }}
+                    size="medium"
+                  />
+                </Box>
+              ) : (
+                /* Show old restaurant name input if no branches */
+                <TextField
+                  label="Название ресторана"
+                  fullWidth
+                  value={customRestaurantName}
+                  onChange={(e) => setCustomRestaurantName(e.target.value)}
+                  sx={{ mb: 3 }}
+                  size="medium"
+                />
+              )}
 
               {/* Sender Company Selection */}
               <Box sx={{ mb: 3 }}>

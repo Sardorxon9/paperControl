@@ -33,6 +33,8 @@ import CommentIcon from "@mui/icons-material/Comment";
 import ImageIcon from "@mui/icons-material/Image";
 import RestaurantIcon from "@mui/icons-material/Restaurant";
 import LocalOfferIcon from "@mui/icons-material/LocalOffer";
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
 import {
   doc,
   getDoc,
@@ -40,7 +42,9 @@ import {
   updateDoc,
   collection,
   GeoPoint,
-  Timestamp
+  Timestamp,
+  addDoc,
+  deleteDoc
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -194,6 +198,9 @@ export default function EditClientForm({ clientId, onClientUpdated, onClose }) {
     comment: "",
     imageURL1: DEFAULT_PLACEHOLDER_URL,
   });
+
+  // State for multiple branches
+  const [branches, setBranches] = useState([]);
 const [productInputs, setProductInputs] = useState({
     packageType: "",
     product: "",
@@ -212,7 +219,34 @@ const [productInputs, setProductInputs] = useState({
   const [availableNames, setAvailableNames] = useState([]);
   const isStandardDesign = formData.designType === "standart";
 
-  // Fetch client + productTypes
+  // Handle branch changes
+  const handleBranchChange = (branchId, field, value) => {
+    setBranches(prev =>
+      prev.map(branch =>
+        branch.id === branchId
+          ? { ...branch, [field]: value }
+          : branch
+      )
+    );
+  };
+
+  const handleAddBranch = () => {
+    const newId = Math.max(...branches.map(b => b.id), 0) + 1;
+    setBranches(prev => [...prev, {
+      id: newId,
+      orgName: "",
+      addressShort: "",
+      geoPoint: "",
+      comment: "",
+      isNew: true // Mark as new branch for saving
+    }]);
+  };
+
+  const handleRemoveBranch = (branchId) => {
+    setBranches(prev => prev.filter(branch => branch.id !== branchId));
+  };
+
+  // Fetch client + productTypes + branches
  useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -270,12 +304,12 @@ const [productInputs, setProductInputs] = useState({
   // Initialize cascading dropdowns properly
   if (data.packageID) {
     await handleProductInputChange('packageType', data.packageID);
-    
+
     // After package is loaded, set product if it exists
     if (data.productID_2) {
       setTimeout(async () => {
         await handleProductInputChange('product', data.productID_2);
-        
+
         // After product is loaded, set gram if it exists
         if (data.gramm || data.gram) {
           setTimeout(() => {
@@ -284,6 +318,28 @@ const [productInputs, setProductInputs] = useState({
         }
       }, 100);
     }
+  }
+
+  // Fetch branches if they exist
+  try {
+    const branchesSnapshot = await getDocs(collection(db, `clients/${clientId}/branches`));
+    if (!branchesSnapshot.empty) {
+      const branchesData = branchesSnapshot.docs.map((doc, index) => ({
+        id: doc.id,
+        dbId: doc.id, // Store Firestore doc ID
+        orgName: doc.data().orgName || "",
+        addressShort: doc.data().addressShort || "",
+        geoPoint: doc.data().addressLong
+          ? `${doc.data().addressLong.latitude}, ${doc.data().addressLong.longitude}`
+          : "",
+        comment: doc.data().comment || "",
+        branchIndex: doc.data().branchIndex || index + 1,
+        isNew: false
+      }));
+      setBranches(branchesData);
+    }
+  } catch (error) {
+    console.error("Error fetching branches:", error);
   }
 }
       } catch (err) {
@@ -411,22 +467,25 @@ const handleSubmit = async (e) => {
 
   try {
     const clientRef = doc(db, "clients", clientId);
-    
-    // Parse coordinates
-    const [lat, lng] = formData.geoPoint
-      .split(",")
-      .map((coord) => parseFloat(coord.trim()));
+
+    // Parse coordinates - use first branch if branches exist, otherwise use formData
+    let lat, lng;
+    if (branches.length > 0) {
+      [lat, lng] = branches[0].geoPoint.split(",").map((coord) => parseFloat(coord.trim()));
+    } else {
+      [lat, lng] = formData.geoPoint.split(",").map((coord) => parseFloat(coord.trim()));
+    }
 
     // Build update data with correct field names
     const updateData = {
       name: formData.name,
-      orgName: formData.orgName,
-      addressShort: formData.addressShort,
+      orgName: branches.length > 0 ? branches[0].orgName : formData.orgName,
+      addressShort: branches.length > 0 ? branches[0].addressShort : formData.addressShort,
       addressLong: new GeoPoint(lat, lng),
       designType: formData.designType,
       shellNum: formData.shellNum,
       notifyWhen: parseFloat(formData.notifyWhen),
-      comment: formData.comment,
+      comment: branches.length > 0 ? (branches[0].comment || '') : formData.comment,
       imageURL1: formData.imageURL1 || DEFAULT_PLACEHOLDER_URL,
       updatedAt: Timestamp.now(),
       // Product fields with correct names
@@ -441,6 +500,34 @@ const handleSubmit = async (e) => {
     }
 
     await updateDoc(clientRef, updateData);
+
+    // Handle branches subcollection
+    if (branches.length > 0) {
+      // Process each branch
+      const branchPromises = branches.map(async (branch, index) => {
+        const [branchLat, branchLng] = branch.geoPoint.split(',').map(coord => parseFloat(coord.trim()));
+        const branchData = {
+          branchName: `Филиал ${index + 1}`,
+          orgName: branch.orgName.trim(),
+          addressShort: branch.addressShort.trim(),
+          addressLong: new GeoPoint(branchLat, branchLng),
+          comment: (branch.comment || '').trim(),
+          branchIndex: index + 1,
+          updatedAt: Timestamp.now()
+        };
+
+        if (branch.isNew) {
+          // Add new branch
+          branchData.createdAt = Timestamp.now();
+          return await addDoc(collection(db, `clients/${clientId}/branches`), branchData);
+        } else {
+          // Update existing branch
+          return await updateDoc(doc(db, `clients/${clientId}/branches`, branch.dbId), branchData);
+        }
+      });
+
+      await Promise.all(branchPromises);
+    }
 
     setMessage({ type: "success", text: "Клиент обновлен" });
     if (onClientUpdated) onClientUpdated();
@@ -491,26 +578,125 @@ const handleSubmit = async (e) => {
               <Typography variant="h6" className="form-section-title">
                 <BusinessIcon /> Информация о ресторане
               </Typography>
-              
+
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
                     label="Название ресторана"
                     value={formData.name}
                     onChange={handleInputChange("name")}
-                   
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Организация"
-                    value={formData.orgName}
-                    onChange={handleInputChange("orgName")}
-                  
-                  />
+
+                {/* Button to add branches */}
+                <Grid item xs={12}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    onClick={handleAddBranch}
+                    sx={{
+                      borderColor: '#0F9D8C',
+                      color: '#0F9D8C',
+                      '&:hover': {
+                        borderColor: '#0c7a6e',
+                        backgroundColor: 'rgba(15, 157, 140, 0.04)'
+                      }
+                    }}
+                  >
+                    Добавить филиал
+                  </Button>
                 </Grid>
+
+                {/* Show old fields if no branches */}
+                {branches.length === 0 && (
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Организация"
+                      value={formData.orgName}
+                      onChange={handleInputChange("orgName")}
+                    />
+                  </Grid>
+                )}
+
+                {/* Display branches */}
+                {branches.map((branch, index) => (
+                  <Grid item xs={12} key={branch.id}>
+                    <Card
+                      variant="outlined"
+                      sx={{
+                        p: 2,
+                        backgroundColor: '#f0faf9',
+                        border: '1.5px solid #0F9D8C',
+                        borderRadius: 2
+                      }}
+                    >
+                      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                        <Typography variant="h6" sx={{ fontWeight: 600, color: '#0F9D8C' }}>
+                          Филиал {index + 1}
+                        </Typography>
+                        <IconButton
+                          onClick={() => handleRemoveBranch(branch.id)}
+                          color="error"
+                          size="small"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Box>
+
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            label="Наименование организации"
+                            variant="outlined"
+                            value={branch.orgName}
+                            onChange={(e) => handleBranchChange(branch.id, 'orgName', e.target.value)}
+                            required
+                            size="small"
+                          />
+                        </Grid>
+
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            label="Адрес"
+                            variant="outlined"
+                            value={branch.addressShort}
+                            onChange={(e) => handleBranchChange(branch.id, 'addressShort', e.target.value)}
+                            required
+                            size="small"
+                          />
+                        </Grid>
+
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            label="Локация ( координаты )"
+                            variant="outlined"
+                            value={branch.geoPoint}
+                            onChange={(e) => handleBranchChange(branch.id, 'geoPoint', e.target.value)}
+                            required
+                            size="small"
+                            placeholder="41.2995, 69.2401"
+                          />
+                        </Grid>
+
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            label="Комментарий"
+                            variant="outlined"
+                            value={branch.comment}
+                            onChange={(e) => handleBranchChange(branch.id, 'comment', e.target.value)}
+                            size="small"
+                          />
+                        </Grid>
+                      </Grid>
+                    </Card>
+                  </Grid>
+                ))}
               </Grid>
             </CardContent>
           </Card>
@@ -560,42 +746,44 @@ const handleSubmit = async (e) => {
             </CardContent>
           </Card>
 
-          {/* Location Section */}
-          <Card className="form-section" variant="outlined">
-            <CardContent>
-              <Typography variant="h6" className="form-section-title">
-                <LocationOnIcon /> Местоположение
-              </Typography>
-              
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Адрес"
-                    value={formData.addressShort}
-                    onChange={handleInputChange("addressShort")}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <LocationOnIcon color="action" />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
+          {/* Location Section - only show if no branches */}
+          {branches.length === 0 && (
+            <Card className="form-section" variant="outlined">
+              <CardContent>
+                <Typography variant="h6" className="form-section-title">
+                  <LocationOnIcon /> Местоположение
+                </Typography>
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Адрес"
+                      value={formData.addressShort}
+                      onChange={handleInputChange("addressShort")}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <LocationOnIcon color="action" />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Координаты (широта, долгота)"
+                      placeholder="например: 41.2995, 69.2401"
+                      value={formData.geoPoint}
+                      onChange={handleInputChange("geoPoint")}
+                      helperText="Введите координаты через запятую"
+                    />
+                  </Grid>
                 </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Координаты (широта, долгота)"
-                    placeholder="например: 41.2995, 69.2401"
-                    value={formData.geoPoint}
-                    onChange={handleInputChange("geoPoint")}
-                    helperText="Введите координаты через запятую"
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Product Section */}
           {/* Product Section */}

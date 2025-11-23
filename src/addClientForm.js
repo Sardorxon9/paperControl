@@ -68,6 +68,9 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
     comment: ""
   });
 
+  // State for multiple branches
+  const [branches, setBranches] = useState([]);
+
   // State for multiple paper rolls (only for unique design)
   const [paperRolls, setPaperRolls] = useState([
     { id: 1, paperRemaining: "" }
@@ -305,14 +308,80 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
     }
   };
 
+  // Handle branch changes
+  const handleBranchChange = (branchId, field, value) => {
+    setBranches(prev =>
+      prev.map(branch =>
+        branch.id === branchId
+          ? { ...branch, [field]: value }
+          : branch
+      )
+    );
+  };
+
+  const handleAddBranch = () => {
+    const newId = Math.max(...branches.map(b => b.id), 0) + 1;
+    setBranches(prev => [...prev, {
+      id: newId,
+      orgName: "",
+      addressShort: "",
+      geoPoint: "",
+      comment: ""
+    }]);
+  };
+
+  const handleRemoveBranch = (branchId) => {
+    setBranches(prev => prev.filter(branch => branch.id !== branchId));
+  };
+
   const validateForm = () => {
     const errors = [];
 
     // Basic required fields
     if (!formData.name.trim()) errors.push("Название ресторана обязательно");
-    if (!formData.addressShort.trim()) errors.push("Адрес обязателен");
-    if (!formData.geoPoint.trim()) errors.push("Координаты обязательны");
     if (!formData.designType) errors.push("Тип дизайна обязателен");
+
+    // Branch validation
+    if (branches.length > 0) {
+      // Validate each branch
+      branches.forEach((branch, index) => {
+        if (!branch.orgName.trim()) errors.push(`Филиал ${index + 1}: Наименование организации обязательно`);
+        if (!branch.addressShort.trim()) errors.push(`Филиал ${index + 1}: Адрес обязателен`);
+        if (!branch.geoPoint.trim()) errors.push(`Филиал ${index + 1}: Координаты обязательны`);
+
+        // Validate coordinates format for each branch
+        if (branch.geoPoint) {
+          const parts = branch.geoPoint.split(',').map(p => p.trim());
+          if (parts.length !== 2) {
+            errors.push(`Филиал ${index + 1}: Координаты должны быть в формате: широта, долгота`);
+          } else {
+            const [lat, lng] = parts;
+            if (isNaN(lat) || lat < -90 || lat > 90)
+              errors.push(`Филиал ${index + 1}: Широта должна быть между -90 и 90`);
+            if (isNaN(lng) || lng < -180 || lng > 180)
+              errors.push(`Филиал ${index + 1}: Долгота должна быть между -180 и 180`);
+          }
+        }
+      });
+    } else {
+      // Old validation for clients without branches (backward compatibility)
+      if (!formData.addressShort.trim()) errors.push("Адрес обязателен");
+      if (!formData.geoPoint.trim()) errors.push("Координаты обязательны");
+
+      // Validate coordinates format
+      if (formData.geoPoint) {
+        const parts = formData.geoPoint.split(',').map(p => p.trim());
+        if (parts.length !== 2) {
+          errors.push("Координаты должны быть в формате: широта, долгота");
+        } else {
+          const [lat, lng] = parts;
+          if (isNaN(lat) || lat < -90 || lat > 90)
+            errors.push("Широта должна быть между -90 и 90");
+          if (isNaN(lng) || lng < -180 || lng > 180)
+            errors.push("Долгота должна быть между -180 и 180");
+        }
+      }
+    }
 
     // Product selection validation
     if (!productInputs.packageType) errors.push("Выберите тип упаковки");
@@ -340,20 +409,6 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
         if (invalidRolls.length > 0) {
           errors.push("Все рулоны должны иметь корректное количество бумаги");
         }
-      }
-    }
-
-    // Validate coordinates format
-    if (formData.geoPoint) {
-      const parts = formData.geoPoint.split(',').map(p => p.trim());
-      if (parts.length !== 2) {
-        errors.push("Координаты должны быть в формате: широта, долгота");
-      } else {
-        const [lat, lng] = parts;
-        if (isNaN(lat) || lat < -90 || lat > 90) 
-          errors.push("Широта должна быть между -90 и 90");
-        if (isNaN(lng) || lng < -180 || lng > 180) 
-          errors.push("Долгота должна быть между -180 и 180");
       }
     }
 
@@ -418,7 +473,7 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
 
 const handleSubmit = async (event) => {
   event.preventDefault();
-  
+
   const errors = validateForm();
   if (errors.length > 0) {
     setMessage({ type: "error", text: errors.join(", ") });
@@ -427,18 +482,23 @@ const handleSubmit = async (event) => {
 
   setLoading(true);
   try {
-    // Parse coordinates
-    const [latitude, longitude] = formData.geoPoint.split(',').map(coord => parseFloat(coord.trim()));
-    
+    // Parse coordinates - use first branch if branches exist, otherwise use formData
+    let latitude, longitude;
+    if (branches.length > 0) {
+      [latitude, longitude] = branches[0].geoPoint.split(',').map(coord => parseFloat(coord.trim()));
+    } else {
+      [latitude, longitude] = formData.geoPoint.split(',').map(coord => parseFloat(coord.trim()));
+    }
+
     // Build client data based on design type - FIXED: Always use productID_2
     const baseClientData = {
       name: formData.name.trim(),
-      orgName: formData.orgName.trim(),
+      orgName: branches.length > 0 ? branches[0].orgName.trim() : formData.orgName.trim(),
       restaurant: formData.name.trim(),
-      addressShort: formData.addressShort.trim(),
+      addressShort: branches.length > 0 ? branches[0].addressShort.trim() : formData.addressShort.trim(),
       addressLong: new GeoPoint(latitude, longitude),
       designType: formData.designType,
-      comment: formData.comment.trim(),
+      comment: branches.length > 0 ? (branches[0].comment || '').trim() : formData.comment.trim(),
       // Save the new product selection format
       packageID: productInputs.packageType,
       productID_2: productInputs.product, // ← ALWAYS use productID_2
@@ -473,6 +533,25 @@ const handleSubmit = async (event) => {
     // Add the main client document
     const clientDocRef = await addDoc(collection(db, "clients"), clientData);
     const clientId = clientDocRef.id;
+
+    // Save branches to subcollection if they exist
+    if (branches.length > 0) {
+      console.log("Creating branches subcollection...");
+      const branchesPromises = branches.map(async (branch, index) => {
+        const [branchLat, branchLng] = branch.geoPoint.split(',').map(coord => parseFloat(coord.trim()));
+        return await addDoc(collection(db, `clients/${clientId}/branches`), {
+          branchName: `Филиал ${index + 1}`,
+          orgName: branch.orgName.trim(),
+          addressShort: branch.addressShort.trim(),
+          addressLong: new GeoPoint(branchLat, branchLng),
+          comment: (branch.comment || '').trim(),
+          createdAt: Timestamp.now(),
+          branchIndex: index + 1
+        });
+      });
+      await Promise.all(branchesPromises);
+      console.log(`Created ${branches.length} branches for client ${clientId}`);
+    }
 
     // If unique design, create paper rolls subcollection and logs
     if (formData.designType === "unique") {
@@ -516,11 +595,11 @@ const handleSubmit = async (event) => {
     }
     
     setMessage({ type: "success", text: "Клиент успешно добавлен!" });
-    
+
     // Reset form
     setFormData({
       name: "",
-      orgName: "",    
+      orgName: "",
       addressShort: "",
       geoPoint: "",
       designType: "unique",
@@ -537,6 +616,7 @@ const handleSubmit = async (event) => {
     });
 
     setPaperRolls([{ id: 1, paperRemaining: "" }]);
+    setBranches([]);
 
     if (onClientAdded) {
       setTimeout(() => {
@@ -700,18 +780,6 @@ return (
                     />
                   </Grid>
 
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Наименование организации (Фирма)"
-                      variant="outlined"
-                      value={formData.orgName}
-                      onChange={handleInputChange('orgName')}
-                      size="small"
-                      sx={{ fontSize: '1.15em' }}
-                    />
-                  </Grid>
-
                   {/* Show shellNum only for unique design */}
                   {!isStandardDesign && (
                     <Grid item xs={12} sm={6}>
@@ -728,31 +796,149 @@ return (
                     </Grid>
                   )}
 
+                  {/* Button to add branches */}
                   <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Адрес"
+                    <Button
                       variant="outlined"
-                      value={formData.addressShort}
-                      onChange={handleInputChange('addressShort')}
-                      size="small"
-                      sx={{ fontSize: '1.15em' }}
-                    />
+                      startIcon={<AddIcon />}
+                      onClick={handleAddBranch}
+                      sx={{
+                        borderColor: '#0F9D8C',
+                        color: '#0F9D8C',
+                        '&:hover': {
+                          borderColor: '#0c7a6e',
+                          backgroundColor: 'rgba(15, 157, 140, 0.04)'
+                        }
+                      }}
+                    >
+                      Добавить филиал
+                    </Button>
                   </Grid>
 
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Локация ( координаты )"
-                      variant="outlined"
-                      value={formData.geoPoint}
-                      onChange={handleInputChange('geoPoint')}
-                      required
-                      size="small"
-                      placeholder="41.2995, 69.2401"
-                      sx={{ fontSize: '1.15em' }}
-                    />
-                  </Grid>
+                  {/* Show old fields if no branches */}
+                  {branches.length === 0 && (
+                    <>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Наименование организации (Фирма)"
+                          variant="outlined"
+                          value={formData.orgName}
+                          onChange={handleInputChange('orgName')}
+                          size="small"
+                          sx={{ fontSize: '1.15em' }}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          label="Адрес"
+                          variant="outlined"
+                          value={formData.addressShort}
+                          onChange={handleInputChange('addressShort')}
+                          size="small"
+                          sx={{ fontSize: '1.15em' }}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          label="Локация ( координаты )"
+                          variant="outlined"
+                          value={formData.geoPoint}
+                          onChange={handleInputChange('geoPoint')}
+                          required
+                          size="small"
+                          placeholder="41.2995, 69.2401"
+                          sx={{ fontSize: '1.15em' }}
+                        />
+                      </Grid>
+                    </>
+                  )}
+
+                  {/* Display branches */}
+                  {branches.map((branch, index) => (
+                    <Grid item xs={12} key={branch.id}>
+                      <Card
+                        variant="outlined"
+                        sx={{
+                          p: 2,
+                          backgroundColor: '#f0faf9',
+                          border: '1.5px solid #0F9D8C',
+                          borderRadius: 2
+                        }}
+                      >
+                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                          <Typography variant="h6" sx={{ fontWeight: 600, color: '#0F9D8C' }}>
+                            Филиал {index + 1}
+                          </Typography>
+                          <IconButton
+                            onClick={() => handleRemoveBranch(branch.id)}
+                            color="error"
+                            size="small"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              fullWidth
+                              label="Наименование организации"
+                              variant="outlined"
+                              value={branch.orgName}
+                              onChange={(e) => handleBranchChange(branch.id, 'orgName', e.target.value)}
+                              required
+                              size="small"
+                              sx={{ fontSize: '1.15em' }}
+                            />
+                          </Grid>
+
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              fullWidth
+                              label="Адрес"
+                              variant="outlined"
+                              value={branch.addressShort}
+                              onChange={(e) => handleBranchChange(branch.id, 'addressShort', e.target.value)}
+                              required
+                              size="small"
+                              sx={{ fontSize: '1.15em' }}
+                            />
+                          </Grid>
+
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              fullWidth
+                              label="Локация ( координаты )"
+                              variant="outlined"
+                              value={branch.geoPoint}
+                              onChange={(e) => handleBranchChange(branch.id, 'geoPoint', e.target.value)}
+                              required
+                              size="small"
+                              placeholder="41.2995, 69.2401"
+                              sx={{ fontSize: '1.15em' }}
+                            />
+                          </Grid>
+
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              fullWidth
+                              label="Комментарий"
+                              variant="outlined"
+                              value={branch.comment}
+                              onChange={(e) => handleBranchChange(branch.id, 'comment', e.target.value)}
+                              size="small"
+                              sx={{ fontSize: '1.15em' }}
+                            />
+                          </Grid>
+                        </Grid>
+                      </Card>
+                    </Grid>
+                  ))}
 
                   {/* Show notifyWhen only for unique design */}
                   {!isStandardDesign && (
