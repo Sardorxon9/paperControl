@@ -105,7 +105,7 @@ function App() {
         />
       } />
 
-      <Route path="/welcome" element={
+      <Route path="/paper-control" element={
         <Welcome
           user={user}
           userRole={userRole}

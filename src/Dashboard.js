@@ -67,7 +67,7 @@ const Dashboard = ({
               '&:hover': { backgroundColor: '#0c7a6e' }
             }}
             startIcon={<Assignment />}
-            onClick={() => navigate('/welcome')}
+            onClick={() => navigate('/paper-control')}
           >
             Открыть
           </Button>
