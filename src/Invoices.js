@@ -110,8 +110,8 @@ const Invoices = ({ currentUser }) => {
   ];
 
   const filteredClients = clients.filter(client =>
-    client.displayRestaurantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.displayOrgName.toLowerCase().includes(searchQuery.toLowerCase())
+    (client.displayName || client.displayRestaurantName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (client.displayOrgName || client.branchOrgName || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Fetch all required data on component mount
@@ -225,7 +225,7 @@ const Invoices = ({ currentUser }) => {
               }
             }
 
-            return {
+            const baseClient = {
               id: docSnap.id,
               ...data,
               fetchedProductName: productName,
@@ -234,6 +234,41 @@ const Invoices = ({ currentUser }) => {
               displayOrgName: data.orgName && data.orgName !== '-' ? data.orgName : (data.name || data.restaurant || ''),
               displayRestaurantName: data.name || data.restaurant || ''
             };
+
+            // Fetch branches for this client
+            let branches = [];
+            try {
+              const branchesSnapshot = await getDocs(collection(db, `clients/${docSnap.id}/branches`));
+              if (!branchesSnapshot.empty) {
+                branches = branchesSnapshot.docs.map(branchDoc => ({
+                  id: branchDoc.id,
+                  ...branchDoc.data()
+                }));
+              }
+            } catch (error) {
+              console.error(`Error fetching branches for client:`, error);
+            }
+
+            // If client has branches, return an array of client rows (one per branch)
+            if (branches.length > 0) {
+              return branches.map((branch, index) => ({
+                ...baseClient,
+                branchId: branch.id,
+                branchName: branch.branchName || `Филиал ${index + 1}`,
+                branchOrgName: branch.orgName,
+                selectedBranchData: branch, // Store full branch data for invoice
+                displayName: `${data.name || data.restaurant} (${branch.branchName || `Филиал ${index + 1}`})`,
+                displayOrgName: branch.orgName,
+                hasBranches: true
+              }));
+            } else {
+              // No branches - return single client row
+              return [{
+                ...baseClient,
+                displayName: data.name || data.restaurant || '',
+                hasBranches: false
+              }];
+            }
           } catch (error) {
             console.error("Error processing client document:", docSnap.id, error);
             return null;
@@ -241,13 +276,18 @@ const Invoices = ({ currentUser }) => {
         })
       );
 
-      const validClients = clientsArray.filter(client => 
-        client !== null && 
-        client.fetchedProductName && 
-        client.fetchedPackageType
-      );
-      
-      setClients(validClients);
+      // Flatten the array since each client can return multiple rows (branches)
+      const flattenedClients = clientsArray
+        .filter(client => client !== null)
+        .flat()
+        .filter(client =>
+          client &&
+          client.id &&
+          client.fetchedProductName &&
+          client.fetchedPackageType
+        );
+
+      setClients(flattenedClients);
     } catch (error) {
       console.error("Error fetching clients data:", error);
     }
@@ -306,11 +346,6 @@ const Invoices = ({ currentUser }) => {
       return false;
     }
 
-    // Check if branch is selected when branches exist
-    if (clientBranches.length > 0 && !selectedBranch) {
-      return false;
-    }
-
     // Check if there are any products
     if (invoiceProducts.length === 0) {
       return false;
@@ -343,8 +378,6 @@ const Invoices = ({ currentUser }) => {
       let message = 'Пожалуйста, заполните все поля';
       if (!paymentType) {
         message = 'Пожалуйста, выберите тип оплаты';
-      } else if (clientBranches.length > 0 && !selectedBranch) {
-        message = 'Пожалуйста, выберите филиал';
       } else if (invoiceProducts.length === 0) {
         message = 'Пожалуйста, добавьте хотя бы один товар';
       }
@@ -495,13 +528,20 @@ const Invoices = ({ currentUser }) => {
     setSelectedBranch(null);
   };
 
-  // Handle opening modal - now adds default product automatically and fetches branches
+  // Handle opening modal - branch is already selected from the table row
   const handleOpenModal = async (client) => {
     setSelectedClient(client);
-    setCustomRestaurantName(client.displayRestaurantName || "");
+    setCustomRestaurantName(client.displayRestaurantName || client.displayName || "");
     setIsEditingRestaurant(false);
     setPaymentType(''); // Reset to unselected
-    setSelectedBranch(null); // Reset branch selection
+
+    // If client has branches, set the selected branch automatically
+    if (client.hasBranches && client.selectedBranchData) {
+      setSelectedBranch(client.selectedBranchData);
+    } else {
+      setSelectedBranch(null);
+    }
+
     setInvoiceProducts([
       {
         id: 1,
@@ -513,26 +553,6 @@ const Invoices = ({ currentUser }) => {
         price: ''
       }
     ]);
-
-    // Fetch branches for the selected client
-    try {
-      const branchesRef = collection(db, `clients/${client.id}/branches`);
-      const branchesQuery = query(branchesRef, orderBy('branchIndex', 'asc'));
-      const branchesSnapshot = await getDocs(branchesQuery);
-
-      if (!branchesSnapshot.empty) {
-        const branchesData = branchesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setClientBranches(branchesData);
-      } else {
-        setClientBranches([]);
-      }
-    } catch (error) {
-      console.error('Error fetching branches:', error);
-      setClientBranches([]);
-    }
 
     setModalOpen(true);
   };
@@ -1282,16 +1302,18 @@ const Invoices = ({ currentUser }) => {
             <TableBody>
               {filteredClients.map((client) => (
                 <TableRow
-                  key={client.id}
+                  key={client.hasBranches ? `${client.id}-${client.branchId}` : client.id}
                   sx={{
                     '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
                     '&:hover': { backgroundColor: '#e3f2fd' }
                   }}
                 >
                   <TableCell sx={{ fontWeight: 600 }}>
-                    {client.displayRestaurantName}
+                    {client.displayName || client.displayRestaurantName}
                   </TableCell>
-                  <TableCell>{client.displayOrgName}</TableCell>
+                  <TableCell>
+                    {client.hasBranches ? client.branchOrgName : client.displayOrgName}
+                  </TableCell>
                   <TableCell>{client.fetchedProductName}</TableCell>
                   <TableCell>{client.fetchedGramm} гр</TableCell>
                   <TableCell>{client.fetchedPackageType}</TableCell>
@@ -1332,80 +1354,15 @@ const Invoices = ({ currentUser }) => {
         <DialogContent dividers sx={{ pt: 2.5 }}>
           {selectedClient && (
             <Box>
-              {/* Branch Selection - shows if client has branches */}
-              {clientBranches.length > 0 ? (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle2" fontWeight="500" gutterBottom color="error">
-                    Выберите филиал: *
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-                    {clientBranches.map((branch, index) => (
-                      <Chip
-                        key={branch.id}
-                        label={branch.branchName ? `Филиал ${branch.branchName}` : `Филиал ${index + 1}`}
-                        onClick={() => setSelectedBranch(branch)}
-                        color={selectedBranch?.id === branch.id ? "primary" : "default"}
-                        variant={selectedBranch?.id === branch.id ? "filled" : "outlined"}
-                        sx={{
-                          cursor: 'pointer',
-                          fontWeight: selectedBranch?.id === branch.id ? 600 : 400,
-                          backgroundColor: selectedBranch?.id === branch.id ? '#0F9D8C' : 'transparent',
-                          borderColor: '#0F9D8C',
-                          color: selectedBranch?.id === branch.id ? 'white' : '#0F9D8C',
-                          fontSize: '0.95rem',
-                          '&:hover': {
-                            backgroundColor: selectedBranch?.id === branch.id ? '#0c7a6e' : 'rgba(15, 157, 140, 0.08)'
-                          }
-                        }}
-                      />
-                    ))}
-                  </Box>
-
-                  {/* Display selected branch info */}
-                  {selectedBranch && (
-                    <Box sx={{ p: 2, backgroundColor: '#f0faf9', borderRadius: 1, border: '1px solid #0F9D8C' }}>
-                      <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Наименование организации:
-                          </Typography>
-                          <Typography variant="body1" fontWeight={600}>
-                            {selectedBranch.orgName}
-                          </Typography>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Название ресторана:
-                          </Typography>
-                          <Typography variant="body1" fontWeight={600}>
-                            {customRestaurantName || selectedClient.displayRestaurantName}
-                          </Typography>
-                        </Grid>
-                      </Grid>
-                    </Box>
-                  )}
-
-                  {/* Restaurant Name (editable) */}
-                  <TextField
-                    label="Название ресторана (можно изменить)"
-                    fullWidth
-                    value={customRestaurantName}
-                    onChange={(e) => setCustomRestaurantName(e.target.value)}
-                    sx={{ mt: 2 }}
-                    size="medium"
-                  />
-                </Box>
-              ) : (
-                /* Show old restaurant name input if no branches */
-                <TextField
-                  label="Название ресторана"
-                  fullWidth
-                  value={customRestaurantName}
-                  onChange={(e) => setCustomRestaurantName(e.target.value)}
-                  sx={{ mb: 3 }}
-                  size="medium"
-                />
-              )}
+              {/* Restaurant Name (editable) */}
+              <TextField
+                label="Название ресторана"
+                fullWidth
+                value={customRestaurantName}
+                onChange={(e) => setCustomRestaurantName(e.target.value)}
+                sx={{ mb: 3 }}
+                size="medium"
+              />
 
               {/* Sender Company Selection */}
               <Box sx={{ mb: 3 }}>

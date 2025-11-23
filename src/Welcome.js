@@ -377,8 +377,8 @@ const fetchClientData = async () => {
             rollCount = 0;
           }
 
-          const clientResult = { 
-            id: docSnap.id, 
+          const baseClientResult = {
+            id: docSnap.id,
             ...data,
             // Store the fetched product info
             fetchedProductName: productName,
@@ -398,15 +398,41 @@ const fetchClientData = async () => {
             totalRolls: rollCount
           };
 
-          // Debug log for final client data
-          console.log(`Final client data for ${data.name}:`, {
-            designType: clientResult.designType,
-            gramm: clientResult.gramm,
-            packaging: clientResult.packaging,
-            productTypeName: clientResult.productTypeName
-          });
+          // Fetch branches for this client
+          let branches = [];
+          try {
+            const branchesSnapshot = await getDocs(collection(db, `clients/${docSnap.id}/branches`));
+            if (!branchesSnapshot.empty) {
+              branches = branchesSnapshot.docs.map(branchDoc => ({
+                id: branchDoc.id,
+                ...branchDoc.data()
+              }));
+            }
+          } catch (error) {
+            console.error(`Error fetching branches for client ${data.name}:`, error);
+          }
 
-          return clientResult;
+          // If client has branches, return an array of client rows (one per branch)
+          if (branches.length > 0) {
+            return branches.map((branch, index) => ({
+              ...baseClientResult,
+              branchId: branch.id,
+              branchName: branch.branchName || `Филиал ${index + 1}`,
+              branchOrgName: branch.orgName,
+              branchAddress: branch.addressShort,
+              branchLocation: branch.addressLong,
+              branchComment: branch.comment,
+              displayName: `${data.name || data.restaurant} (${branch.branchName || `Филиал ${index + 1}`})`,
+              hasBranches: true
+            }));
+          } else {
+            // No branches - return single client row
+            return [{
+              ...baseClientResult,
+              displayName: data.name || data.restaurant || '',
+              hasBranches: false
+            }];
+          }
           
         } catch (error) {
           console.error("Error processing client document:", docSnap.id, error);
@@ -415,16 +441,21 @@ const fetchClientData = async () => {
       })
     );
 
-    const validClients = clientsArray.filter(client => client !== null && client.id);
-    setClientData(validClients);
+    // Flatten the array since each client can return multiple rows (branches)
+    const flattenedClients = clientsArray
+      .filter(client => client !== null)
+      .flat()
+      .filter(client => client && client.id);
 
-    if (validClients.length > 0) {
+    setClientData(flattenedClients);
+
+    if (flattenedClients.length > 0) {
       setColumnHeaders(getColumnHeaders(userRole));
     } else {
       setColumnHeaders([]);
     }
-    
-    console.log('Total valid clients loaded:', validClients.length);
+
+    console.log('Total valid clients loaded (including branch rows):', flattenedClients.length);
     
   } catch (error) {
     console.error("Error fetching client data:", error);
@@ -880,7 +911,7 @@ const ClientsTable = () => (
             
             return (
               <TableRow
-                key={client.id}
+                key={client.hasBranches ? `${client.id}-${client.branchId}` : client.id}
                 sx={{
                   borderBottom: lowPaper
                     ? '3px solid #f44336'
@@ -900,20 +931,33 @@ const ClientsTable = () => (
                           {lowPaper && <ReportGmailerrorredIcon color="error" />}
                           <Box>
                             <Typography fontWeight={600}>
-                              {client.name || '-'}
+                              {client.displayName || client.name || '-'}
                             </Typography>
                             {/* Organization name below restaurant name in green */}
-                            {client.orgName && client.orgName !== '-' && (
-                              <Typography 
-                                variant="body2" 
-                                sx={{ 
+                            {client.hasBranches && client.branchOrgName ? (
+                              <Typography
+                                variant="body2"
+                                sx={{
                                   color: '#0F9D8C',
                                   fontWeight: 400,
                                   fontSize: '0.85rem'
                                 }}
                               >
-                                {client.orgName}
+                                {client.branchOrgName}
                               </Typography>
+                            ) : (
+                              client.orgName && client.orgName !== '-' && (
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    color: '#0F9D8C',
+                                    fontWeight: 400,
+                                    fontSize: '0.85rem'
+                                  }}
+                                >
+                                  {client.orgName}
+                                </Typography>
+                              )
                             )}
                           </Box>
                         </Box>
