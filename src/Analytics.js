@@ -3,9 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import {
   collection,
-  getDocs,
-  query,
-  where
+  getDocs
 } from "firebase/firestore";
 import { db } from "./firebase";
 import {
@@ -16,18 +14,23 @@ import {
   Button,
   Stack,
   Grid,
-  Card,
-  CardContent,
-  Divider
+  Card
 } from "@mui/material";
 import {
   Chart as ChartJS,
   ArcElement,
-  BarElement, CategoryScale, LinearScale, 
+  BarElement,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  TimeScale,
   Tooltip,
-  Legend
+  Legend,
+  Filler
 } from 'chart.js';
-import { Doughnut, Bar } from 'react-chartjs-2';
+import { Doughnut, Bar, Line } from 'react-chartjs-2';
+import ClientUsageHistoryModal from './components/ClientUsageHistoryModal';
 import Shield from '@mui/icons-material/Shield';
 import Work from '@mui/icons-material/Work';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -36,15 +39,29 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper as MuiPaper
 } from "@mui/material";
 import { ArrowDownward, ArrowUpward } from "@mui/icons-material";
-import { subDays } from "date-fns";
+import { subDays, subMonths, format, startOfDay, endOfDay, startOfWeek, startOfMonth, endOfWeek, endOfMonth } from "date-fns";
+import { ru } from 'date-fns/locale';
+import { DatePicker } from '@mui/x-date-pickers';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 
 
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+ChartJS.register(
+  ArcElement,
+  BarElement,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  TimeScale,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 export default function Analytics({ user, userRole, onLogout }) {
   const navigate = useNavigate();
-  const [clientData, setClientData] = useState([]);
   const [recentLogs, setRecentLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [productStats, setProductStats] = useState({});
@@ -61,10 +78,31 @@ export default function Analytics({ user, userRole, onLogout }) {
     sachet: 0,
     total: 0
   });
+  const [topPaperUsageClients, setTopPaperUsageClients] = useState([]);
+  const [paperUsageModalOpen, setPaperUsageModalOpen] = useState(false);
+  const [selectedClientForUsage, setSelectedClientForUsage] = useState(null);
+  const [earliestLogDate, setEarliestLogDate] = useState(null);
+  const [dailyUsageData, setDailyUsageData] = useState([]);
+  const [dateRangeStart, setDateRangeStart] = useState(subMonths(new Date(), 3));
+  const [dateRangeEnd, setDateRangeEnd] = useState(new Date());
+  const [logsPage, setLogsPage] = useState(0);
+  const [logsPerPage] = useState(20);
+  const [chartScale, setChartScale] = useState('daily'); // daily, weekly, monthly
 
   // Helper function to format numbers with spaces
   const formatNumber = (num) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  };
+
+  // Handle opening client usage history modal
+  const handleOpenUsageModal = (client) => {
+    setSelectedClientForUsage(client);
+    setPaperUsageModalOpen(true);
+  };
+
+  const handleCloseUsageModal = () => {
+    setPaperUsageModalOpen(false);
+    setSelectedClientForUsage(null);
   };
 
   // Fetch client data
@@ -74,26 +112,96 @@ export default function Analytics({ user, userRole, onLogout }) {
       const clientSnapshot = await getDocs(collection(db, "clients"));
       const clientList = [];
       const logsList = [];
-      const oneWeekAgo = subDays(new Date(), 7);
+      const thirtyDaysAgo = subDays(new Date(), 30);
+      let earliestDate = null;
+      const dailyUsageMap = {};
 
       // --- Iterate through Clients ---
-      await Promise.all(clientSnapshot.docs.map(async (clientDoc) => {
+      const clientPaperUsage = await Promise.all(clientSnapshot.docs.map(async (clientDoc) => {
         const client = { id: clientDoc.id, ...clientDoc.data() };
         clientList.push(client);
 
         const logsRef = collection(db, "clients", clientDoc.id, "logs");
         const logSnapshot = await getDocs(logsRef);
 
+        let totalPaperUsed = 0;
+
         logSnapshot.docs.forEach((logDoc) => {
           const log = logDoc.data();
           const logDate = log.date?.toDate ? log.date.toDate() : new Date(log.date);
 
-          if (logDate >= oneWeekAgo) {
+          // Track earliest log date
+          if (!earliestDate || logDate < earliestDate) {
+            earliestDate = logDate;
+          }
+
+          // Calculate paper usage (only paperOut actions)
+          if (log.actionType === 'paperOut') {
+            totalPaperUsed += log.amount || 0;
+
+            // Track daily usage for the chart
+            const dateKey = format(logDate, 'yyyy-MM-dd');
+            if (!dailyUsageMap[dateKey]) {
+              dailyUsageMap[dateKey] = 0;
+            }
+            dailyUsageMap[dateKey] += log.amount || 0;
+          }
+
+          // Collect logs from last 30 days
+          if (logDate >= thirtyDaysAgo) {
             logsList.push({
               date: logDate,
               restaurantName: client.name || "—",
               actionType: log.actionType,
               amount: log.amount,
+            });
+          }
+        });
+
+        return {
+          ...client,
+          totalUsed: totalPaperUsed
+        };
+      }));
+
+      // --- Fetch ProductTypes and their logs (standard papers) ---
+      const productTypesSnapshot = await getDocs(collection(db, "productTypes"));
+      const productTypesList = [];
+
+      await Promise.all(productTypesSnapshot.docs.map(async (productTypeDoc) => {
+        const productType = { id: productTypeDoc.id, ...productTypeDoc.data() };
+        productTypesList.push(productType);
+
+        const logsRef = collection(db, "productTypes", productTypeDoc.id, "logs");
+        const logSnapshot = await getDocs(logsRef);
+
+        logSnapshot.docs.forEach((logDoc) => {
+          const log = logDoc.data();
+          const logDate = log.date?.toDate ? log.date.toDate() : new Date(log.date);
+
+          // Track earliest log date
+          if (!earliestDate || logDate < earliestDate) {
+            earliestDate = logDate;
+          }
+
+          // Calculate paper usage (only paperOut actions)
+          if (log.actionType === 'paperOut') {
+            // Track daily usage for the chart
+            const dateKey = format(logDate, 'yyyy-MM-dd');
+            if (!dailyUsageMap[dateKey]) {
+              dailyUsageMap[dateKey] = 0;
+            }
+            dailyUsageMap[dateKey] += log.amount || 0;
+          }
+
+          // Collect logs from last 30 days
+          if (logDate >= thirtyDaysAgo) {
+            logsList.push({
+              date: logDate,
+              restaurantName: productType.name || "Стандартная бумага",
+              actionType: log.actionType,
+              amount: log.amount,
+              isProductType: true
             });
           }
         });
@@ -104,6 +212,13 @@ export default function Analytics({ user, userRole, onLogout }) {
       const productMap = {};
       productSnapshot.docs.forEach((doc) => {
         productMap[doc.id] = doc.data().productName;
+      });
+
+      // --- Fetch Package Types ---
+      const packageSnapshot = await getDocs(collection(db, "packageTypes"));
+      const packageMap = {};
+      packageSnapshot.docs.forEach((doc) => {
+        packageMap[doc.id] = doc.data().type;
       });
 
       // --- Package Stats ---
@@ -175,8 +290,29 @@ export default function Analytics({ user, userRole, onLogout }) {
       // --- Sort logs (latest first) ---
       logsList.sort((a, b) => b.date - a.date);
 
+      // --- Calculate Top 15 Paper Usage Clients ---
+      const topPaperUsage = clientPaperUsage
+        .filter(client => client.totalUsed > 0)
+        .map(client => ({
+          id: client.id,
+          restaurant: client.name || client.restaurant || "Неизвестный клиент",
+          orgName: client.orgName || "—",
+          packageType: packageMap[client.packageID] || "—",
+          productName: productMap[client.productID_2] || "—",
+          totalUsed: parseFloat(client.totalUsed.toFixed(2))
+        }))
+        .sort((a, b) => b.totalUsed - a.totalUsed)
+        .slice(0, 15);
+
+      // --- Prepare Daily Usage Data for Chart ---
+      const dailyUsageArray = Object.entries(dailyUsageMap)
+        .map(([date, amount]) => ({
+          date,
+          amount: parseFloat(amount.toFixed(2))
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+
       // --- Set State ---
-      setClientData(clientList);
       setPackageStats(stats);
       setProductStats(productStats);
       setRecentLogs(logsList);
@@ -187,6 +323,9 @@ export default function Analytics({ user, userRole, onLogout }) {
         total: totalPayments
       });
       setSenderCompanyStats(senderCompanyData);
+      setTopPaperUsageClients(topPaperUsage);
+      setEarliestLogDate(earliestDate);
+      setDailyUsageData(dailyUsageArray);
     } catch (err) {
       console.error("Error fetching data:", err);
     } finally {
@@ -341,6 +480,130 @@ export default function Analytics({ user, userRole, onLogout }) {
     ],
   };
 
+ // Aggregate data by scale (daily, weekly, monthly)
+  const aggregateDataByScale = (data, scale) => {
+    const aggregated = {};
+
+    data.forEach(item => {
+      const itemDate = new Date(item.date);
+      let key;
+
+      switch (scale) {
+        case 'weekly':
+          key = format(startOfWeek(itemDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+          break;
+        case 'monthly':
+          key = format(startOfMonth(itemDate), 'yyyy-MM-dd');
+          break;
+        case 'daily':
+        default:
+          key = item.date;
+          break;
+      }
+
+      if (!aggregated[key]) {
+        aggregated[key] = 0;
+      }
+      aggregated[key] += item.amount;
+    });
+
+    return Object.entries(aggregated)
+      .map(([date, amount]) => ({ date, amount: parseFloat(amount.toFixed(2)) }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  };
+
+  // Format labels based on scale
+  const formatChartLabel = (dateStr, scale) => {
+    const date = new Date(dateStr);
+    switch (scale) {
+      case 'weekly':
+        const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
+        return `${format(date, 'dd.MM')} - ${format(weekEnd, 'dd.MM.yyyy')}`;
+      case 'monthly':
+        return format(date, 'LLLL yyyy', { locale: ru });
+      case 'daily':
+      default:
+        return format(date, 'dd.MM.yyyy');
+    }
+  };
+
+ // Filter daily usage data by date range
+  const filteredDailyUsage = dailyUsageData.filter(item => {
+    const itemDate = new Date(item.date);
+    return itemDate >= startOfDay(dateRangeStart) && itemDate <= endOfDay(dateRangeEnd);
+  });
+
+  // Aggregate by selected scale
+  const aggregatedUsageData = aggregateDataByScale(filteredDailyUsage, chartScale);
+
+  // Daily Usage Line Chart Data
+  const dailyUsageChartData = {
+    labels: aggregatedUsageData.map(item => formatChartLabel(item.date, chartScale)),
+    datasets: [
+      {
+        label: 'Расход бумаги (кг)',
+        data: aggregatedUsageData.map(item => item.amount),
+        borderColor: '#0F9D8C',
+        backgroundColor: 'rgba(15, 157, 140, 0.1)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        pointBackgroundColor: '#0F9D8C',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+      },
+    ],
+  };
+
+  const dailyUsageChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    devicePixelRatio: 3,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        padding: 12,
+        bodyFont: { size: 14 },
+        titleFont: { size: 15, weight: 'bold' },
+        callbacks: {
+          label: function(context) {
+            return `Расход: ${context.raw} кг`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: {
+          font: { size: 11 },
+          maxRotation: 45,
+          minRotation: 45,
+          maxTicksLimit: 15
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)'
+        }
+      },
+      y: {
+        beginAtZero: true,
+        ticks: {
+          font: { size: 12 },
+          callback: function(value) {
+            return value + ' кг';
+          }
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)'
+        }
+      }
+    }
+  };
+
  const topClientsChartOptions = {
   indexAxis: 'y',
   responsive: true,
@@ -446,7 +709,7 @@ const centerTextPlugin = {
         mb: 3,
       }}
     >
-      <Container maxWidth={false} sx={{ maxWidth: "1600px" }}>
+      <Container maxWidth={false} sx={{ maxWidth: "2000px" }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Box
             sx={{
@@ -519,8 +782,8 @@ const centerTextPlugin = {
       </Container>
     </Box>
 
-    <Container maxWidth={false} sx={{ maxWidth: "1600px", py: 2 }}>
-      <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ mb: 4 }}>
+    <Container maxWidth={false} sx={{ maxWidth: "2000px", py: 2 }}>
+      <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ mb: 5 }}>
         Аналитика
       </Typography>
 
@@ -529,10 +792,10 @@ const centerTextPlugin = {
           <CircularProgress size={60} />
         </Box>
       ) : (
-        <Stack spacing={3}>
+        <Stack spacing={5}>
           {/* 1st Container - 3 Stats Cards */}
-          <Card elevation={2} sx={{ borderRadius: 3, p: 3 }}>
-            <Grid container spacing={3}>
+          <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
+            <Grid container spacing={4}>
               <Grid item xs={12} md={4}>
                 <Box
                   sx={{
@@ -609,8 +872,8 @@ const centerTextPlugin = {
           </Card>
 
           {/* 2nd Container - Three Donut Charts */}
-          <Card elevation={2} sx={{ borderRadius: 3, p: 3 }}>
-            <Grid container spacing={3}>
+          <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
+            <Grid container spacing={4}>
               <Grid item xs={12} md={4}>
                 <Box>
                   <Typography variant="h6" fontWeight="bold" gutterBottom>
@@ -646,18 +909,272 @@ const centerTextPlugin = {
             </Grid>
           </Card>
 
-          {/* 3rd Container - Top Clients Bar Chart (Full Width) */}
-          <Card elevation={2} sx={{ borderRadius: 3, p: 3 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Топ 10 клиентов по сумме накладных
-            </Typography>
-            <Box sx={{ position: 'relative', height: 500, mt: 2 }}>
-              <Bar data={topClientsChartData} options={topClientsChartOptions} />
-            </Box>
+          {/* 3rd Container - Three Column Layout with Charts */}
+          <Card elevation={3} sx={{ borderRadius: 4, p: 5, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
+            <Grid container spacing={6}>
+              {/* Column 1 - Top 10 Clients by Invoice Amount */}
+              <Grid item xs={12} lg={2.5}>
+                <Box sx={{ height: '100%' }}>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom noWrap>
+                    Топ 10 клиентов по сумме накладных
+                  </Typography>
+                  <Box sx={{ position: 'relative', height: 550, mt: 2 }}>
+                    <Bar data={topClientsChartData} options={topClientsChartOptions} />
+                  </Box>
+                </Box>
+              </Grid>
+
+              {/* Column 2 - Top 15 Paper Usage */}
+              <Grid item xs={12} lg={2.5}>
+                <Box sx={{ height: '100%' }}>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    Топ 15 клиентов по расходу бумаги
+                  </Typography>
+                  {earliestLogDate && (
+                    <Typography variant="caption" color="text.secondary">
+                      С {format(earliestLogDate, 'dd.MM.yyyy', { locale: ru })} ({format(earliestLogDate, 'LLLL', { locale: ru })})
+                    </Typography>
+                  )}
+                </Box>
+
+                <Box sx={{
+                  maxHeight: 550,
+                  overflowY: 'auto',
+                  '&::-webkit-scrollbar': {
+                    width: '8px',
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    backgroundColor: '#f1f1f1',
+                    borderRadius: '10px',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: '#666',
+                    borderRadius: '10px',
+                    '&:hover': {
+                      backgroundColor: '#444',
+                    }
+                  }
+                }}>
+                  {topPaperUsageClients.length > 0 ? (
+                    <Stack spacing={2.5}>
+                      {topPaperUsageClients.map((client, index) => (
+                        <Box
+                          key={client.id}
+                          onClick={() => handleOpenUsageModal(client)}
+                          sx={{
+                            p: 2.5,
+                            borderRadius: 2,
+                            bgcolor: '#f9f9f9',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            border: '1px solid transparent',
+                            '&:hover': {
+                              bgcolor: '#E2F0EE',
+                              borderColor: '#0F9D8C',
+                              transform: 'translateX(4px)',
+                              boxShadow: '0 2px 8px rgba(15, 157, 140, 0.15)'
+                            }
+                          }}
+                        >
+                          <Stack direction="row" alignItems="center" spacing={2}>
+                            {/* Rank Badge */}
+                            <Box
+                              sx={{
+                                minWidth: 32,
+                                height: 32,
+                                borderRadius: '50%',
+                                bgcolor: index < 3 ? '#0F9D8C' : '#e0e0e0',
+                                color: index < 3 ? '#fff' : '#666',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 'bold',
+                                fontSize: '0.9rem'
+                              }}
+                            >
+                              {index + 1}
+                            </Box>
+
+                            {/* Client Info */}
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Typography variant="body1" fontWeight="600" noWrap>
+                                {client.restaurant}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                {client.orgName}
+                              </Typography>
+                              <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap">
+                                <Typography variant="caption" sx={{
+                                  bgcolor: '#E8F0FE',
+                                  color: '#174EA6',
+                                  px: 1,
+                                  py: 0.25,
+                                  borderRadius: 1,
+                                  fontWeight: 500
+                                }}>
+                                  {client.packageType}
+                                </Typography>
+                                <Typography variant="caption" sx={{
+                                  bgcolor: '#FFF4E5',
+                                  color: '#E65100',
+                                  px: 1,
+                                  py: 0.25,
+                                  borderRadius: 1,
+                                  fontWeight: 500
+                                }}>
+                                  {client.productName}
+                                </Typography>
+                              </Stack>
+                            </Box>
+
+                            {/* Total Usage */}
+                            <Box sx={{ textAlign: 'right' }}>
+                              <Typography variant="h6" fontWeight="bold" color="#333">
+                                {client.totalUsed.toFixed(2)}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                кг
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </Box>
+                      ))}
+                    </Stack>
+                  ) : (
+                    <Box
+                      display="flex"
+                      justifyContent="center"
+                      alignItems="center"
+                      minHeight="200px"
+                      bgcolor="#f5f5f5"
+                      borderRadius={2}
+                    >
+                      <Typography variant="body1" color="text.secondary">
+                        Нет данных о расходе бумаги
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+                </Box>
+              </Grid>
+
+              {/* Column 3 - Daily Usage Chart (Wider) */}
+              <Grid item xs={12} lg={7}>
+                <Box sx={{ height: '100%' }}>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="h6" fontWeight="bold" gutterBottom noWrap>
+                      Расход бумаги (все клиенты)
+                    </Typography>
+
+                    {/* Scale Selector */}
+                    <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                      <Button
+                        size="small"
+                        variant={chartScale === 'daily' ? 'contained' : 'outlined'}
+                        onClick={() => setChartScale('daily')}
+                        sx={{
+                          minWidth: 80,
+                          bgcolor: chartScale === 'daily' ? '#0F9D8C' : 'transparent',
+                          color: chartScale === 'daily' ? '#fff' : '#0F9D8C',
+                          borderColor: '#0F9D8C',
+                          '&:hover': {
+                            bgcolor: chartScale === 'daily' ? '#0c7a6e' : 'rgba(15, 157, 140, 0.04)',
+                            borderColor: '#0c7a6e'
+                          }
+                        }}
+                      >
+                        День
+                      </Button>
+                      <Button
+                        size="small"
+                        variant={chartScale === 'weekly' ? 'contained' : 'outlined'}
+                        onClick={() => setChartScale('weekly')}
+                        sx={{
+                          minWidth: 80,
+                          bgcolor: chartScale === 'weekly' ? '#0F9D8C' : 'transparent',
+                          color: chartScale === 'weekly' ? '#fff' : '#0F9D8C',
+                          borderColor: '#0F9D8C',
+                          '&:hover': {
+                            bgcolor: chartScale === 'weekly' ? '#0c7a6e' : 'rgba(15, 157, 140, 0.04)',
+                            borderColor: '#0c7a6e'
+                          }
+                        }}
+                      >
+                        Неделя
+                      </Button>
+                      <Button
+                        size="small"
+                        variant={chartScale === 'monthly' ? 'contained' : 'outlined'}
+                        onClick={() => setChartScale('monthly')}
+                        sx={{
+                          minWidth: 80,
+                          bgcolor: chartScale === 'monthly' ? '#0F9D8C' : 'transparent',
+                          color: chartScale === 'monthly' ? '#fff' : '#0F9D8C',
+                          borderColor: '#0F9D8C',
+                          '&:hover': {
+                            bgcolor: chartScale === 'monthly' ? '#0c7a6e' : 'rgba(15, 157, 140, 0.04)',
+                            borderColor: '#0c7a6e'
+                          }
+                        }}
+                      >
+                        Месяц
+                      </Button>
+                    </Stack>
+
+                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
+                      <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+                        <DatePicker
+                          label="С"
+                          value={dateRangeStart}
+                          onChange={(newValue) => setDateRangeStart(newValue)}
+                          slotProps={{
+                            textField: {
+                              size: 'small',
+                              sx: { minWidth: 130 }
+                            }
+                          }}
+                        />
+                        <DatePicker
+                          label="До"
+                          value={dateRangeEnd}
+                          onChange={(newValue) => setDateRangeEnd(newValue)}
+                          slotProps={{
+                            textField: {
+                              size: 'small',
+                              sx: { minWidth: 130 }
+                            }
+                          }}
+                        />
+                      </Stack>
+                    </LocalizationProvider>
+                  </Box>
+
+                  {aggregatedUsageData.length > 0 ? (
+                    <Box sx={{ height: 480 }}>
+                      <Line data={dailyUsageChartData} options={dailyUsageChartOptions} />
+                    </Box>
+                  ) : (
+                    <Box
+                      display="flex"
+                      justifyContent="center"
+                      alignItems="center"
+                      height={480}
+                      bgcolor="#f5f5f5"
+                      borderRadius={2}
+                    >
+                      <Typography variant="body1" color="text.secondary">
+                        Нет данных за выбранный период
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+            </Grid>
           </Card>
 
           {/* 4th Container - Sender Company Mini Table */}
-          <Card elevation={2} sx={{ borderRadius: 3, p: 3 }}>
+          <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
             <Typography variant="h6" fontWeight="bold" gutterBottom>
               Накладные по организациям
             </Typography>
@@ -673,7 +1190,11 @@ const centerTextPlugin = {
                   {senderCompanyStats.length > 0 ? (
                     senderCompanyStats.map((item, index) => (
                       <TableRow key={index} hover>
-                        <TableCell>{item.company}</TableCell>
+                        <TableCell>
+                          <Typography variant="body2" noWrap sx={{ maxWidth: 300 }}>
+                            {item.company}
+                          </Typography>
+                        </TableCell>
                         <TableCell align="right">{formatNumber(item.total)} сум</TableCell>
                       </TableRow>
                     ))
@@ -692,11 +1213,11 @@ const centerTextPlugin = {
           </Card>
 
           {/* 5th Container - Recent Logs (Full Width) */}
-          <Card elevation={2} sx={{ borderRadius: 3, p: 3 }}>
+          <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
             <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Недавние лог-записи (последние 7 дней)
+              Недавние лог-записи (последние 30 дней)
             </Typography>
-            <TableContainer component={MuiPaper} sx={{ mt: 2 }}>
+            <TableContainer component={MuiPaper} sx={{ mt: 2, borderRadius: 2 }}>
               <Table>
                 <TableHead>
                   <TableRow>
@@ -708,31 +1229,42 @@ const centerTextPlugin = {
                 </TableHead>
                 <TableBody>
                   {recentLogs.length > 0 ? (
-                    recentLogs.map((log, index) => (
-                      <TableRow key={index} hover>
-                        <TableCell>{log.date.toLocaleString()}</TableCell>
-                        <TableCell>{log.restaurantName}</TableCell>
-                        <TableCell>
-                          {log.actionType === "paperIn" ? (
-                            <Box display="flex" alignItems="center" gap={1}>
-                              <ArrowDownward sx={{ color: "green", fontSize: 20 }} />
-                              <Typography variant="body2" color="green">Приход</Typography>
-                            </Box>
-                          ) : (
-                            <Box display="flex" alignItems="center" gap={1}>
-                              <ArrowUpward sx={{ color: "red", fontSize: 20 }} />
-                              <Typography variant="body2" color="red">Расход</Typography>
-                            </Box>
-                          )}
-                        </TableCell>
-                        <TableCell>{log.amount} кг</TableCell>
-                      </TableRow>
-                    ))
+                    recentLogs
+                      .slice(logsPage * logsPerPage, logsPage * logsPerPage + logsPerPage)
+                      .map((log, index) => (
+                        <TableRow key={index} hover>
+                          <TableCell>{log.date.toLocaleString('ru-RU')}</TableCell>
+                          <TableCell>
+                            <Typography variant="body2" noWrap sx={{ maxWidth: 250 }}>
+                              {log.restaurantName}
+                              {log.isProductType && (
+                                <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                                  (Стандарт)
+                                </Typography>
+                              )}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            {log.actionType === "paperIn" ? (
+                              <Box display="flex" alignItems="center" gap={1}>
+                                <ArrowDownward sx={{ color: "green", fontSize: 20 }} />
+                                <Typography variant="body2" color="green">Приход</Typography>
+                              </Box>
+                            ) : (
+                              <Box display="flex" alignItems="center" gap={1}>
+                                <ArrowUpward sx={{ color: "red", fontSize: 20 }} />
+                                <Typography variant="body2" color="red">Расход</Typography>
+                              </Box>
+                            )}
+                          </TableCell>
+                          <TableCell>{typeof log.amount === 'number' ? log.amount.toFixed(2) : log.amount} кг</TableCell>
+                        </TableRow>
+                      ))
                   ) : (
                     <TableRow>
                       <TableCell colSpan={4} align="center">
                         <Typography variant="body2" color="text.secondary" py={3}>
-                          Нет записей за последние 7 дней
+                          Нет записей за последние 30 дней
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -740,10 +1272,58 @@ const centerTextPlugin = {
                 </TableBody>
               </Table>
             </TableContainer>
+
+            {/* Pagination Controls */}
+            {recentLogs.length > logsPerPage && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 2, gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  disabled={logsPage === 0}
+                  onClick={() => setLogsPage(logsPage - 1)}
+                  sx={{
+                    color: '#0F9D8C',
+                    borderColor: '#0F9D8C',
+                    '&:hover': {
+                      borderColor: '#0c7a6e',
+                      backgroundColor: 'rgba(15, 157, 140, 0.04)'
+                    }
+                  }}
+                >
+                  Назад
+                </Button>
+                <Typography variant="body2" color="text.secondary">
+                  Страница {logsPage + 1} из {Math.ceil(recentLogs.length / logsPerPage)}
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  disabled={logsPage >= Math.ceil(recentLogs.length / logsPerPage) - 1}
+                  onClick={() => setLogsPage(logsPage + 1)}
+                  sx={{
+                    color: '#0F9D8C',
+                    borderColor: '#0F9D8C',
+                    '&:hover': {
+                      borderColor: '#0c7a6e',
+                      backgroundColor: 'rgba(15, 157, 140, 0.04)'
+                    }
+                  }}
+                >
+                  Вперёд
+                </Button>
+              </Box>
+            )}
           </Card>
         </Stack>
       )}
     </Container>
+
+    {/* Client Usage History Modal */}
+    <ClientUsageHistoryModal
+      open={paperUsageModalOpen}
+      onClose={handleCloseUsageModal}
+      client={selectedClientForUsage}
+    />
   </>
 );
 }
