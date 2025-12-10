@@ -33,8 +33,8 @@ import {
   doc,
   getDoc
 } from "firebase/firestore";
-import { db } from "./firebase";
-import { checkAndNotifyLowPaper } from './notificationService';
+import { db } from "../../services/firebase";
+import { checkAndNotifyLowPaper } from '../../services/notificationService';
 
 export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
   // Package Types for both design types

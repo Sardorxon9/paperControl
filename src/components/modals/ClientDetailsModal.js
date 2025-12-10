@@ -14,7 +14,7 @@ import {
 } from "firebase/firestore";
 import EditIcon from '@mui/icons-material/Edit';
 import TelegramIcon from '@mui/icons-material/Telegram';
-import { db } from "./firebase";
+import { db } from "../../services/firebase";
 import {
   Box,
   Button,
@@ -45,15 +45,15 @@ import {
   Chip
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
-import { checkAndNotifyLowPaper } from "./notificationService";
+import { checkAndNotifyLowPaper } from "../../services/notificationService";
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
 import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
 import HelpOutlineRoundedIcon from '@mui/icons-material/HelpOutlineRounded';
-import EditClientForm from "./EditClientForm";
+import EditClientForm from "../forms/EditClientForm";
 import { PhotoProvider, PhotoView } from 'react-photo-view';
-import '../src/style/ClientDetailsUI.css';
-import './components/ui/css/ClientDetailsModal.css';
+import '../../styles/ClientDetailsUI.css';
+import '../../styles/ClientDetailsModal.css';
 const modalStyle = {
   position: 'absolute',
   top: '50%',

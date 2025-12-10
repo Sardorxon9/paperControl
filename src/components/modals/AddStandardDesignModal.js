@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { collection, addDoc, serverTimestamp, getDocs, doc, getDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { db } from '../../services/firebase';
 
 const AddStandardDesignModal = ({ open, onClose, onDesignAdded, currentUser }) => {
   const [formData, setFormData] = useState({

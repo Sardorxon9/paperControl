@@ -10,7 +10,7 @@ import {
   serverTimestamp
 } from "firebase/firestore";
 
-import { db } from "./firebase";
+import { db } from "../services/firebase";
 import {
   Container,
   Typography,
@@ -43,18 +43,18 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import Shield from '@mui/icons-material/Shield';
 import Work from '@mui/icons-material/Work';
-import AddClientForm from './addClientForm';
-import ClientDetailsModal from './ClientDetailsModal';
-import ProductDetailsModal from './ProductDetailsModal';
+import AddClientForm from '../components/forms/addClientForm';
+import ClientDetailsModal from '../components/modals/ClientDetailsModal';
+import ProductDetailsModal from '../components/modals/ProductDetailsModal';
 import ReportGmailerrorredIcon from '@mui/icons-material/ReportGmailerrorred';
 import LogoutIcon from '@mui/icons-material/Logout';
-import AddStandardDesignModal from "./AddStandardDesignModal";
+import AddStandardDesignModal from "../components/modals/AddStandardDesignModal";
 import UnfoldMoreRoundedIcon from '@mui/icons-material/UnfoldMoreRounded';
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import CancelRoundedIcon from '@mui/icons-material/CancelRounded';
-import { checkAndNotifyLowPaper, sendLowPaperSummaryToAdmins } from "./paperNotificationService";
+import { checkAndNotifyLowPaper, sendLowPaperSummaryToAdmins } from "../services/paperNotificationService";
 import TelegramIcon from '@mui/icons-material/Telegram';
 
 const getHiddenColumns = (userRole) => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
-import { db, auth } from './firebase'; // Assuming your firebase file is in src/firebase.js
+import { db, auth } from '../../services/firebase'; // Assuming your firebase file is in src/firebase.js
 
 // Define all the headers for the CSV file, including client and roll data
 const CSV_HEADERS = [

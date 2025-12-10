@@ -47,7 +47,7 @@ import {
   Add, 
   Delete 
 } from '@mui/icons-material';
-import { db } from "./firebase";
+import { db } from "../services/firebase";
 import {
   collection,
   getDocs,

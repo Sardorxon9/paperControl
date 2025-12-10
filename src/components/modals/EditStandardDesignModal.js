@@ -22,7 +22,7 @@ import {
   updateDoc,
   serverTimestamp
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db } from '../../services/firebase';
 
 const DEFAULT_PLACEHOLDER_URL = "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg";
 

@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../../services/firebase";
 import {
   Chart as ChartJS,
   LineElement,
@@ -27,7 +27,7 @@ import {
   Filler
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, differenceInDays } from 'date-fns';
 
 ChartJS.register(
   LineElement,
@@ -247,16 +247,25 @@ export default function ClientUsageHistoryModal({ open, onClose, client }) {
                   Дней с расходом
                 </Typography>
               </Box>
-              {usageData.length > 0 && (
-                <Box textAlign="center">
-                  <Typography variant="h5" fontWeight="bold" color="#34A853">
-                    {((client.totalUsed / usageData.length) * 30).toFixed(2)} кг
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Средний расход в месяц
-                  </Typography>
-                </Box>
-              )}
+              {usageData.length > 0 && (() => {
+                // Calculate average monthly usage based on actual time span
+                const firstDate = parseISO(usageData[0].date);
+                const lastDate = parseISO(usageData[usageData.length - 1].date);
+                const totalDays = differenceInDays(lastDate, firstDate) + 1; // +1 to include both first and last day
+                const monthsSpan = totalDays / 30.44; // Average days per month
+                const avgPerMonth = monthsSpan > 0 ? client.totalUsed / monthsSpan : client.totalUsed;
+
+                return (
+                  <Box textAlign="center">
+                    <Typography variant="h5" fontWeight="bold" color="#34A853">
+                      {avgPerMonth.toFixed(2)} кг
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Средний расход в месяц
+                    </Typography>
+                  </Box>
+                );
+              })()}
             </Box>
 
             {/* Line Chart */}

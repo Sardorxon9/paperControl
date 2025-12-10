@@ -46,9 +46,9 @@ import {
   addDoc,
   deleteDoc
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { db } from "../../services/firebase";
 
-import './components/ui/css/EditClientForm.css'
+import '../../styles/EditClientForm.css'
 // 🔗 Default placeholder
 const DEFAULT_PLACEHOLDER_URL =
   "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg?updatedAt=1755710788958";

@@ -5,7 +5,7 @@ import {
   collection,
   getDocs
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { db } from "../services/firebase";
 import {
   Container,
   Typography,
@@ -30,7 +30,7 @@ import {
   Filler
 } from 'chart.js';
 import { Doughnut, Bar, Line } from 'react-chartjs-2';
-import ClientUsageHistoryModal from './components/ClientUsageHistoryModal';
+import ClientUsageHistoryModal from '../components/modals/ClientUsageHistoryModal';
 import Shield from '@mui/icons-material/Shield';
 import Work from '@mui/icons-material/Work';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -909,268 +909,244 @@ const centerTextPlugin = {
             </Grid>
           </Card>
 
-          {/* 3rd Container - Three Column Layout with Charts */}
-          <Card elevation={3} sx={{ borderRadius: 4, p: 5, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
-            <Grid container spacing={6}>
-              {/* Column 1 - Top 10 Clients by Invoice Amount */}
-              <Grid item xs={12} lg={2.5}>
-                <Box sx={{ height: '100%' }}>
-                  <Typography variant="h6" fontWeight="bold" gutterBottom noWrap>
-                    Топ 10 клиентов по сумме накладных
-                  </Typography>
-                  <Box sx={{ position: 'relative', height: 550, mt: 2 }}>
-                    <Bar data={topClientsChartData} options={topClientsChartOptions} />
-                  </Box>
-                </Box>
-              </Grid>
+          {/* Top 10 Clients by Invoice Amount - Full Width */}
+          <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
+            <Typography variant="h6" fontWeight="bold" gutterBottom>
+              Топ 10 клиентов по сумме накладных
+            </Typography>
+            <Box sx={{ position: 'relative', height: 500, mt: 3 }}>
+              <Bar data={topClientsChartData} options={topClientsChartOptions} />
+            </Box>
+          </Card>
 
-              {/* Column 2 - Top 15 Paper Usage */}
-              <Grid item xs={12} lg={2.5}>
-                <Box sx={{ height: '100%' }}>
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="h6" fontWeight="bold" gutterBottom>
-                    Топ 15 клиентов по расходу бумаги
-                  </Typography>
-                  {earliestLogDate && (
-                    <Typography variant="caption" color="text.secondary">
-                      С {format(earliestLogDate, 'dd.MM.yyyy', { locale: ru })} ({format(earliestLogDate, 'LLLL', { locale: ru })})
-                    </Typography>
-                  )}
-                </Box>
+          {/* Top 15 Paper Usage Clients - Full Width */}
+          <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" gutterBottom>
+                Топ 15 клиентов по расходу бумаги
+              </Typography>
+              {earliestLogDate && (
+                <Typography variant="caption" color="text.secondary">
+                  С {format(earliestLogDate, 'dd.MM.yyyy', { locale: ru })} ({format(earliestLogDate, 'LLLL', { locale: ru })})
+                </Typography>
+              )}
+            </Box>
 
-                <Box sx={{
-                  maxHeight: 550,
-                  overflowY: 'auto',
-                  '&::-webkit-scrollbar': {
-                    width: '8px',
-                  },
-                  '&::-webkit-scrollbar-track': {
-                    backgroundColor: '#f1f1f1',
-                    borderRadius: '10px',
-                  },
-                  '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: '#666',
-                    borderRadius: '10px',
-                    '&:hover': {
-                      backgroundColor: '#444',
-                    }
-                  }
-                }}>
-                  {topPaperUsageClients.length > 0 ? (
-                    <Stack spacing={2.5}>
-                      {topPaperUsageClients.map((client, index) => (
+            {topPaperUsageClients.length > 0 ? (
+              <Grid container spacing={3}>
+                {topPaperUsageClients.map((client, index) => (
+                  <Grid item xs={12} sm={6} md={4} lg={3} key={client.id}>
+                    <Box
+                      onClick={() => handleOpenUsageModal(client)}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 2,
+                        bgcolor: '#f9f9f9',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        border: '1px solid transparent',
+                        height: '100%',
+                        '&:hover': {
+                          bgcolor: '#E2F0EE',
+                          borderColor: '#0F9D8C',
+                          transform: 'translateY(-4px)',
+                          boxShadow: '0 4px 12px rgba(15, 157, 140, 0.2)'
+                        }
+                      }}
+                    >
+                      <Stack spacing={1.5}>
+                        {/* Rank Badge */}
                         <Box
-                          key={client.id}
-                          onClick={() => handleOpenUsageModal(client)}
                           sx={{
-                            p: 2.5,
-                            borderRadius: 2,
-                            bgcolor: '#f9f9f9',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            border: '1px solid transparent',
-                            '&:hover': {
-                              bgcolor: '#E2F0EE',
-                              borderColor: '#0F9D8C',
-                              transform: 'translateX(4px)',
-                              boxShadow: '0 2px 8px rgba(15, 157, 140, 0.15)'
-                            }
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            bgcolor: index < 3 ? '#0F9D8C' : '#e0e0e0',
+                            color: index < 3 ? '#fff' : '#666',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '1rem'
                           }}
                         >
-                          <Stack direction="row" alignItems="center" spacing={2}>
-                            {/* Rank Badge */}
-                            <Box
-                              sx={{
-                                minWidth: 32,
-                                height: 32,
-                                borderRadius: '50%',
-                                bgcolor: index < 3 ? '#0F9D8C' : '#e0e0e0',
-                                color: index < 3 ? '#fff' : '#666',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontWeight: 'bold',
-                                fontSize: '0.9rem'
-                              }}
-                            >
-                              {index + 1}
-                            </Box>
+                          {index + 1}
+                        </Box>
 
-                            {/* Client Info */}
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                              <Typography variant="body1" fontWeight="600" noWrap>
-                                {client.restaurant}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" display="block" noWrap>
-                                {client.orgName}
-                              </Typography>
-                              <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap">
-                                <Typography variant="caption" sx={{
-                                  bgcolor: '#E8F0FE',
-                                  color: '#174EA6',
-                                  px: 1,
-                                  py: 0.25,
-                                  borderRadius: 1,
-                                  fontWeight: 500
-                                }}>
-                                  {client.packageType}
-                                </Typography>
-                                <Typography variant="caption" sx={{
-                                  bgcolor: '#FFF4E5',
-                                  color: '#E65100',
-                                  px: 1,
-                                  py: 0.25,
-                                  borderRadius: 1,
-                                  fontWeight: 500
-                                }}>
-                                  {client.productName}
-                                </Typography>
-                              </Stack>
-                            </Box>
-
-                            {/* Total Usage */}
-                            <Box sx={{ textAlign: 'right' }}>
-                              <Typography variant="h6" fontWeight="bold" color="#333">
-                                {client.totalUsed.toFixed(2)}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                кг
-                              </Typography>
-                            </Box>
+                        {/* Client Info */}
+                        <Box>
+                          <Typography variant="body1" fontWeight="600" sx={{ mb: 0.5 }}>
+                            {client.restaurant}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                            {client.orgName}
+                          </Typography>
+                          <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ mb: 1.5 }}>
+                            <Typography variant="caption" sx={{
+                              bgcolor: '#E8F0FE',
+                              color: '#174EA6',
+                              px: 1,
+                              py: 0.25,
+                              borderRadius: 1,
+                              fontWeight: 500
+                            }}>
+                              {client.packageType}
+                            </Typography>
+                            <Typography variant="caption" sx={{
+                              bgcolor: '#FFF4E5',
+                              color: '#E65100',
+                              px: 1,
+                              py: 0.25,
+                              borderRadius: 1,
+                              fontWeight: 500
+                            }}>
+                              {client.productName}
+                            </Typography>
                           </Stack>
                         </Box>
-                      ))}
-                    </Stack>
-                  ) : (
-                    <Box
-                      display="flex"
-                      justifyContent="center"
-                      alignItems="center"
-                      minHeight="200px"
-                      bgcolor="#f5f5f5"
-                      borderRadius={2}
-                    >
-                      <Typography variant="body1" color="text.secondary">
-                        Нет данных о расходе бумаги
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-                </Box>
-              </Grid>
 
-              {/* Column 3 - Daily Usage Chart (Wider) */}
-              <Grid item xs={12} lg={7}>
-                <Box sx={{ height: '100%' }}>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="h6" fontWeight="bold" gutterBottom noWrap>
-                      Расход бумаги (все клиенты)
-                    </Typography>
-
-                    {/* Scale Selector */}
-                    <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-                      <Button
-                        size="small"
-                        variant={chartScale === 'daily' ? 'contained' : 'outlined'}
-                        onClick={() => setChartScale('daily')}
-                        sx={{
-                          minWidth: 80,
-                          bgcolor: chartScale === 'daily' ? '#0F9D8C' : 'transparent',
-                          color: chartScale === 'daily' ? '#fff' : '#0F9D8C',
-                          borderColor: '#0F9D8C',
-                          '&:hover': {
-                            bgcolor: chartScale === 'daily' ? '#0c7a6e' : 'rgba(15, 157, 140, 0.04)',
-                            borderColor: '#0c7a6e'
-                          }
-                        }}
-                      >
-                        День
-                      </Button>
-                      <Button
-                        size="small"
-                        variant={chartScale === 'weekly' ? 'contained' : 'outlined'}
-                        onClick={() => setChartScale('weekly')}
-                        sx={{
-                          minWidth: 80,
-                          bgcolor: chartScale === 'weekly' ? '#0F9D8C' : 'transparent',
-                          color: chartScale === 'weekly' ? '#fff' : '#0F9D8C',
-                          borderColor: '#0F9D8C',
-                          '&:hover': {
-                            bgcolor: chartScale === 'weekly' ? '#0c7a6e' : 'rgba(15, 157, 140, 0.04)',
-                            borderColor: '#0c7a6e'
-                          }
-                        }}
-                      >
-                        Неделя
-                      </Button>
-                      <Button
-                        size="small"
-                        variant={chartScale === 'monthly' ? 'contained' : 'outlined'}
-                        onClick={() => setChartScale('monthly')}
-                        sx={{
-                          minWidth: 80,
-                          bgcolor: chartScale === 'monthly' ? '#0F9D8C' : 'transparent',
-                          color: chartScale === 'monthly' ? '#fff' : '#0F9D8C',
-                          borderColor: '#0F9D8C',
-                          '&:hover': {
-                            bgcolor: chartScale === 'monthly' ? '#0c7a6e' : 'rgba(15, 157, 140, 0.04)',
-                            borderColor: '#0c7a6e'
-                          }
-                        }}
-                      >
-                        Месяц
-                      </Button>
-                    </Stack>
-
-                    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
-                      <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
-                        <DatePicker
-                          label="С"
-                          value={dateRangeStart}
-                          onChange={(newValue) => setDateRangeStart(newValue)}
-                          slotProps={{
-                            textField: {
-                              size: 'small',
-                              sx: { minWidth: 130 }
-                            }
-                          }}
-                        />
-                        <DatePicker
-                          label="До"
-                          value={dateRangeEnd}
-                          onChange={(newValue) => setDateRangeEnd(newValue)}
-                          slotProps={{
-                            textField: {
-                              size: 'small',
-                              sx: { minWidth: 130 }
-                            }
-                          }}
-                        />
+                        {/* Total Usage */}
+                        <Box sx={{
+                          pt: 1.5,
+                          borderTop: '1px solid #e0e0e0',
+                          textAlign: 'center'
+                        }}>
+                          <Typography variant="h5" fontWeight="bold" color="#0F9D8C">
+                            {client.totalUsed.toFixed(2)}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            кг
+                          </Typography>
+                        </Box>
                       </Stack>
-                    </LocalizationProvider>
-                  </Box>
-
-                  {aggregatedUsageData.length > 0 ? (
-                    <Box sx={{ height: 480 }}>
-                      <Line data={dailyUsageChartData} options={dailyUsageChartOptions} />
                     </Box>
-                  ) : (
-                    <Box
-                      display="flex"
-                      justifyContent="center"
-                      alignItems="center"
-                      height={480}
-                      bgcolor="#f5f5f5"
-                      borderRadius={2}
-                    >
-                      <Typography variant="body1" color="text.secondary">
-                        Нет данных за выбранный период
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
+                  </Grid>
+                ))}
               </Grid>
-            </Grid>
+            ) : (
+              <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                minHeight="200px"
+                bgcolor="#f5f5f5"
+                borderRadius={2}
+              >
+                <Typography variant="body1" color="text.secondary">
+                  Нет данных о расходе бумаги
+                </Typography>
+              </Box>
+            )}
+          </Card>
+
+          {/* Daily Usage Chart - Full Width */}
+          <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" fontWeight="bold" gutterBottom>
+                Расход бумаги (все клиенты)
+              </Typography>
+
+              {/* Scale Selector */}
+              <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                <Button
+                  size="small"
+                  variant={chartScale === 'daily' ? 'contained' : 'outlined'}
+                  onClick={() => setChartScale('daily')}
+                  sx={{
+                    minWidth: 80,
+                    bgcolor: chartScale === 'daily' ? '#0F9D8C' : 'transparent',
+                    color: chartScale === 'daily' ? '#fff' : '#0F9D8C',
+                    borderColor: '#0F9D8C',
+                    '&:hover': {
+                      bgcolor: chartScale === 'daily' ? '#0c7a6e' : 'rgba(15, 157, 140, 0.04)',
+                      borderColor: '#0c7a6e'
+                    }
+                  }}
+                >
+                  День
+                </Button>
+                <Button
+                  size="small"
+                  variant={chartScale === 'weekly' ? 'contained' : 'outlined'}
+                  onClick={() => setChartScale('weekly')}
+                  sx={{
+                    minWidth: 80,
+                    bgcolor: chartScale === 'weekly' ? '#0F9D8C' : 'transparent',
+                    color: chartScale === 'weekly' ? '#fff' : '#0F9D8C',
+                    borderColor: '#0F9D8C',
+                    '&:hover': {
+                      bgcolor: chartScale === 'weekly' ? '#0c7a6e' : 'rgba(15, 157, 140, 0.04)',
+                      borderColor: '#0c7a6e'
+                    }
+                  }}
+                >
+                  Неделя
+                </Button>
+                <Button
+                  size="small"
+                  variant={chartScale === 'monthly' ? 'contained' : 'outlined'}
+                  onClick={() => setChartScale('monthly')}
+                  sx={{
+                    minWidth: 80,
+                    bgcolor: chartScale === 'monthly' ? '#0F9D8C' : 'transparent',
+                    color: chartScale === 'monthly' ? '#fff' : '#0F9D8C',
+                    borderColor: '#0F9D8C',
+                    '&:hover': {
+                      bgcolor: chartScale === 'monthly' ? '#0c7a6e' : 'rgba(15, 157, 140, 0.04)',
+                      borderColor: '#0c7a6e'
+                    }
+                  }}
+                >
+                  Месяц
+                </Button>
+              </Stack>
+
+              <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  <DatePicker
+                    label="С"
+                    value={dateRangeStart}
+                    onChange={(newValue) => setDateRangeStart(newValue)}
+                    slotProps={{
+                      textField: {
+                        size: 'small',
+                        sx: { minWidth: 130 }
+                      }
+                    }}
+                  />
+                  <DatePicker
+                    label="До"
+                    value={dateRangeEnd}
+                    onChange={(newValue) => setDateRangeEnd(newValue)}
+                    slotProps={{
+                      textField: {
+                        size: 'small',
+                        sx: { minWidth: 130 }
+                      }
+                    }}
+                  />
+                </Stack>
+              </LocalizationProvider>
+            </Box>
+
+            {aggregatedUsageData.length > 0 ? (
+              <Box sx={{ height: 500 }}>
+                <Line data={dailyUsageChartData} options={dailyUsageChartOptions} />
+              </Box>
+            ) : (
+              <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                height={500}
+                bgcolor="#f5f5f5"
+                borderRadius={2}
+              >
+                <Typography variant="body1" color="text.secondary">
+                  Нет данных за выбранный период
+                </Typography>
+              </Box>
+            )}
           </Card>
 
           {/* 4th Container - Sender Company Mini Table */}

@@ -47,7 +47,7 @@ import {
   orderBy,
   increment
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db } from '../../services/firebase';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import EditStandardDesignModal from './EditStandardDesignModal';
 

@@ -20,7 +20,7 @@ import {
   ArrowForward,
 } from '@mui/icons-material';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from './firebase';
+import { auth } from '../services/firebase';
 
 const AuthPages = () => {
   const [isLogin, setIsLogin] = useState(true);
