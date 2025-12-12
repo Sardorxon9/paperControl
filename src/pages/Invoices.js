@@ -36,7 +36,8 @@ import {
   InputLabel,
   Divider,
   Grid,
-  Chip
+  Chip,
+  Switch
 } from '@mui/material';
 import { 
   ArrowBack, 
@@ -94,6 +95,20 @@ const Invoices = ({ currentUser }) => {
   const [clientBranches, setClientBranches] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState(null);
 
+  // Standard design invoice modal state
+  const [standardModalOpen, setStandardModalOpen] = useState(false);
+  const [standardClients, setStandardClients] = useState([]);
+  const [selectedStandardClient, setSelectedStandardClient] = useState(null);
+  const [manualEntryMode, setManualEntryMode] = useState(false);
+  const [manualRestaurantName, setManualRestaurantName] = useState('');
+  const [standardOrgName, setStandardOrgName] = useState('');
+  const [standardInvoiceProducts, setStandardInvoiceProducts] = useState([]);
+  const [standardSenderCompany, setStandardSenderCompany] = useState('White Ray');
+  const [standardPaymentType, setStandardPaymentType] = useState('');
+  const [standardGenerating, setStandardGenerating] = useState(false);
+  const [standardGeneratedInvoiceUrl, setStandardGeneratedInvoiceUrl] = useState('');
+  const [standardInvoiceNumber, setStandardInvoiceNumber] = useState('');
+
   const grammOptions = [
     { value: '1', label: '1 гр' },
     { value: '2', label: '2 гр' },
@@ -118,6 +133,12 @@ const Invoices = ({ currentUser }) => {
   useEffect(() => {
     fetchAllData();
   }, []);
+
+  // Filter standard clients whenever clients data changes
+  useEffect(() => {
+    const filtered = clients.filter(client => client.designType === 'standart');
+    setStandardClients(filtered);
+  }, [clients]);
 
   const fetchAllData = async () => {
     try {
@@ -568,6 +589,308 @@ const Invoices = ({ currentUser }) => {
   const handlePaymentTypeChange = (event) => {
     setPaymentType(event.target.value);
   };
+
+  // ==================== STANDARD DESIGN INVOICE HANDLERS ====================
+
+  // Handle opening standard invoice modal
+  const handleOpenStandardModal = () => {
+    setStandardModalOpen(true);
+    setManualEntryMode(false);
+    setSelectedStandardClient(null);
+    setManualRestaurantName('');
+    setStandardOrgName('');
+    setStandardInvoiceProducts([]);
+    setStandardSenderCompany('White Ray');
+    setStandardPaymentType('');
+    setStandardGeneratedInvoiceUrl('');
+    setStandardInvoiceNumber('');
+  };
+
+  // Handle closing standard invoice modal
+  const handleCloseStandardModal = () => {
+    setStandardModalOpen(false);
+    setManualEntryMode(false);
+    setSelectedStandardClient(null);
+    setManualRestaurantName('');
+    setStandardOrgName('');
+    setStandardInvoiceProducts([]);
+    setStandardSenderCompany('White Ray');
+    setStandardPaymentType('');
+    setStandardGeneratedInvoiceUrl('');
+    setStandardInvoiceNumber('');
+  };
+
+  // Handle manual entry toggle
+  const handleManualEntryToggle = (event) => {
+    const isManual = event.target.checked;
+    setManualEntryMode(isManual);
+
+    if (isManual) {
+      // Switching to manual mode - clear client selection and reset fields
+      setSelectedStandardClient(null);
+      setManualRestaurantName('');
+      setStandardOrgName('');
+      setStandardInvoiceProducts([]);
+    } else {
+      // Switching back to client selection - clear manual fields
+      setManualRestaurantName('');
+      setStandardOrgName('');
+      setStandardInvoiceProducts([]);
+    }
+  };
+
+  // Handle standard client selection
+  const handleStandardClientChange = (event) => {
+    const clientId = event.target.value;
+    const client = standardClients.find(c => c.id === clientId);
+
+    if (client) {
+      setSelectedStandardClient(client);
+      setManualRestaurantName(client.displayRestaurantName || client.displayName || '');
+      setStandardOrgName(client.orgName || '');
+
+      // Auto-fill products if client has productID_2 and packageID
+      if (client.productID_2 && client.packageID) {
+        setStandardInvoiceProducts([{
+          id: 1,
+          isDefault: true,
+          productName: client.productID_2,
+          packageType: client.packageID,
+          gramm: client.fetchedGramm || client.gramm || client.gram || '',
+          quantity: '',
+          price: ''
+        }]);
+      } else {
+        setStandardInvoiceProducts([]);
+      }
+    }
+  };
+
+  // Add product row for standard invoice
+  const addStandardProductRow = () => {
+    const newProduct = {
+      id: Date.now(),
+      isDefault: false,
+      productName: '',
+      packageType: '',
+      gramm: '',
+      quantity: '',
+      price: ''
+    };
+    setStandardInvoiceProducts([...standardInvoiceProducts, newProduct]);
+  };
+
+  // Remove product row for standard invoice
+  const removeStandardProductRow = (productId) => {
+    setStandardInvoiceProducts(standardInvoiceProducts.filter(product => product.id !== productId));
+  };
+
+  // Update product field for standard invoice
+  const updateStandardProductField = (productId, field, value) => {
+    setStandardInvoiceProducts(standardInvoiceProducts.map(product =>
+      product.id === productId ? { ...product, [field]: value } : product
+    ));
+  };
+
+  // Calculate total amount for standard invoice
+  const calculateStandardTotalAmount = () => {
+    return standardInvoiceProducts.reduce((total, product) => {
+      const quantity = parseFloat(product.quantity) || 0;
+      const price = parseFloat(product.price) || 0;
+      return total + (quantity * price);
+    }, 0);
+  };
+
+  // Validate standard invoice products
+  const validateStandardProducts = () => {
+    // Check if payment type is selected
+    if (!standardPaymentType) {
+      return false;
+    }
+
+    // Check if there are any products
+    if (standardInvoiceProducts.length === 0) {
+      return false;
+    }
+
+    // Check if restaurant name is provided (either from selection or manual entry)
+    if (!manualRestaurantName.trim()) {
+      return false;
+    }
+
+    for (const product of standardInvoiceProducts) {
+      if (product.isDefault) {
+        // For default product
+        if (!product.quantity || !product.price) {
+          return false;
+        }
+      } else {
+        // For additional products, all fields are required
+        if (!product.productName || !product.packageType || !product.gramm || !product.quantity || !product.price) {
+          return false;
+        }
+      }
+
+      const quantity = parseFloat(product.quantity);
+      const price = parseFloat(product.price);
+      if (isNaN(quantity) || isNaN(price) || quantity <= 0 || price <= 0) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Handle creating standard invoice
+  const handleCreateStandardInvoice = async () => {
+    if (!validateStandardProducts()) {
+      let message = 'Пожалуйста, заполните все поля';
+      if (!standardPaymentType) {
+        message = 'Пожалуйста, выберите тип оплаты';
+      } else if (standardInvoiceProducts.length === 0) {
+        message = 'Пожалуйста, добавьте хотя бы один товар';
+      } else if (!manualRestaurantName.trim()) {
+        message = 'Пожалуйста, укажите название ресторана';
+      }
+
+      setSnackbar({
+        open: true,
+        message: message,
+        severity: 'warning'
+      });
+      return;
+    }
+
+    setStandardGenerating(true);
+
+    try {
+      // Generate invoice number
+      const newInvoiceNumber = generateInvoiceNumber();
+      setStandardInvoiceNumber(newInvoiceNumber);
+
+      // Prepare products data for HTML generation
+      const productsForInvoice = standardInvoiceProducts.map(product => {
+        if (product.isDefault && selectedStandardClient) {
+          return {
+            productName: selectedStandardClient.fetchedProductName,
+            packageType: selectedStandardClient.fetchedPackageType,
+            gramm: product.gramm,
+            quantity: parseFloat(product.quantity),
+            price: parseFloat(product.price)
+          };
+        } else {
+          const selectedProductObj = products.find(p => p.id === product.productName);
+          const selectedPackageObj = packageTypes.find(p => p.id === product.packageType);
+
+          return {
+            productName: selectedProductObj?.productName || '',
+            packageType: selectedPackageObj?.type || '',
+            gramm: product.gramm,
+            quantity: parseFloat(product.quantity),
+            price: parseFloat(product.price)
+          };
+        }
+      });
+
+      // Create a mock client object for HTML generation
+      const mockClient = {
+        displayOrgName: standardOrgName || manualRestaurantName,
+        displayRestaurantName: manualRestaurantName
+      };
+
+      // Generate HTML content
+      const htmlContent = generateInvoiceHTML(
+        mockClient,
+        productsForInvoice,
+        newInvoiceNumber,
+        standardSenderCompany,
+        manualRestaurantName,
+        standardPaymentType,
+        standardOrgName || manualRestaurantName
+      );
+
+      // Create blob URL
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      setStandardGeneratedInvoiceUrl(url);
+
+      // Save invoice record
+      const invoiceData = {
+        dateCreated: Timestamp.now(),
+        products: standardInvoiceProducts.map(product => {
+          if (product.isDefault && selectedStandardClient) {
+            return {
+              productID_2: selectedStandardClient.productID_2,
+              packageID: selectedStandardClient.packageID,
+              gramm: product.gramm,
+              quantity: parseFloat(product.quantity),
+              price: parseFloat(product.price),
+              totalPrice: parseFloat(product.quantity) * parseFloat(product.price)
+            };
+          } else {
+            return {
+              productID_2: product.productName,
+              packageID: product.packageType,
+              gramm: product.gramm,
+              quantity: parseFloat(product.quantity),
+              price: parseFloat(product.price),
+              totalPrice: parseFloat(product.quantity) * parseFloat(product.price)
+            };
+          }
+        }),
+        totalInvoiceAmount: calculateStandardTotalAmount(),
+        invoiceNumber: newInvoiceNumber,
+        userID: currentUser?.uid || "unknown",
+        userName: currentUser?.name || "Unknown User",
+        senderCompany: standardSenderCompany,
+        customRestaurantName: manualRestaurantName,
+        paymentType: standardPaymentType,
+        invoiceType: 'standard-design' // Mark as standard design invoice
+      };
+
+      // If client was selected from list, save to client's subcollection
+      if (selectedStandardClient) {
+        await addDoc(collection(db, `clients/${selectedStandardClient.id}/invoices`), invoiceData);
+      }
+
+      // Save to all-invoices collection for centralized history
+      const allInvoicesData = {
+        ...invoiceData,
+        clientId: selectedStandardClient?.id || 'manual-entry',
+        orgName: standardOrgName || manualRestaurantName
+      };
+      await addDoc(collection(db, 'all-invoices'), allInvoicesData);
+
+      setSnackbar({
+        open: true,
+        message: 'Накладная успешно создана!',
+        severity: 'success'
+      });
+
+    } catch (error) {
+      console.error('Error creating standard invoice:', error);
+      setSnackbar({
+        open: true,
+        message: 'Ошибка при создании накладной',
+        severity: 'error'
+      });
+    } finally {
+      setStandardGenerating(false);
+    }
+  };
+
+  // Handle download for standard invoice
+  const handleStandardDownload = () => {
+    if (!standardGeneratedInvoiceUrl || !manualRestaurantName || !standardInvoiceNumber) return;
+
+    const link = document.createElement('a');
+    link.href = standardGeneratedInvoiceUrl;
+    link.download = `Накладная_Стандарт_${manualRestaurantName}_${standardInvoiceNumber}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // ==================== END STANDARD DESIGN INVOICE HANDLERS ====================
 
   // This function will be replaced with the HTML template from the second artifact
   const generateInvoiceHTML = (client, productsData, invoiceNumber, senderCompany, customRestaurantName, paymentType, orgName) => {
@@ -1236,21 +1559,37 @@ const Invoices = ({ currentUser }) => {
                 </Typography>
               </Box>
             </Box>
-            <Button
-              variant="outlined"
-              startIcon={<History />}
-              onClick={() => navigate('/invoices/history')}
-              sx={{
-                borderColor: '#3c7570ff',
-                color: '#3c7570ff',
-                '&:hover': {
-                  backgroundColor: '#3c75701a',
-                  borderColor: '#2c5954'
-                }
-              }}
-            >
-              История созданных накладных
-            </Button>
+            <Box display="flex" flexDirection="column" gap={1.5}>
+              <Button
+                variant="outlined"
+                startIcon={<History />}
+                onClick={() => navigate('/invoices/history')}
+                sx={{
+                  borderColor: '#3c7570ff',
+                  color: '#3c7570ff',
+                  '&:hover': {
+                    backgroundColor: '#3c75701a',
+                    borderColor: '#2c5954'
+                  }
+                }}
+              >
+                История созданных накладных
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<Receipt />}
+                onClick={handleOpenStandardModal}
+                sx={{
+                  backgroundColor: '#148274',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#0d6b5e'
+                  }
+                }}
+              >
+                Создать накладную на стандарт дизайн
+              </Button>
+            </Box>
           </Box>
         </CardContent>
       </Card>
@@ -1811,6 +2150,486 @@ const Invoices = ({ currentUser }) => {
             }}
           >
             {generating ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              'Создать накладную'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Standard Design Invoice Modal */}
+      <Dialog open={standardModalOpen} onClose={handleCloseStandardModal} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ pb: 1.5 }}>
+          <Typography variant="h5" fontWeight="600">
+            Создание накладной на стандарт дизайн
+          </Typography>
+          <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Для клиентов со стандартным дизайном этикеток
+          </Typography>
+        </DialogTitle>
+
+        <DialogContent dividers sx={{ pt: 2.5 }}>
+          <Box>
+            {/* Manual Entry Toggle */}
+            <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', backgroundColor: '#f5f5f5', p: 2, borderRadius: 1 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={manualEntryMode}
+                    onChange={handleManualEntryToggle}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Typography variant="body1" fontWeight="500">
+                    Добавить вручную
+                  </Typography>
+                }
+              />
+              <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+                {manualEntryMode ? 'Ручной ввод названия ресторана' : 'Выбор из списка клиентов'}
+              </Typography>
+            </Box>
+
+            {/* Client Selection or Manual Entry */}
+            {!manualEntryMode ? (
+              <Box sx={{ mb: 3 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Выберите клиента</InputLabel>
+                  <Select
+                    value={selectedStandardClient?.id || ''}
+                    onChange={handleStandardClientChange}
+                    label="Выберите клиента"
+                  >
+                    <MenuItem value="" disabled>
+                      Выберите клиента из списка
+                    </MenuItem>
+                    {standardClients.map((client) => (
+                      <MenuItem key={client.id} value={client.id}>
+                        {client.displayName || client.displayRestaurantName} {client.orgName && `(${client.orgName})`}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            ) : (
+              <Box sx={{ mb: 3 }}>
+                <TextField
+                  label="Название ресторана"
+                  fullWidth
+                  value={manualRestaurantName}
+                  onChange={(e) => setManualRestaurantName(e.target.value)}
+                  placeholder="Введите название ресторана"
+                  helperText="Вручную введите название ресторана"
+                />
+              </Box>
+            )}
+
+            {/* Organization Name Field */}
+            <Box sx={{ mb: 3 }}>
+              <TextField
+                label="Название организации"
+                fullWidth
+                value={standardOrgName}
+                onChange={(e) => setStandardOrgName(e.target.value)}
+                placeholder={selectedStandardClient ? "Автоматически заполнено из базы" : "Введите название организации (опционально)"}
+                helperText={
+                  selectedStandardClient && !selectedStandardClient.orgName
+                    ? "Организация не указана в базе данных"
+                    : "Вы можете отредактировать название организации"
+                }
+              />
+            </Box>
+
+            {/* Restaurant Name (only if client selected) */}
+            {selectedStandardClient && (
+              <Box sx={{ mb: 3 }}>
+                <TextField
+                  label="Название ресторана"
+                  fullWidth
+                  value={manualRestaurantName}
+                  onChange={(e) => setManualRestaurantName(e.target.value)}
+                />
+              </Box>
+            )}
+
+            {/* Sender Company Selection */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle2" fontWeight="500" gutterBottom>
+                От имени компании:
+              </Typography>
+              <ToggleButtonGroup
+                value={standardSenderCompany}
+                exclusive
+                onChange={(event, newCompany) => {
+                  if (newCompany !== null) {
+                    setStandardSenderCompany(newCompany);
+                  }
+                }}
+                aria-label="sender company"
+                fullWidth
+              >
+                <ToggleButton
+                  value="White Ray"
+                  aria-label="white ray"
+                  sx={{
+                    py: 1.5,
+                    "&.Mui-selected": {
+                      backgroundColor: "#e0f2f1",
+                      color: "#025249",
+                      "&:hover": {
+                        backgroundColor: "#b2dfdb"
+                      }
+                    }
+                  }}
+                >
+                  White Ray
+                </ToggleButton>
+                <ToggleButton
+                  value="Pure Pack"
+                  aria-label="pure pack"
+                  sx={{
+                    py: 1.5,
+                    "&.Mui-selected": {
+                      backgroundColor: "#e0f2f1",
+                      color: "#025249",
+                      "&:hover": {
+                        backgroundColor: "#b2dfdb"
+                      }
+                    }
+                  }}
+                >
+                  Pure Pack
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            {/* Payment Type Selection */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle2" fontWeight="500" gutterBottom>
+                Тип оплаты:
+              </Typography>
+              <RadioGroup
+                row
+                value={standardPaymentType}
+                onChange={(e) => setStandardPaymentType(e.target.value)}
+                name="standard-payment-type"
+              >
+                <FormControlLabel
+                  value="cash"
+                  control={<Radio />}
+                  label="Наличные"
+                />
+                <FormControlLabel
+                  value="transfer"
+                  control={<Radio />}
+                  label="Перечисление"
+                />
+              </RadioGroup>
+            </Box>
+
+            <Divider sx={{ my: 3, borderColor: 'rgba(0, 0, 0, 0.2)', borderWidth: '1px' }} />
+
+            {/* Products Section */}
+            <Box sx={{ mb: 2.5 }}>
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Typography variant="h6" fontWeight="500" color="#105f58">
+                  Товары в накладной
+                </Typography>
+                <Button
+                  variant="outlined"
+                  startIcon={<Add />}
+                  onClick={addStandardProductRow}
+                  size="medium"
+                >
+                  Добавить товар
+                </Button>
+              </Box>
+            </Box>
+
+            {/* No Products Message */}
+            {standardInvoiceProducts.length === 0 && (
+              <Box
+                sx={{
+                  mt: 3.5,
+                  p: 4,
+                  backgroundColor: '#f5f5f5',
+                  borderRadius: 2,
+                  textAlign: 'center'
+                }}
+              >
+                <Typography variant="body1" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                  Товары не добавлены. Пожалуйста, нажмите кнопку "Добавить товар" и укажите товар
+                </Typography>
+              </Box>
+            )}
+
+            {/* Product Cards */}
+            {standardInvoiceProducts.map((product, index) => (
+              <Card
+                key={product.id}
+                sx={{
+                  mb: 2.5,
+                  p: 3,
+                  boxShadow: product.isDefault ? '0px 4px 12px rgba(0, 0, 0, 0.12)' : 'none',
+                  border: product.isDefault ? 'none' : '1px solid #e0e0e0',
+                  backgroundColor: product.isDefault ? 'transparent' : '#f8fdff',
+                  borderRadius: '10px'
+                }}
+              >
+                <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2.5}>
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight="500">
+                      {product.isDefault ? `Основной товар` : `Дополнительный товар`}
+                    </Typography>
+                  </Box>
+                  <IconButton
+                    onClick={() => removeStandardProductRow(product.id)}
+                    color="error"
+                    size="medium"
+                    sx={{
+                      backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                      '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.12)' }
+                    }}
+                  >
+                    <Delete fontSize="small" />
+                  </IconButton>
+                </Box>
+
+                {product.isDefault && selectedStandardClient ? (
+                  <Box sx={{ mb: 2.5 }}>
+                    <Grid container spacing={2.5}>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Продукт"
+                          value={selectedStandardClient.fetchedProductName || 'Не указан'}
+                          fullWidth
+                          size="medium"
+                          InputProps={{ readOnly: true }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={3}>
+                        <TextField
+                          label="Упаковка"
+                          value={selectedStandardClient.fetchedPackageType || 'Не указана'}
+                          fullWidth
+                          size="medium"
+                          InputProps={{ readOnly: true }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={3}>
+                        <TextField
+                          label="Граммаж"
+                          value={product.gramm ? `${product.gramm} гр` : 'Не указан'}
+                          fullWidth
+                          size="medium"
+                          InputProps={{ readOnly: true }}
+                        />
+                      </Grid>
+                    </Grid>
+                  </Box>
+                ) : (
+                  <Box sx={{ mb: 2.5 }}>
+                    <Grid container spacing={2.5}>
+                      <Grid item xs={12} sm={6}>
+                        <Box sx={{ mb: 1 }}>
+                          <Typography variant="body2" fontWeight="500" color="text.secondary">
+                            Продукт
+                          </Typography>
+                        </Box>
+                        <FormControl fullWidth size="medium">
+                          <Select
+                            value={product.productName}
+                            onChange={(e) => updateStandardProductField(product.id, 'productName', e.target.value)}
+                            displayEmpty
+                          >
+                            <MenuItem value="" disabled>
+                              Выберите продукт
+                            </MenuItem>
+                            {products.map((prod) => (
+                              <MenuItem key={prod.id} value={prod.id}>
+                                {prod.productName}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12} sm={3}>
+                        <Box sx={{ mb: 1 }}>
+                          <Typography variant="body2" fontWeight="500" color="text.secondary">
+                            Упаковка
+                          </Typography>
+                        </Box>
+                        <FormControl fullWidth size="medium">
+                          <Select
+                            value={product.packageType}
+                            onChange={(e) => updateStandardProductField(product.id, 'packageType', e.target.value)}
+                            displayEmpty
+                          >
+                            <MenuItem value="" disabled>
+                              Выберите упаковку
+                            </MenuItem>
+                            {packageTypes.map((pkg) => (
+                              <MenuItem key={pkg.id} value={pkg.id}>
+                                {pkg.type}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12} sm={3}>
+                        <Box sx={{ mb: 1 }}>
+                          <Typography variant="body2" fontWeight="500" color="text.secondary">
+                            Граммаж
+                          </Typography>
+                        </Box>
+                        <FormControl fullWidth size="medium">
+                          <Select
+                            value={product.gramm}
+                            onChange={(e) => updateStandardProductField(product.id, 'gramm', e.target.value)}
+                            displayEmpty
+                          >
+                            <MenuItem value="" disabled>
+                              Выберите граммаж
+                            </MenuItem>
+                            {grammOptions.map((option) => (
+                              <MenuItem key={option.value} value={option.value}>
+                                {option.label}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                )}
+
+                <Box sx={{ mt: 3 }}>
+                  <Grid container spacing={2.5}>
+                    <Grid item xs={12} sm={4}>
+                      <NumericFormat
+                        customInput={TextField}
+                        fullWidth
+                        label="Количество"
+                        value={product.quantity}
+                        onValueChange={(values) => {
+                          updateStandardProductField(product.id, 'quantity', values.value);
+                        }}
+                        thousandSeparator=" "
+                        allowNegative={false}
+                        decimalScale={0}
+                        size="medium"
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        fullWidth
+                        label="Цена за единицу (сум)"
+                        type="number"
+                        value={product.price}
+                        onChange={(e) => updateStandardProductField(product.id, 'price', e.target.value)}
+                        inputProps={{ min: 0, step: 0.01 }}
+                        size="medium"
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                {product.quantity && product.price && (
+                  <Box
+                    sx={{
+                      mt: 2,
+                      p: 1.5,
+                      backgroundColor: 'rgba(0, 128, 128, 0.06)',
+                      borderRadius: 1,
+                      border: '1px solid rgba(0, 128, 128, 0.12)'
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight="500" color="primary">
+                      Сумма: {(parseFloat(product.quantity) * parseFloat(product.price)).toLocaleString('ru-RU')} сум
+                    </Typography>
+                  </Box>
+                )}
+              </Card>
+            ))}
+
+            {/* Total Amount */}
+            {calculateStandardTotalAmount() > 0 && (
+              <Box
+                sx={{
+                  mt: 3.5,
+                  p: 3,
+                  backgroundColor: '#d3eeec',
+                  borderRadius: 1.5,
+                  border: '1px solid #bce5e179'
+                }}
+              >
+                <Typography variant="h6" fontWeight="600" color="#0a4540ff" align="center">
+                  Общая сумма: {calculateStandardTotalAmount().toLocaleString('ru-RU')} сум
+                </Typography>
+              </Box>
+            )}
+
+            {/* Generated Invoice Section */}
+            {standardGeneratedInvoiceUrl && (
+              <Box sx={{ mt: 3.5, p: 3, backgroundColor: '#e3f2fd', borderRadius: 1.5 }}>
+                <Typography variant="subtitle1" fontWeight="500" gutterBottom color="primary">
+                  ✅ Накладная создана успешно!
+                </Typography>
+                <Box display="flex" gap={2} flexWrap="wrap" sx={{ mt: 2 }}>
+                  <Link
+                    href={standardGeneratedInvoiceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{ textDecoration: 'none' }}
+                  >
+                    <Button
+                      variant="outlined"
+                      startIcon={<Print />}
+                      color="primary"
+                      size="medium"
+                    >
+                      Открыть накладную
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="contained"
+                    startIcon={<Download />}
+                    onClick={handleStandardDownload}
+                    size="medium"
+                    sx={{
+                      backgroundColor: '#0d47a1',
+                      '&:hover': { backgroundColor: '#1565c0' }
+                    }}
+                  >
+                    Скачать HTML
+                  </Button>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2.5, borderTop: 1, borderColor: 'divider' }}>
+          <Button onClick={handleCloseStandardModal} color="inherit" size="medium">
+            Отмена
+          </Button>
+          <Button
+            onClick={handleCreateStandardInvoice}
+            variant="contained"
+            disabled={standardGenerating || !validateStandardProducts()}
+            size="medium"
+            sx={{
+              backgroundColor: '#105f58',
+              color: 'white',
+              '&:hover': { backgroundColor: '#0c4a44' },
+              minWidth: 165,
+              py: 1
+            }}
+          >
+            {standardGenerating ? (
               <CircularProgress size={20} color="inherit" />
             ) : (
               'Создать накладную'

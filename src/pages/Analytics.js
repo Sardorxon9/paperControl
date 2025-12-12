@@ -36,9 +36,9 @@ import Work from '@mui/icons-material/Work';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import {
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper as MuiPaper
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper as MuiPaper, Tooltip as MuiTooltip, IconButton, ToggleButtonGroup, ToggleButton
 } from "@mui/material";
-import { ArrowDownward, ArrowUpward } from "@mui/icons-material";
+import { ArrowDownward, ArrowUpward, ViewModule, ViewList } from "@mui/icons-material";
 import { subDays, subMonths, format, startOfDay, endOfDay, startOfWeek, startOfMonth, endOfWeek, endOfMonth } from "date-fns";
 import { ru } from 'date-fns/locale';
 import { DatePicker } from '@mui/x-date-pickers';
@@ -88,6 +88,7 @@ export default function Analytics({ user, userRole, onLogout }) {
   const [logsPage, setLogsPage] = useState(0);
   const [logsPerPage] = useState(20);
   const [chartScale, setChartScale] = useState('daily'); // daily, weekly, monthly
+  const [paperUsageView, setPaperUsageView] = useState('cards'); // 'cards' or 'table'
 
   // Helper function to format numbers with spaces
   const formatNumber = (num) => {
@@ -921,108 +922,337 @@ const centerTextPlugin = {
 
           {/* Top 15 Paper Usage Clients - Full Width */}
           <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
-                Топ 15 клиентов по расходу бумаги
-              </Typography>
-              {earliestLogDate && (
-                <Typography variant="caption" color="text.secondary">
-                  С {format(earliestLogDate, 'dd.MM.yyyy', { locale: ru })} ({format(earliestLogDate, 'LLLL', { locale: ru })})
+            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
+              <Box>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  Топ 15 клиентов по расходу бумаги
                 </Typography>
-              )}
+                {earliestLogDate && (
+                  <Typography variant="caption" color="text.secondary">
+                    С {format(earliestLogDate, 'dd.MM.yyyy', { locale: ru })} ({format(earliestLogDate, 'LLLL', { locale: ru })})
+                  </Typography>
+                )}
+              </Box>
+
+              {/* View Toggle */}
+              <ToggleButtonGroup
+                value={paperUsageView}
+                exclusive
+                onChange={(e, newView) => {
+                  if (newView !== null) setPaperUsageView(newView);
+                }}
+                size="small"
+                sx={{
+                  '& .MuiToggleButton-root': {
+                    px: 1.5,
+                    py: 0.75,
+                    minWidth: '40px',
+                    color: '#666',
+                    borderColor: '#ddd',
+                    '&.Mui-selected': {
+                      bgcolor: '#424242',
+                      color: '#fff',
+                      borderColor: '#424242',
+                      '&:hover': {
+                        bgcolor: '#333'
+                      }
+                    },
+                    '&:hover': {
+                      bgcolor: '#f5f5f5'
+                    }
+                  }
+                }}
+              >
+                <ToggleButton value="cards">
+                  <ViewModule sx={{ fontSize: 20 }} />
+                </ToggleButton>
+                <ToggleButton value="table">
+                  <ViewList sx={{ fontSize: 20 }} />
+                </ToggleButton>
+              </ToggleButtonGroup>
             </Box>
 
             {topPaperUsageClients.length > 0 ? (
-              <Grid container spacing={3}>
-                {topPaperUsageClients.map((client, index) => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={client.id}>
-                    <Box
-                      onClick={() => handleOpenUsageModal(client)}
-                      sx={{
-                        p: 2.5,
-                        borderRadius: 2,
-                        bgcolor: '#f9f9f9',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        border: '1px solid transparent',
-                        height: '100%',
-                        '&:hover': {
-                          bgcolor: '#E2F0EE',
-                          borderColor: '#0F9D8C',
-                          transform: 'translateY(-4px)',
-                          boxShadow: '0 4px 12px rgba(15, 157, 140, 0.2)'
-                        }
-                      }}
-                    >
-                      <Stack spacing={1.5}>
-                        {/* Rank Badge */}
-                        <Box
-                          sx={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: '50%',
-                            bgcolor: index < 3 ? '#0F9D8C' : '#e0e0e0',
-                            color: index < 3 ? '#fff' : '#666',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 'bold',
-                            fontSize: '1rem'
-                          }}
+              <>
+                {/* Cards View */}
+                {paperUsageView === 'cards' && (
+                  <Grid container spacing={2}>
+                    {topPaperUsageClients.map((client, index) => (
+                      <Grid item xs={12} sm={6} md={4} lg={2.4} key={client.id}>
+                        <MuiTooltip
+                          title={`Нажмите для просмотра истории расхода`}
+                          arrow
+                          placement="top"
                         >
-                          {index + 1}
-                        </Box>
+                          <Box
+                            onClick={() => handleOpenUsageModal(client)}
+                            sx={{
+                              p: 2,
+                              borderRadius: 2,
+                              bgcolor: '#f9f9f9',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              border: '1px solid #e0e0e0',
+                              height: '70%',
+                              minHeight: '200px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              '&:hover': {
+                                bgcolor: '#E2F0EE',
+                                borderColor: '#0F9D8C',
+                                transform: 'translateY(-2px)',
+                                boxShadow: '0 4px 12px rgba(15, 157, 140, 0.15)'
+                              }
+                            }}
+                          >
+                            {/* Rank Badge */}
+                            <Box
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: '50%',
+                                bgcolor: index < 3 ? '#0F9D8C' : '#e0e0e0',
+                                color: index < 3 ? '#fff' : '#666',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 'bold',
+                                fontSize: '0.875rem',
+                                mb: 1.5
+                              }}
+                            >
+                              {index + 1}
+                            </Box>
 
-                        {/* Client Info */}
-                        <Box>
-                          <Typography variant="body1" fontWeight="600" sx={{ mb: 0.5 }}>
-                            {client.restaurant}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-                            {client.orgName}
-                          </Typography>
-                          <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ mb: 1.5 }}>
-                            <Typography variant="caption" sx={{
-                              bgcolor: '#E8F0FE',
-                              color: '#174EA6',
-                              px: 1,
-                              py: 0.25,
-                              borderRadius: 1,
-                              fontWeight: 500
-                            }}>
-                              {client.packageType}
-                            </Typography>
-                            <Typography variant="caption" sx={{
-                              bgcolor: '#FFF4E5',
-                              color: '#E65100',
-                              px: 1,
-                              py: 0.25,
-                              borderRadius: 1,
-                              fontWeight: 500
-                            }}>
-                              {client.productName}
-                            </Typography>
-                          </Stack>
-                        </Box>
+                            {/* Client Name */}
+                            <MuiTooltip title={client.restaurant} arrow placement="top">
+                              <Typography
+                                variant="body2"
+                                fontWeight="600"
+                                sx={{
+                                  mb: 0.5,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {client.restaurant}
+                              </Typography>
+                            </MuiTooltip>
 
-                        {/* Total Usage */}
-                        <Box sx={{
-                          pt: 1.5,
-                          borderTop: '1px solid #e0e0e0',
-                          textAlign: 'center'
-                        }}>
-                          <Typography variant="h5" fontWeight="bold" color="#0F9D8C">
-                            {client.totalUsed.toFixed(2)}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            кг
-                          </Typography>
-                        </Box>
-                      </Stack>
-                    </Box>
+                            {/* Organization Name */}
+                            <MuiTooltip title={client.orgName} arrow placement="top">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                display="block"
+                                sx={{
+                                  mb: 1.5,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  minHeight: '16px'
+                                }}
+                              >
+                                {client.orgName}
+                              </Typography>
+                            </MuiTooltip>
+
+                            {/* Tags */}
+                            <Stack direction="row" spacing={0.5} sx={{ mb: 1.5, flexWrap: 'wrap', gap: 0.5 }}>
+                              <MuiTooltip title={`Упаковка: ${client.packageType}`} arrow>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    bgcolor: '#E8F0FE',
+                                    color: '#174EA6',
+                                    px: 0.75,
+                                    py: 0.25,
+                                    borderRadius: 1,
+                                    fontWeight: 500,
+                                    fontSize: '0.7rem',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    maxWidth: '100%',
+                                    display: 'inline-block'
+                                  }}
+                                >
+                                  {client.packageType}
+                                </Typography>
+                              </MuiTooltip>
+                              <MuiTooltip title={`Продукт: ${client.productName}`} arrow>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    bgcolor: '#FFF4E5',
+                                    color: '#E65100',
+                                    px: 0.75,
+                                    py: 0.25,
+                                    borderRadius: 1,
+                                    fontWeight: 500,
+                                    fontSize: '0.7rem',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    maxWidth: '100%',
+                                    display: 'inline-block'
+                                  }}
+                                >
+                                  {client.productName}
+                                </Typography>
+                              </MuiTooltip>
+                            </Stack>
+
+                            {/* Total Usage */}
+                            <Box
+                              sx={{
+                                mt: 'auto',
+                                pt: 1.5,
+                                borderTop: '1px solid #e0e0e0',
+                                textAlign: 'center'
+                              }}
+                            >
+                              <Typography variant="h6" fontWeight="bold" color="#0F9D8C">
+                                {client.totalUsed.toFixed(2)} КГ
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </MuiTooltip>
+                      </Grid>
+                    ))}
                   </Grid>
-                ))}
-              </Grid>
+                )}
+
+                {/* Table View */}
+                {paperUsageView === 'table' && (
+                  <TableContainer component={MuiPaper} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                    <Table>
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                          <TableCell sx={{ fontWeight: 'bold', width: '60px' }}>№</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', minWidth: '200px' }}>Название ресторана</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', minWidth: '200px' }}>Организация</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', minWidth: '120px' }}>Упаковка</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', minWidth: '150px' }}>Продукт</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 'bold', minWidth: '120px' }}>Расход (кг)</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {topPaperUsageClients.map((client, index) => (
+                          <TableRow
+                            key={client.id}
+                            hover
+                            onClick={() => handleOpenUsageModal(client)}
+                            sx={{
+                              cursor: 'pointer',
+                              '&:hover': {
+                                bgcolor: '#E2F0EE'
+                              }
+                            }}
+                          >
+                            <TableCell>
+                              <Box
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: '50%',
+                                  bgcolor: index < 3 ? '#0F9D8C' : '#e0e0e0',
+                                  color: index < 3 ? '#fff' : '#666',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: 'bold',
+                                  fontSize: '0.875rem'
+                                }}
+                              >
+                                {index + 1}
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              <MuiTooltip title={client.restaurant} arrow placement="top">
+                                <Typography
+                                  variant="body2"
+                                  fontWeight="600"
+                                  sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    maxWidth: '250px'
+                                  }}
+                                >
+                                  {client.restaurant}
+                                </Typography>
+                              </MuiTooltip>
+                            </TableCell>
+                            <TableCell>
+                              <MuiTooltip title={client.orgName} arrow placement="top">
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                  sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    maxWidth: '250px'
+                                  }}
+                                >
+                                  {client.orgName}
+                                </Typography>
+                              </MuiTooltip>
+                            </TableCell>
+                            <TableCell>
+                              <Box
+                                sx={{
+                                  bgcolor: '#E8F0FE',
+                                  color: '#174EA6',
+                                  px: 1.5,
+                                  py: 0.5,
+                                  borderRadius: 1,
+                                  fontWeight: 500,
+                                  fontSize: '0.75rem',
+                                  display: 'inline-block',
+                                  maxWidth: '100%',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {client.packageType}
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              <Box
+                                sx={{
+                                  bgcolor: '#FFF4E5',
+                                  color: '#E65100',
+                                  px: 1.5,
+                                  py: 0.5,
+                                  borderRadius: 1,
+                                  fontWeight: 500,
+                                  fontSize: '0.75rem',
+                                  display: 'inline-block',
+                                  maxWidth: '100%',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {client.productName}
+                              </Box>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography variant="body1" fontWeight="bold" color="#0F9D8C">
+                                {client.totalUsed.toFixed(2)}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+              </>
             ) : (
               <Box
                 display="flex"
