@@ -60,7 +60,7 @@ const ProductCard = ({ product, onEdit }) => {
           borderRadius: 2,
           transition: 'all 0.3s ease',
           boxShadow: 'none',
-          border: '1px solid #e0e0e0',
+          border: '1px solid transparent',
           overflow: 'hidden',
           '&:hover': {
             transform: 'translateY(-4px)',

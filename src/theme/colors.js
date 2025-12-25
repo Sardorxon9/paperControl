@@ -8,7 +8,7 @@ export const brandColors = {
 
   // Supportive colors
   dark: '#171C1B',
-  gray: '#F5F5F5',
+  gray: '#EBEBEB',
 
   // Semantic colors
   success: '#04907F',
