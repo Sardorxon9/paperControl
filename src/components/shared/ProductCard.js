@@ -20,6 +20,7 @@ const ProductCard = ({ product, onEdit }) => {
   const navigate = useNavigate();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Collect all available images
   const images = [];
@@ -32,9 +33,14 @@ const ProductCard = ({ product, onEdit }) => {
   // Check if product has valid paperDocID
   const hasPaperDoc = product.paperDocID && product.paperDocID !== 'n/a';
 
-  const handleImageClick = (index) => {
-    setSelectedImageIndex(index);
+  const handleImageClick = () => {
+    setSelectedImageIndex(currentImageIndex);
     setLightboxOpen(true);
+  };
+
+  const handleIndicatorClick = (index, e) => {
+    e.stopPropagation();
+    setCurrentImageIndex(index);
   };
 
   const handleNavigateToPaper = () => {
@@ -66,9 +72,9 @@ const ProductCard = ({ product, onEdit }) => {
         <Box sx={{ position: 'relative', height: 240, width: '100%', overflow: 'hidden', flexShrink: 0 }}>
           <CardMedia
             component="img"
-            image={images[0] || 'https://via.placeholder.com/400'}
+            image={images[currentImageIndex] || 'https://via.placeholder.com/400'}
             alt={product.productName}
-            onClick={() => handleImageClick(0)}
+            onClick={handleImageClick}
             sx={{
               position: 'absolute',
               top: 0,
@@ -81,6 +87,19 @@ const ProductCard = ({ product, onEdit }) => {
               '&:hover': {
                 transform: 'scale(1.05)',
               },
+            }}
+          />
+
+          {/* Gradient overlays */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 15%, rgba(0,0,0,0) 70%, rgba(0,0,0,0.3) 100%)',
+              pointerEvents: 'none',
             }}
           />
 
@@ -114,67 +133,40 @@ const ProductCard = ({ product, onEdit }) => {
             />
           </IconButton>
 
-          {/* Image count badge */}
+          {/* Circle indicators */}
           {images.length > 1 && (
-            <Chip
-              label={`${images.length} фото`}
-              size="small"
+            <Box
               sx={{
                 position: 'absolute',
-                top: 12,
-                left: 12,
-                backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                color: 'white',
-                fontWeight: 600,
+                bottom: 12,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                gap: 0.75,
+                zIndex: 2,
               }}
-            />
+            >
+              {images.map((_, index) => (
+                <Box
+                  key={index}
+                  onClick={(e) => handleIndicatorClick(index, e)}
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: currentImageIndex === index ? 'white' : 'transparent',
+                    border: '1.5px solid white',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      transform: 'scale(1.2)',
+                    },
+                  }}
+                />
+              ))}
+            </Box>
           )}
         </Box>
-
-        {/* Additional thumbnail images */}
-        {images.length > 1 && (
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 1,
-              p: 1,
-              pb: 0,
-              overflowX: 'auto',
-              flexShrink: 0,
-              '&::-webkit-scrollbar': {
-                height: 6,
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: brandColors.dark,
-                borderRadius: 3,
-              },
-            }}
-          >
-            {images.slice(1, 5).map((img, idx) => (
-              <Box
-                key={idx}
-                component="img"
-                src={img}
-                alt={`Thumbnail ${idx + 2}`}
-                onClick={() => handleImageClick(idx + 1)}
-                sx={{
-                  width: 60,
-                  height: 60,
-                  flexShrink: 0,
-                  objectFit: 'cover',
-                  borderRadius: 1,
-                  cursor: 'pointer',
-                  border: `2px solid ${brandColors.border}`,
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    borderColor: brandColors.dark,
-                    transform: 'scale(1.1)',
-                  },
-                }}
-              />
-            ))}
-          </Box>
-        )}
 
         {/* Content Section */}
         <CardContent sx={{ flexGrow: 1, p: 2, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', overflow: 'hidden' }}>
