@@ -11,6 +11,7 @@ import Welcome from './pages/Welcome';
 import Analytics from './pages/Analytics';
 import Invoices from './pages/Invoices';
 import InvoiceHistory from './pages/InvoiceHistory';
+import Catalogue from './pages/Catalogue';
 
 import { CircularProgress, Box } from '@mui/material';
 import './styles/mobile-responsive.css';
@@ -130,6 +131,14 @@ function App() {
 
       <Route path="/invoices/history" element={
         <InvoiceHistory />
+      } />
+
+      <Route path="/catalogue" element={
+        <Catalogue
+          user={user}
+          userRole={userRole}
+          onLogout={handleLogout}
+        />
       } />
 
       {/* Redirect any unknown routes to dashboard */}

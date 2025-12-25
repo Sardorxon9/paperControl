@@ -6,6 +6,10 @@ export const brandColors = {
   primaryVeryLight: '#e8f5f3',
   primaryBorder: 'rgba(4, 144, 127, 0.3)',
 
+  // Supportive colors
+  dark: '#171C1B',
+  gray: '#F5F5F5',
+
   // Semantic colors
   success: '#04907F',
   error: '#f44336',
@@ -18,6 +22,6 @@ export const brandColors = {
 
   // Background colors
   bgLight: '#fafafa',
-  bgHover: '#e3f2f1',
+  bgHover: '#F5F5F5',
   border: '#e0e0e0'
 };

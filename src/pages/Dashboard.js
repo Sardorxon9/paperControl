@@ -19,7 +19,8 @@ import {
   People,
   Settings,
   Task,
-  Receipt
+  Receipt,
+  Inventory
 } from '@mui/icons-material';
 
 const Dashboard = ({
@@ -60,14 +61,33 @@ const Dashboard = ({
           <Typography variant="body2" color="text.secondary" gutterBottom sx={{ flexGrow: 1 }}>
             Управление клиентами и контроль расхода бумаги
           </Typography>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             sx={{
               backgroundColor: '#0F9D8C',
               '&:hover': { backgroundColor: '#0c7a6e' }
             }}
             startIcon={<Assignment />}
             onClick={() => navigate('/paper-control')}
+          >
+            Открыть
+          </Button>
+        </Paper>
+
+        {/* Catalogue Card */}
+        <Paper elevation={2} sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="h6" gutterBottom>Каталог продукции</Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom sx={{ flexGrow: 1 }}>
+            Просмотр каталога продукции с фотографиями
+          </Typography>
+          <Button
+            variant="contained"
+            sx={{
+              backgroundColor: '#04907F',
+              '&:hover': { backgroundColor: '#037569' }
+            }}
+            startIcon={<Inventory />}
+            onClick={() => navigate('/catalogue')}
           >
             Открыть
           </Button>

@@ -1,7 +1,7 @@
 // Welcome.js - Fixed version with proper productID_2 usage
 
 import { useEffect, useState } from "react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   collection,
   getDocs,
@@ -96,6 +96,7 @@ const getColumnHeaders = (userRole) => {
 
 export default function Welcome({ user, userRole, onLogout }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [clientData, setClientData] = useState([]);
   const [productTypesData, setProductTypesData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -109,6 +110,7 @@ export default function Welcome({ user, userRole, onLogout }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [addClientModalOpen, setAddClientModalOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
+  const [highlightedRowId, setHighlightedRowId] = useState(null);
   const [showAddStandardDesignModal, setShowAddStandardDesignModal] = useState(false);
   const [sortByProduct, setSortByProduct] = useState('type');
   const [sortDirectionProduct, setSortDirectionProduct] = useState('asc');
@@ -568,6 +570,27 @@ const fetchProductTypesData = async () => {
     fetchClientData();
     fetchProductTypesData();
   }, [userRole]);
+
+  // Handle URL parameters for tab selection and row highlighting
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const highlight = searchParams.get('highlight');
+
+    if (tab) {
+      const tabIndex = parseInt(tab, 10);
+      if (!isNaN(tabIndex) && tabIndex >= 0 && tabIndex <= 1) {
+        setCurrentTab(tabIndex);
+      }
+    }
+
+    if (highlight) {
+      setHighlightedRowId(highlight);
+      // Clear highlight after 5 seconds
+      setTimeout(() => {
+        setHighlightedRowId(null);
+      }, 5000);
+    }
+  }, [searchParams]);
 
   const [selectedClientProduct, setSelectedClientProduct] = useState(null);
 
@@ -1108,8 +1131,16 @@ const ClientsTable = () => (
               <TableRow
                 key={product.id}
                 sx={{
-                  '&:nth-of-type(odd)': { backgroundColor: '#fafafa' },
-                  '&:hover': { backgroundColor: '#e3f2fd' }
+                  backgroundColor: highlightedRowId === product.id
+                    ? '#c8e6c9'
+                    : undefined,
+                  '&:nth-of-type(odd)': {
+                    backgroundColor: highlightedRowId === product.id
+                      ? '#c8e6c9'
+                      : '#fafafa'
+                  },
+                  '&:hover': { backgroundColor: '#e3f2fd' },
+                  transition: 'background-color 0.3s ease',
                 }}
               >
                 <TableCell sx={{ padding: '16px' }}>

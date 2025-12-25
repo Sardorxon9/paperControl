@@ -1,0 +1,90 @@
+[
+  {
+    "productName": "Сахар Белый в Стик упаковках",
+    "packageType": "Стик",
+    "usedMaterial": "Белый сахар",
+    "productCode": "ST-OQ-01",
+    "marketPlace": false,
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg"
+  },
+  {
+    "productName": "Сахар Белый в Стик упаковках",
+    "packageType": "Стик",
+    "usedMaterial": "Белый сахар",
+    "productCode": "ST-OQ-02",
+    "marketPlace": false,
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg"
+  },
+  {
+    "productName": "Сахар Белый в Стик упаковках",
+    "packageType": "Стик",
+    "usedMaterial": "Белый сахар",
+    "productCode": "ST-OQ-100UZM",
+    "marketPlace": true,
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg"
+  },
+  {
+    "productName": "Сахар Белый в Стик упаковках",
+    "packageType": "Стик",
+    "usedMaterial": "Белый сахар",
+    "productCode": "ST-OQ-300UZM",
+    "marketPlace": true,
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg"
+  },
+  {
+    "productName": "Сахар Белый в Стик упаковках",
+    "packageType": "Стик",
+    "usedMaterial": "Белый сахар",
+    "productCode": "ST-OQ-100YNDX",
+    "marketPlace": true,
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg"
+  },
+  {
+    "productName": "Сахар Коричневый в Стик упаковках",
+    "packageType": "Стик",
+    "usedMaterial": "Коричневый сахар",
+    "productCode": "ST-JG-01",
+    "marketPlace": false,
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg"
+  },
+  {
+    "productName": "Сахар Белый в Саше упаковках",
+    "packageType": "Саше",
+    "usedMaterial": "Белый сахар",
+    "productCode": "SH-OQ-01",
+    "marketPlace": false,
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg"
+  },
+  {
+    "productName": "Сахар Коричневый в Саше упаковках",
+    "packageType": "Саше",
+    "usedMaterial": "Коричневый сахар",
+    "productCode": "SH-JG-01",
+    "marketPlace": false,
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg"
+  },
+  {
+    "productName": "Соль в Саше упаковках",
+    "packageType": "Саше",
+    "usedMaterial": "Соль",
+    "productCode": "SH-TUZ-01",
+    "marketPlace": false,
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg"
+  },
+  {
+    "productName": "Сливки в Саше упаковках",
+    "packageType": "Саше",
+    "usedMaterial": "Сливки",
+    "productCode": "SH-SLIV-01",
+    "marketPlace": false,
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg"
+  },
+  {
+    "productName": "Сахарозаменитель в Саше упаковках",
+    "packageType": "Саше",
+    "usedMaterial": "Сахарозаменитель",
+    "productCode": "SH-SZ-01",
+    "marketPlace": false,
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg"
+  }
+]
