@@ -19,10 +19,12 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import AddIcon from '@mui/icons-material/Add';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import ProductCard from '../components/shared/ProductCard';
 import EditProductModal from '../components/modals/EditProductModal';
+import AddCatalogueItemModal from '../components/modals/AddCatalogueItemModal';
 import { brandColors } from '../theme/colors';
 
 const Catalogue = ({ user, userRole, onLogout }) => {
@@ -34,6 +36,7 @@ const Catalogue = ({ user, userRole, onLogout }) => {
   const [selectedMaterialTypes, setSelectedMaterialTypes] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
   // Fetch products from Firestore
   useEffect(() => {
@@ -140,6 +143,14 @@ const Catalogue = ({ user, userRole, onLogout }) => {
     setEditingProduct(null);
   };
 
+  const handleOpenAddModal = () => {
+    setAddModalOpen(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setAddModalOpen(false);
+  };
+
   const handleProductUpdated = async () => {
     // Refresh the products list after update
     setLoading(true);
@@ -201,6 +212,22 @@ const Catalogue = ({ user, userRole, onLogout }) => {
                 {user?.name} ({user?.email})
               </Typography>
             </Box>
+
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleOpenAddModal}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                bgcolor: brandColors.primary,
+                '&:hover': {
+                  bgcolor: brandColors.primaryHover,
+                },
+              }}
+            >
+              Добавить дизайн
+            </Button>
 
             <Button
               variant="outlined"
@@ -423,6 +450,13 @@ const Catalogue = ({ user, userRole, onLogout }) => {
         onClose={handleCloseEditModal}
         product={editingProduct}
         onProductUpdated={handleProductUpdated}
+      />
+
+      {/* Add Catalogue Item Modal */}
+      <AddCatalogueItemModal
+        open={addModalOpen}
+        onClose={handleCloseAddModal}
+        onSuccess={handleProductUpdated}
       />
     </Box>
   );
