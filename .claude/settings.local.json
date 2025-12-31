@@ -12,7 +12,12 @@
       "Bash(node scripts/seedCatalogue.js:*)",
       "Bash(node scripts/updateCatalogue.js:*)",
       "Bash(move seedCatalogue.js seedCatalogue.mjs)",
-      "Bash(move updateCatalogue.js updateCatalogue.mjs)"
+      "Bash(move updateCatalogue.js updateCatalogue.mjs)",
+      "Bash(node scripts/addGrammOptions.mjs:*)",
+      "Bash(node scripts/fixProductTypesCatalogue.mjs:*)",
+      "Bash(node scripts/inspectProductTypes.mjs:*)",
+      "Bash(node scripts/linkProductTypesToCatalogue.mjs:*)",
+      "Bash(node scripts/migrateStandardClients.mjs:*)"
     ]
   }
 }

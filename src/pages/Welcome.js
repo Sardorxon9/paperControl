@@ -48,7 +48,8 @@ import ClientDetailsModal from '../components/modals/ClientDetailsModal';
 import ProductDetailsModal from '../components/modals/ProductDetailsModal';
 import ReportGmailerrorredIcon from '@mui/icons-material/ReportGmailerrorred';
 import LogoutIcon from '@mui/icons-material/Logout';
-import AddStandardDesignModal from "../components/modals/AddStandardDesignModal";
+import AddStandardRollModal from "../components/modals/AddStandardRollModal";
+import ImageLightbox from '../components/shared/ImageLightbox';
 import UnfoldMoreRoundedIcon from '@mui/icons-material/UnfoldMoreRounded';
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
@@ -111,7 +112,9 @@ export default function Welcome({ user, userRole, onLogout }) {
   const [addClientModalOpen, setAddClientModalOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
   const [highlightedRowId, setHighlightedRowId] = useState(null);
-  const [showAddStandardDesignModal, setShowAddStandardDesignModal] = useState(false);
+  const [showAddStandardRollModal, setShowAddStandardRollModal] = useState(false);
+  const [imageLightboxOpen, setImageLightboxOpen] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState('');
   const [sortByProduct, setSortByProduct] = useState('type');
   const [sortDirectionProduct, setSortDirectionProduct] = useState('asc');
   const [sortBy, setSortBy] = useState('name');   
@@ -287,81 +290,103 @@ const fetchClientData = async () => {
             return null;
           }
           
-          // Fetch product and package info using new fields
-          const { productName, packageType } = await fetchClientProductInfo(data);
-          
-          // Initialize productTypeData with default values
-          let productTypeData = { 
-            packaging: '', 
-            type: '', 
-            shellNum: '', 
-            paperRemaining: 0, 
-            gramm: '', 
-            productTypeStandardName: '' 
-          };
-          
-          // Get gramm value - try multiple sources
+          // Initialize variables
+          let productName = null;
+          let packageType = null;
           let grammValue = '';
-          
-          // First, try to get gramm from client's own data (for unique designs)
-          if (data.designType === "unique" && data.gramm) {
-            grammValue = data.gramm;
-            console.log(`Client ${data.name}: Using unique design gramm:`, grammValue);
-          }
-          
-          // If no gramm from client data, or if it's a standard design, try productType
-          if (!grammValue && (data.productID_2 || data.packageID)) {
-            try {
-              const productTypeMatch = await findProductTypeByIds(data.productID_2, data.packageID);
-              
-              if (productTypeMatch) {
-                const { data: ptData } = productTypeMatch;
-                console.log(`Client ${data.name}: Found productType match:`, {
-                  name: ptData.name,
-                  gramm: ptData.gramm,
-                  packaging: ptData.packaging,
-                  type: ptData.type
-                });
-                
-                productTypeData = {
-                  packaging: ptData.packaging || '',
-                  type: ptData.type || '',
-                  gramm: ptData.gramm || '',
-                  productTypeStandardName: ptData.name || '',
-                  shellNum: '',
-                  paperRemaining: 0
-                };
+          let productTypeData = {
+            packaging: '',
+            type: '',
+            shellNum: '',
+            paperRemaining: 0,
+            gramm: '',
+            productTypeStandardName: ''
+          };
 
-                // Use gramm from productType if not already set
-                if (!grammValue && ptData.gramm) {
-                  grammValue = ptData.gramm;
-                  console.log(`Client ${data.name}: Using productType gramm:`, grammValue);
-                }
+          // NEW: For standard designs with catalogue-based architecture
+          if (data.designType === "standart" && data.catalogueItemID) {
+            // Use catalogue-based fields directly from client document
+            productName = data.productName || null;
+            packageType = data.packageType || null;
+            grammValue = data.gramm || '';
 
-                // For standard designs, get paper info
-                if (data.designType === "standart") {
-                  try {
-                    const paperInfoQuery = await getDocs(collection(db, "productTypes", productTypeMatch.id, "paperInfo"));
-                    if (!paperInfoQuery.empty) {
-                      const paperInfoData = paperInfoQuery.docs[0].data();
-                      productTypeData.shellNum = paperInfoData.shellNum || '';
-                      productTypeData.paperRemaining = Number(paperInfoData.paperRemaining) || 0;
-                    }
-                  } catch (error) {
-                    console.error(`Error fetching paperInfo for standard design (${data.name}):`, error);
+            // If client has productTypeID, fetch productType details
+            if (data.productTypeID) {
+              try {
+                const productTypeDoc = await getDoc(doc(db, "productTypes", data.productTypeID));
+                if (productTypeDoc.exists()) {
+                  const ptData = productTypeDoc.data();
+                  productTypeData.productTypeStandardName = ptData.name || '';
+                  productTypeData.gramm = ptData.gramm || grammValue;
+
+                  // Get paper info from productType
+                  const paperInfoQuery = await getDocs(
+                    collection(db, "productTypes", data.productTypeID, "paperInfo")
+                  );
+                  if (!paperInfoQuery.empty) {
+                    const paperInfoData = paperInfoQuery.docs[0].data();
+                    productTypeData.shellNum = paperInfoData.shellNum || '';
+                    productTypeData.paperRemaining = Number(paperInfoData.paperRemaining) || 0;
                   }
                 }
-              } else {
-                console.warn(`Client ${data.name}: No productType match found for productID_2: ${data.productID_2}, packageID: ${data.packageID}`);
+              } catch (error) {
+                console.error(`Error fetching productType for client ${data.name}:`, error);
               }
-            } catch (error) {
-              console.error(`Error fetching product type data for client ${data.name}:`, error);
             }
-          }
+          } else {
+            // OLD: For legacy clients or unique designs
+            // Fetch product and package info using old method
+            const fetchedInfo = await fetchClientProductInfo(data);
+            productName = fetchedInfo.productName;
+            packageType = fetchedInfo.packageType;
 
-          // Final fallback - check if gramm exists in any of the related data
-          if (!grammValue) {
-            console.warn(`Client ${data.name}: No gramm value found from any source`);
+            // Get gramm value - try multiple sources
+            if (data.designType === "unique" && data.gramm) {
+              grammValue = data.gramm;
+            }
+
+            // If no gramm from client data, or if it's a standard design, try productType
+            if (!grammValue && (data.productID_2 || data.packageID)) {
+              try {
+                const productTypeMatch = await findProductTypeByIds(data.productID_2, data.packageID);
+
+                if (productTypeMatch) {
+                  const { data: ptData } = productTypeMatch;
+
+                  productTypeData = {
+                    packaging: ptData.packaging || '',
+                    type: ptData.type || '',
+                    gramm: ptData.gramm || '',
+                    productTypeStandardName: ptData.name || '',
+                    shellNum: '',
+                    paperRemaining: 0
+                  };
+
+                  // Use gramm from productType if not already set
+                  if (!grammValue && ptData.gramm) {
+                    grammValue = ptData.gramm;
+                  }
+
+                  // For standard designs, get paper info
+                  if (data.designType === "standart") {
+                    try {
+                      const paperInfoQuery = await getDocs(collection(db, "productTypes", productTypeMatch.id, "paperInfo"));
+                      if (!paperInfoQuery.empty) {
+                        const paperInfoData = paperInfoQuery.docs[0].data();
+                        productTypeData.shellNum = paperInfoData.shellNum || '';
+                        productTypeData.paperRemaining = Number(paperInfoData.paperRemaining) || 0;
+                      }
+                    } catch (error) {
+                      console.error(`Error fetching paperInfo for standard design (${data.name}):`, error);
+                    }
+                  }
+                } else {
+                  console.warn(`Client ${data.name}: No productType match found for productID_2: ${data.productID_2}, packageID: ${data.packageID}`);
+                }
+              } catch (error) {
+                console.error(`Error fetching product type data for client ${data.name}:`, error);
+              }
+            }
           }
           
           // Count available paper rolls
@@ -546,6 +571,7 @@ const fetchProductTypesData = async () => {
             shellNum,
             paperRemaining,
             totalRolls,
+            imageURL: data.imageURL || '', // Image URL from catalogue
             // Store original data for debugging
             originalData: data
           };
@@ -1069,6 +1095,11 @@ const ClientsTable = () => (
   </>
 );
 
+  const handleImageClick = (imageUrl) => {
+    setSelectedImageUrl(imageUrl);
+    setImageLightboxOpen(true);
+  };
+
   const ProductTypesTable = () => (
     <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
       <Table sx={{ minWidth: 650 }}>
@@ -1076,6 +1107,7 @@ const ClientsTable = () => (
           <TableRow sx={{ backgroundColor: '#3c7570ff' }}>
             {[
               { id: 'index', label: '№' },
+              { id: 'image', label: 'Дизайн' },
               { id: 'type', label: 'Тип продукта' },
               { id: 'packaging', label: 'Упаковка' },
               { id: 'gramm', label: 'Граммовка' },
@@ -1146,13 +1178,54 @@ const ClientsTable = () => (
                 <TableCell sx={{ padding: '16px' }}>
                   {index + 1}
                 </TableCell>
-                
+
+                <TableCell sx={{ padding: '16px' }}>
+                  {product.imageURL ? (
+                    <Box
+                      component="img"
+                      src={product.imageURL}
+                      alt={product.name}
+                      sx={{
+                        width: 60,
+                        height: 60,
+                        objectFit: 'cover',
+                        borderRadius: 1,
+                        cursor: 'pointer',
+                        border: '1px solid #e0e0e0',
+                        '&:hover': {
+                          opacity: 0.8,
+                          transform: 'scale(1.05)',
+                          transition: 'all 0.2s ease-in-out'
+                        }
+                      }}
+                      onClick={() => handleImageClick(product.imageURL)}
+                    />
+                  ) : (
+                    <Box
+                      sx={{
+                        width: 60,
+                        height: 60,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: '#f5f5f5',
+                        borderRadius: 1,
+                        border: '1px solid #e0e0e0',
+                        color: '#9e9e9e',
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      Нет фото
+                    </Box>
+                  )}
+                </TableCell>
+
               <TableCell sx={{ padding: '16px' }}>
   <Box>
-    <Typography 
-      variant="body1" 
-      sx={{ 
-        fontWeight: 600, 
+    <Typography
+      variant="body1"
+      sx={{
+        fontWeight: 600,
         color: 'grey.800',
         lineHeight: 1.2,
         mb: 0.5
@@ -1160,10 +1233,10 @@ const ClientsTable = () => (
     >
       {product.type}
     </Typography>
-    <Typography 
-      variant="body2" 
-      sx={{ 
-        fontWeight: 400, 
+    <Typography
+      variant="body2"
+      sx={{
+        fontWeight: 400,
         color: 'grey.600',
         lineHeight: 1.2
       }}
@@ -1326,7 +1399,7 @@ const ClientsTable = () => (
                     <Button
                       variant="contained"
                       startIcon={<AddIcon />}
-                      onClick={() => setShowAddStandardDesignModal(true)}
+                      onClick={() => setShowAddStandardRollModal(true)}
                       sx={{
                         backgroundColor: '#04907F',
                         '&:hover': { backgroundColor: '#037569' },
@@ -1338,7 +1411,7 @@ const ClientsTable = () => (
                         whiteSpace: "nowrap"
                       }}
                     >
-                      Стандарт диз рулон
+                      Добавить стандартный дизайн
                     </Button>
                   </>
                 )}
@@ -1463,25 +1536,16 @@ const ClientsTable = () => (
           />
         )}
 
-        {showAddStandardDesignModal && (
-          <Modal
-            open={showAddStandardDesignModal}
-            onClose={() => setShowAddStandardDesignModal(false)}
-            aria-labelledby="add-standard-design-modal"
-            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            <Box>
-              <AddStandardDesignModal
-                open={showAddStandardDesignModal}
-                onClose={() => setShowAddStandardDesignModal(false)}
-                onDesignAdded={() => {
-                  setShowAddStandardDesignModal(false);
-                  fetchProductTypesData();
-                }}
-                currentUser={user}
-              />
-            </Box>
-          </Modal>
+        {showAddStandardRollModal && (
+          <AddStandardRollModal
+            open={showAddStandardRollModal}
+            onClose={() => setShowAddStandardRollModal(false)}
+            onRollAdded={() => {
+              setShowAddStandardRollModal(false);
+              fetchProductTypesData();
+            }}
+            currentUser={user}
+          />
         )}
 
         {modalOpen && selectedClient && (
@@ -1500,14 +1564,23 @@ const ClientsTable = () => (
   onClose={() => setSnackbar({ ...snackbar, open: false })}
   anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
 >
-  <Alert 
-    onClose={() => setSnackbar({ ...snackbar, open: false })} 
+  <Alert
+    onClose={() => setSnackbar({ ...snackbar, open: false })}
     severity={snackbar.severity}
     sx={{ width: '100%' }}
   >
     {snackbar.message}
   </Alert>
 </Snackbar>
+
+{imageLightboxOpen && selectedImageUrl && (
+  <ImageLightbox
+    images={[selectedImageUrl]}
+    initialIndex={0}
+    open={imageLightboxOpen}
+    onClose={() => setImageLightboxOpen(false)}
+  />
+)}
     </>
   );
 }

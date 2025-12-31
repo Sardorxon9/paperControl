@@ -126,23 +126,32 @@ const [openEdit, setOpenEdit] = useState(false);
     // Always fetch logs for all clients
     fetchLogs();
 
+    // Fetch paper rolls based on design type
     if (hasTracking) {
-      fetchPaperRolls();
+      fetchPaperRolls(); // For unique designs
+    } else if (client.designType === 'standart' && client.productTypeID) {
+      fetchStandardDesignRolls(); // For standard designs
     }
 
-    // NEW: Fetch product name and package type data in parallel
+    // Fetch product name and package type data
     const fetchProductDetails = async () => {
-      // Use Promise.all to fetch both pieces of data at the same time
-      const [nameResult, typeResult] = await Promise.all([
-        fetchProductName(client.productID_2),
-        fetchPackageType(client.packageID)
-      ]);
+      // For standard designs with new architecture, use catalogue data if available
+      if (client.designType === 'standart' && client.productName && client.packageType) {
+        setProductName(client.productName);
+        setPackageType(client.packageType);
+      } else {
+        // Fallback to old method for backward compatibility
+        const [nameResult, typeResult] = await Promise.all([
+          fetchProductName(client.productID_2),
+          fetchPackageType(client.packageID)
+        ]);
 
-      setProductName(nameResult);
-      setPackageType(typeResult);
+        setProductName(nameResult);
+        setPackageType(typeResult);
+      }
     };
 
-    if (client.productID_2 || client.packageID) {
+    if (client.productID_2 || client.packageID || client.productName) {
       fetchProductDetails();
     } else {
       // If no IDs are present, set states to null
@@ -154,7 +163,7 @@ const [openEdit, setOpenEdit] = useState(false);
 
   
 
-  // Fetch paper rolls from the new subcollection
+  // Fetch paper rolls from the new subcollection (for unique designs)
   const fetchPaperRolls = async () => {
     if (!client?.id) return;
 
@@ -162,25 +171,82 @@ const [openEdit, setOpenEdit] = useState(false);
       const rollsRef = collection(db, `clients/${client.id}/paperRolls`);
       const rollsQuery = query(rollsRef, orderBy('dateCreated', 'asc'));
       const rollsSnapshot = await getDocs(rollsQuery);
-      
+
   const rollsData = rollsSnapshot.docs
   .map(doc => ({
     id: doc.id,
     ...doc.data()
       }))
       .filter(roll => roll.status !== 'deleted');// Filter out deleted rolls
-      
+
       setPaperRolls(rollsData);
     } catch (error) {
       console.error('Error fetching paper rolls:', error);
     }
   };
 
+  // NEW: Fetch paper rolls for standard designs from productTypes
+  const fetchStandardDesignRolls = async () => {
+    if (!client?.productTypeID) {
+      console.log('No productTypeID found for standard design client');
+      setPaperRolls([]);
+      return;
+    }
+
+    try {
+      // Fetch productType data
+      const productTypeRef = doc(db, 'productTypes', client.productTypeID);
+      const productTypeSnap = await getDoc(productTypeRef);
+
+      if (productTypeSnap.exists()) {
+        setProductType(productTypeSnap.data());
+      }
+
+      // Fetch paperInfo subcollection
+      const paperInfoRef = collection(db, `productTypes/${client.productTypeID}/paperInfo`);
+      const paperInfoSnapshot = await getDocs(paperInfoRef);
+
+      if (paperInfoSnapshot.empty) {
+        console.log('No paperInfo found for this productType');
+        setPaperRolls([]);
+        return;
+      }
+
+      // Get the first (and usually only) paperInfo document
+      const paperInfoDoc = paperInfoSnapshot.docs[0];
+      const paperInfoId = paperInfoDoc.id;
+
+      // Fetch individual rolls from paperInfo/{id}/individualRolls
+      const rollsRef = collection(
+        db,
+        `productTypes/${client.productTypeID}/paperInfo/${paperInfoId}/individualRolls`
+      );
+      const rollsQuery = query(rollsRef, orderBy('dateCreated', 'asc'));
+      const rollsSnapshot = await getDocs(rollsQuery);
+
+      const rollsData = rollsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        paperInfoId: paperInfoId, // Store paperInfoId for later use
+        ...doc.data(),
+        isStandardDesign: true // Flag to identify standard design rolls
+      }));
+
+      setPaperRolls(rollsData);
+    } catch (error) {
+      console.error('Error fetching standard design rolls:', error);
+      setPaperRolls([]);
+    }
+  };
+
   useEffect(() => {
-  if (open && client?.designType === 'unique') {
-    fetchPaperRolls();
-  }
-}, [open, client]);
+    if (open && client) {
+      if (client.designType === 'unique') {
+        fetchPaperRolls();
+      } else if (client.designType === 'standart' && client.productTypeID) {
+        fetchStandardDesignRolls();
+      }
+    }
+  }, [open, client]);
 
 
   // Fetch logs from the logs subcollection (now tracks usage, not additions)
@@ -1154,15 +1220,39 @@ try {
 
       {/* Paper Rolls List */}
       <Box flex={1} sx={{ overflow: 'auto' }}>
+        {paperRolls.length === 0 && client.designType === 'standart' && !client.productTypeID && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Для этого стандартного дизайна еще нет бумажных рулонов. Добавьте рулоны через раздел "Стандартные дизайны".
+          </Alert>
+        )}
+        {paperRolls.length === 0 && client.designType === 'standart' && client.productTypeID && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Нет доступных рулонов для этого дизайна.
+          </Alert>
+        )}
         {paperRolls.map((roll, index) => (
           <Card className="roll-card" key={roll.id} sx={{ mb: 2, bgcolor: '#E2F0EE', border: '1px solid #BDDCD8' }}>
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
               <Box display="flex" justifyContent="space-between" alignItems="flex-start">
                 {/* Left side - Рулон name and weight stacked vertically */}
                 <Box display="flex" flexDirection="column" alignItems="flex-start">
-                  <Typography variant="body2" color="#727d7b" sx={{ mb: 0.5 }}>
-                    Рулон {index + 1}
-                  </Typography>
+                  <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+                    <Typography variant="body2" color="#727d7b">
+                      Рулон {index + 1}
+                    </Typography>
+                    {roll.isStandardDesign && (
+                      <Chip
+                        label="Общий"
+                        size="small"
+                        sx={{
+                          height: 20,
+                          fontSize: '0.7rem',
+                          bgcolor: '#04907F',
+                          color: 'white'
+                        }}
+                      />
+                    )}
+                  </Box>
 
               {editingRollId === roll.id ? (
   <Box display="flex" flexDirection="column" gap={1}>

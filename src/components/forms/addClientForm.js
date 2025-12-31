@@ -24,17 +24,20 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import { 
-  collection, 
-  getDocs, 
-  addDoc, 
-  GeoPoint, 
+import {
+  collection,
+  getDocs,
+  addDoc,
+  GeoPoint,
   Timestamp,
   doc,
-  getDoc
+  getDoc,
+  query,
+  where
 } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import { checkAndNotifyLowPaper } from '../../services/notificationService';
+import StandardDesignPicker from '../shared/StandardDesignPicker';
 
 export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
   // Package Types for both design types
@@ -55,6 +58,14 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
     product: "",
     gram: "",
     name: "" // Only for standard design when multiple matches exist
+  });
+
+  // New state for standard design picker
+  const [selectedStandardDesign, setSelectedStandardDesign] = useState({
+    catalogueItemId: null,
+    gramm: null,
+    catalogueItem: null,
+    productTypeId: null  // Will be fetched/created
   });
 
   const [formData, setFormData] = useState({
@@ -224,7 +235,7 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
       // Filter products by selected package type
       const filteredProducts = productTypesData.filter(item => item.packageID === value);
       const uniqueProducts = [...new Set(filteredProducts.map(item => item.productID_2))];
-      
+
       // Get product names from products collection
       const productsWithNames = await Promise.all(
         uniqueProducts.map(async (productID) => {
@@ -244,35 +255,35 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
           }
         })
       );
-      
+
       setAvailableProducts(productsWithNames);
-      
+
       // Reset dependent fields
       setProductInputs(prev => ({ ...prev, product: "", gram: "", name: "" }));
       setAvailableGrams([]);
       setAvailableNames([]);
-      
+
     } else if (field === 'product') {
       // Filter grams by selected package type and product
-      const filteredItems = productTypesData.filter(item => 
+      const filteredItems = productTypesData.filter(item =>
         item.packageID === productInputs.packageType && item.productID_2 === value
       );
       const uniqueGrams = [...new Set(filteredItems.map(item => item.gram))].sort((a, b) => a - b);
-      
+
       setAvailableGrams(uniqueGrams);
-      
+
       // Reset dependent fields
       setProductInputs(prev => ({ ...prev, gram: "", name: "" }));
       setAvailableNames([]);
-      
+
     } else if (field === 'gram') {
       // Check if multiple names exist for this combination
-      const matchingItems = productTypesData.filter(item => 
-        item.packageID === productInputs.packageType && 
-        item.productID_2 === productInputs.product && 
+      const matchingItems = productTypesData.filter(item =>
+        item.packageID === productInputs.packageType &&
+        item.productID_2 === productInputs.product &&
         item.gram === parseInt(value)
       );
-      
+
       if (matchingItems.length > 1) {
         const uniqueNames = [...new Set(matchingItems.map(item => item.name))];
         setAvailableNames(uniqueNames);
@@ -283,6 +294,44 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
           setProductInputs(prev => ({ ...prev, name: matchingItems[0].name }));
         }
       }
+    }
+  };
+
+  // NEW: Handle standard design selection from StandardDesignPicker
+  const handleStandardDesignSelect = async (catalogueItemId, gramm, catalogueItem) => {
+    setSelectedStandardDesign({
+      catalogueItemId,
+      gramm,
+      catalogueItem,
+      productTypeId: null
+    });
+
+    // Check if productType exists for this catalogueItem + gramm
+    try {
+      const productTypesQuery = query(
+        collection(db, 'productTypes'),
+        where('catalogueItemID', '==', catalogueItemId),
+        where('gramm', '==', gramm)
+      );
+      const existingProductTypes = await getDocs(productTypesQuery);
+
+      if (!existingProductTypes.empty) {
+        const productTypeId = existingProductTypes.docs[0].id;
+        setSelectedStandardDesign(prev => ({
+          ...prev,
+          productTypeId
+        }));
+        console.log(`Found existing productType: ${productTypeId}`);
+      } else {
+        console.log('No productType exists yet for this design+gramm combination');
+        setSnackbar({
+          open: true,
+          message: 'Внимание: Для этого дизайна и граммовки еще нет бумажных рулонов',
+          severity: 'warning'
+        });
+      }
+    } catch (error) {
+      console.error('Error checking productType:', error);
     }
   };
 
@@ -420,13 +469,27 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
     }
 
     // Product selection validation
-    if (!productInputs.packageType) errors.push("Выберите тип упаковки");
-    if (!productInputs.product) errors.push("Выберите продукт");
-    if (!productInputs.gram) errors.push("Выберите граммаж");
-
-    // For standard design, check if name is required
-    if (formData.designType === "standart" && availableNames.length > 0 && !productInputs.name) {
-      errors.push("Выберите название");
+    if (formData.designType === "standart") {
+      // For standard design, check if using new or old method
+      if (selectedStandardDesign.catalogueItemId) {
+        // NEW method: StandardDesignPicker
+        if (!selectedStandardDesign.gramm) {
+          errors.push("Выберите дизайн и граммовку из каталога");
+        }
+      } else {
+        // OLD method: Dropdown selection (backward compatibility)
+        if (!productInputs.packageType) errors.push("Выберите тип упаковки");
+        if (!productInputs.product) errors.push("Выберите продукт");
+        if (!productInputs.gram) errors.push("Выберите граммаж");
+        if (availableNames.length > 0 && !productInputs.name) {
+          errors.push("Выберите название");
+        }
+      }
+    } else {
+      // For unique design
+      if (!productInputs.packageType) errors.push("Выберите тип упаковки");
+      if (!productInputs.product) errors.push("Выберите продукт");
+      if (!productInputs.gram) errors.push("Выберите граммаж");
     }
 
     // Design type specific validation
@@ -526,21 +589,47 @@ const handleSubmit = async (event) => {
       [latitude, longitude] = formData.geoPoint.split(',').map(coord => parseFloat(coord.trim()));
     }
 
-    // Build client data based on design type - FIXED: Always use productID_2
-    const baseClientData = {
-      name: formData.name.trim(),
-      orgName: branches.length > 0 ? branches[0].orgName.trim() : formData.orgName.trim(),
-      restaurant: formData.name.trim(),
-      addressShort: branches.length > 0 ? branches[0].addressShort.trim() : formData.addressShort.trim(),
-      addressLong: new GeoPoint(latitude, longitude),
-      designType: formData.designType,
-      comment: branches.length > 0 ? (branches[0].comment || '').trim() : formData.comment.trim(),
-      // Save the new product selection format
-      packageID: productInputs.packageType,
-      productID_2: productInputs.product, // ← ALWAYS use productID_2
-      gram: parseInt(productInputs.gram),
-      ...(productInputs.name && { name: productInputs.name })
-    };
+    // Build client data based on design type
+    let baseClientData;
+
+    if (formData.designType === "standart" && selectedStandardDesign.catalogueItemId) {
+      // NEW: For standard design with StandardDesignPicker selection
+      baseClientData = {
+        name: formData.name.trim(),
+        orgName: branches.length > 0 ? branches[0].orgName.trim() : formData.orgName.trim(),
+        restaurant: formData.name.trim(),
+        addressShort: branches.length > 0 ? branches[0].addressShort.trim() : formData.addressShort.trim(),
+        addressLong: new GeoPoint(latitude, longitude),
+        designType: formData.designType,
+        comment: branches.length > 0 ? (branches[0].comment || '').trim() : formData.comment.trim(),
+        // NEW: Save catalogueItemID and productTypeID
+        catalogueItemID: selectedStandardDesign.catalogueItemId,
+        gramm: selectedStandardDesign.gramm,
+        productTypeID: selectedStandardDesign.productTypeId || null,
+        // Also save catalogue item details for backward compatibility
+        productCode: selectedStandardDesign.catalogueItem.productCode,
+        productName: selectedStandardDesign.catalogueItem.productName,
+        packageType: selectedStandardDesign.catalogueItem.packageType,
+        usedMaterial: selectedStandardDesign.catalogueItem.usedMaterial,
+        imageURL: selectedStandardDesign.catalogueItem.imageURL || ''
+      };
+    } else {
+      // OLD: For legacy selection or unique design
+      baseClientData = {
+        name: formData.name.trim(),
+        orgName: branches.length > 0 ? branches[0].orgName.trim() : formData.orgName.trim(),
+        restaurant: formData.name.trim(),
+        addressShort: branches.length > 0 ? branches[0].addressShort.trim() : formData.addressShort.trim(),
+        addressLong: new GeoPoint(latitude, longitude),
+        designType: formData.designType,
+        comment: branches.length > 0 ? (branches[0].comment || '').trim() : formData.comment.trim(),
+        // Save the old product selection format
+        packageID: productInputs.packageType,
+        productID_2: productInputs.product,
+        gram: parseInt(productInputs.gram),
+        ...(productInputs.name && { name: productInputs.name })
+      };
+    }
 
     let clientData;
 
@@ -649,6 +738,13 @@ const handleSubmit = async (event) => {
       product: "",
       gram: "",
       name: ""
+    });
+
+    setSelectedStandardDesign({
+      catalogueItemId: null,
+      gramm: null,
+      catalogueItem: null,
+      productTypeId: null
     });
 
     setPaperRolls([{ id: 1, paperRemaining: "" }]);
@@ -1099,20 +1195,40 @@ return (
 
             {/* --- Product Section --- */}
             <Grid item xs={12}>
-              <Paper 
-                variant="outlined" 
-                sx={{ 
-                  p: 3, 
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 3,
                   backgroundColor: 'grey.50',
                   border: '1px solid',
                   borderColor: 'grey.200'
                 }}
               >
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 3, fontSize: '1.15em' }}>
-                  Продукт
+                  {isStandardDesign ? 'Выбор стандартного дизайна' : 'Продукт'}
                 </Typography>
 
-                <Grid container spacing={3}>
+                {isStandardDesign ? (
+                  /* NEW: StandardDesignPicker for standard design */
+                  <Box>
+                    <StandardDesignPicker
+                      onSelect={handleStandardDesignSelect}
+                      selectedCatalogueItemId={selectedStandardDesign.catalogueItemId}
+                      selectedGramm={selectedStandardDesign.gramm}
+                      compact={true}
+                    />
+                    {selectedStandardDesign.catalogueItemId && (
+                      <Alert severity="info" sx={{ mt: 2 }}>
+                        Выбран: <strong>{selectedStandardDesign.catalogueItem.productName}</strong> ({selectedStandardDesign.gramm} гр)
+                        {selectedStandardDesign.productTypeId && (
+                          <span> - Бумага доступна</span>
+                        )}
+                      </Alert>
+                    )}
+                  </Box>
+                ) : (
+                  /* OLD: Dropdown selection for unique design */
+                  <Grid container spacing={3}>
                   {/* Package Type */}
                   <Grid item xs={12} sm={4}>
                     <TextField
@@ -1266,41 +1382,9 @@ return (
   </TextField>
 </Grid>
 
-                  {/* Name (only for Standard Design with multiple options) */}
-                  {isStandardDesign && availableNames.length > 0 && (
-                    <Grid item xs={12} sm={4}>
-                      <TextField
-                        select
-                        fullWidth
-                        label="Название"
-                        value={productInputs.name}
-                        onChange={(e) => handleProductInputChange('name', e.target.value)}
-                        required
-                        size="small"
-                        SelectProps={{
-                          renderValue: (selected) =>
-                            selected
-                              ? selected
-                              : <span style={{ opacity: 0.6, fontStyle: "italic" }}>Выбрать</span>,
-                          MenuProps: { 
-                            PaperProps: { 
-                              sx: { 
-                                maxHeight: 200,
-                                minWidth: 200 
-                              } 
-                            } 
-                          }
-                        }}
-                      >
-                        {availableNames.map((name) => (
-                          <MenuItem key={name} value={name}>
-                            {name}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </Grid>
-                  )}
+                  {/* Name (only for Standard Design with multiple options) - REMOVED, now using StandardDesignPicker */}
                 </Grid>
+                )}
               </Paper>
             </Grid>
 

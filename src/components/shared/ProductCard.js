@@ -242,6 +242,7 @@ const ProductCard = ({ product, onEdit }) => {
                   py: 1,
                   borderRadius: 1,
                   border: `1px solid ${brandColors.border}`,
+                  mb: 1.5,
                 }}
               >
                 <Typography
@@ -270,6 +271,52 @@ const ProductCard = ({ product, onEdit }) => {
                 >
                   {product.usedMaterial}
                 </Typography>
+              </Box>
+            )}
+
+            {/* Gramm Options */}
+            {product.possibleGramms && product.possibleGramms.length > 0 && (
+              <Box
+                sx={{
+                  backgroundColor: brandColors.primaryVeryLight,
+                  px: 1.5,
+                  py: 1,
+                  borderRadius: 1,
+                  border: `1px solid ${brandColors.primary}`,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: brandColors.textSecondary,
+                    fontSize: '0.688rem',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    display: 'block',
+                    mb: 0.5,
+                  }}
+                >
+                  Доступные граммовки
+                </Typography>
+                <Stack direction="row" spacing={0.5} flexWrap="wrap" gap={0.5}>
+                  {product.possibleGramms.map((gramm) => (
+                    <Chip
+                      key={gramm}
+                      label={`${gramm} гр`}
+                      size="small"
+                      sx={{
+                        height: 22,
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        backgroundColor: brandColors.primary,
+                        color: 'white',
+                        '& .MuiChip-label': {
+                          px: 1,
+                        },
+                      }}
+                    />
+                  ))}
+                </Stack>
               </Box>
             )}
           </Box>
