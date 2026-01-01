@@ -84,6 +84,7 @@ const ProductDetailsModal = ({ open, onClose, product, currentUser }) => {
   const [correctWeight, setCorrectWeight] = useState("");
 
   const [productData, setProductData] = useState(null);
+  const [catalogueData, setCatalogueData] = useState(null);
 
   // Ftulka deletion states
   const [showFtulkaModal, setShowFtulkaModal] = useState(false);
@@ -119,11 +120,21 @@ const ProductDetailsModal = ({ open, onClose, product, currentUser }) => {
 
     setLoading(true);
     try {
-      // fetch productType doc (for totalKG, shellNum, name)
+      // fetch productType doc
       const productRef = doc(db, "productTypes", product.id);
       const productSnap = await getDoc(productRef);
       if (productSnap.exists()) {
-        setProductData({ id: productSnap.id, ...productSnap.data() });
+        const ptData = productSnap.data();
+        setProductData({ id: productSnap.id, ...ptData });
+
+        // Fetch catalogue data using catalogueItemID foreign key
+        if (ptData.catalogueItemID) {
+          const catalogueRef = doc(db, "catalogue", ptData.catalogueItemID);
+          const catalogueSnap = await getDoc(catalogueRef);
+          if (catalogueSnap.exists()) {
+            setCatalogueData(catalogueSnap.data());
+          }
+        }
       }
 
       // fetch paperInfo
@@ -413,14 +424,16 @@ const ProductDetailsModal = ({ open, onClose, product, currentUser }) => {
 </IconButton>
 
           <Typography variant="h4" gutterBottom fontWeight="bold">
-            {productData?.type || "Продукт"}- 
-            {productData?.packaging || "Тип"}-
-            {productData?.gramm || "Грамм"}гр,
+            {catalogueData?.productName || product?.productName || "Продукт"} -
+            {catalogueData?.packageType || product?.packaging || "Тип"} -
+            {productData?.gramm || product?.gramm || "-"}гр
           </Typography>
 
-          <Typography variant="h4" gutterBottom fontWeight="bold">
-            {productData?.name || "Продукт"}
-          </Typography>
+          {catalogueData?.comment && catalogueData.comment !== 'n/a' && (
+            <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
+              {catalogueData.comment}
+            </Typography>
+          )}
 
           <Divider sx={{ mb: 4 }} />
 
@@ -440,7 +453,12 @@ const ProductDetailsModal = ({ open, onClose, product, currentUser }) => {
                   <Stack spacing={2}>
                     <Box>
                       <Typography variant="body2" color="textSecondary">Название</Typography>
-                      <Typography variant="body1">{productData?.name || '-'}</Typography>
+                      <Typography variant="body1">{catalogueData?.productName || product?.productName || '-'}</Typography>
+                    </Box>
+
+                    <Box>
+                      <Typography variant="body2" color="textSecondary">Материал</Typography>
+                      <Typography variant="body1">{catalogueData?.usedMaterial || '-'}</Typography>
                     </Box>
 
                     <Box>
@@ -457,7 +475,7 @@ const ProductDetailsModal = ({ open, onClose, product, currentUser }) => {
                       </Typography>
                     </Box>
 {/* --- Product Image Block --- */}
-{productData?.imageURL1 && (
+{(catalogueData?.imageURL || product?.imageURL) && (
   <PhotoProvider
     toolbarRender={({ rotate, onRotate, scale, onScale, onClose }) => (
       <div style={{
@@ -491,10 +509,10 @@ const ProductDetailsModal = ({ open, onClose, product, currentUser }) => {
       </div>
     )}
   >
-    <PhotoView src={productData.imageURL1}>
+    <PhotoView src={catalogueData?.imageURL || product?.imageURL}>
       <Box
         component="img"
-        src={productData.imageURL1}
+        src={catalogueData?.imageURL || product?.imageURL}
         alt="Product Image"
         sx={{
           width: 120,

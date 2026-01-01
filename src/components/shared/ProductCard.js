@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import EditIcon from '@mui/icons-material/Edit';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ImageLightbox from './ImageLightbox';
 import { brandColors } from '../../theme/colors';
 
@@ -21,6 +22,7 @@ const ProductCard = ({ product, onEdit }) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isImageHovered, setIsImageHovered] = useState(false);
 
   // Collect all available images
   const images = [];
@@ -69,7 +71,11 @@ const ProductCard = ({ product, onEdit }) => {
         }}
       >
         {/* Image Section */}
-        <Box sx={{ position: 'relative', height: 240, width: '100%', overflow: 'hidden', flexShrink: 0 }}>
+        <Box
+          sx={{ position: 'relative', height: 240, width: '100%', overflow: 'hidden', flexShrink: 0 }}
+          onMouseEnter={() => setIsImageHovered(true)}
+          onMouseLeave={() => setIsImageHovered(false)}
+        >
           <CardMedia
             component="img"
             image={images[currentImageIndex] || 'https://via.placeholder.com/400'}
@@ -82,11 +88,10 @@ const ProductCard = ({ product, onEdit }) => {
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              cursor: 'pointer',
-              transition: 'transform 0.3s ease',
-              '&:hover': {
-                transform: 'scale(1.05)',
-              },
+              cursor: 'zoom-in',
+              transition: 'all 0.3s ease',
+              filter: isImageHovered ? 'brightness(0.7)' : 'brightness(1)',
+              transform: isImageHovered ? 'scale(1.05)' : 'scale(1)',
             }}
           />
 
@@ -102,6 +107,28 @@ const ProductCard = ({ product, onEdit }) => {
               pointerEvents: 'none',
             }}
           />
+
+          {/* Zoom Icon Overlay */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              opacity: isImageHovered ? 1 : 0,
+              transition: 'opacity 0.3s ease',
+              pointerEvents: 'none',
+              zIndex: 1,
+            }}
+          >
+            <ZoomInIcon
+              sx={{
+                fontSize: 64,
+                color: 'white',
+                filter: 'drop-shadow(0px 4px 8px rgba(0,0,0,0.6))',
+              }}
+            />
+          </Box>
 
           {/* Edit button - Top right corner */}
           <IconButton

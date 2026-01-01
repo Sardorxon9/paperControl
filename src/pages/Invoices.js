@@ -63,6 +63,7 @@ import BorderColorRoundedIcon from '@mui/icons-material/BorderColorRounded';
 import { NumericFormat } from "react-number-format";
 import { History } from '@mui/icons-material';
 import InvoiceHistory from './InvoiceHistory';
+import StandardDesignPicker from '../components/shared/StandardDesignPicker';
 
 const Invoices = ({ currentUser }) => {
   const navigate = useNavigate();
@@ -671,11 +672,14 @@ const Invoices = ({ currentUser }) => {
     const newProduct = {
       id: Date.now(),
       isDefault: false,
+      catalogueItemID: '',
+      productCode: '',
       productName: '',
       packageType: '',
       gramm: '',
       quantity: '',
-      price: ''
+      price: '',
+      type: 'standard'
     };
     setStandardInvoiceProducts([...standardInvoiceProducts, newProduct]);
   };
@@ -689,6 +693,21 @@ const Invoices = ({ currentUser }) => {
   const updateStandardProductField = (productId, field, value) => {
     setStandardInvoiceProducts(standardInvoiceProducts.map(product =>
       product.id === productId ? { ...product, [field]: value } : product
+    ));
+  };
+
+  // Handle catalogue item selection for standard invoice products
+  const handleStandardCatalogueSelect = (productId, catalogueItemId, gramm, catalogueItem) => {
+    setStandardInvoiceProducts(standardInvoiceProducts.map(product =>
+      product.id === productId ? {
+        ...product,
+        catalogueItemID: catalogueItemId,
+        productCode: catalogueItem.productCode,
+        productName: catalogueItem.productName,
+        packageType: catalogueItem.packageType,
+        gramm: gramm,
+        type: 'standard'
+      } : product
     ));
   };
 
@@ -725,8 +744,8 @@ const Invoices = ({ currentUser }) => {
           return false;
         }
       } else {
-        // For additional products, all fields are required
-        if (!product.productName || !product.packageType || !product.gramm || !product.quantity || !product.price) {
+        // For additional products, catalogueItemID and gramm are required
+        if (!product.catalogueItemID || !product.gramm || !product.quantity || !product.price) {
           return false;
         }
       }
@@ -778,12 +797,10 @@ const Invoices = ({ currentUser }) => {
             price: parseFloat(product.price)
           };
         } else {
-          const selectedProductObj = products.find(p => p.id === product.productName);
-          const selectedPackageObj = packageTypes.find(p => p.id === product.packageType);
-
+          // For catalogue-based products, use the data already stored
           return {
-            productName: selectedProductObj?.productName || '',
-            packageType: selectedPackageObj?.type || '',
+            productName: product.productName || '',
+            packageType: product.packageType || '',
             gramm: product.gramm,
             quantity: parseFloat(product.quantity),
             price: parseFloat(product.price)
@@ -828,8 +845,8 @@ const Invoices = ({ currentUser }) => {
             };
           } else {
             return {
-              productID_2: product.productName,
-              packageID: product.packageType,
+              catalogueItemID: product.catalogueItemID,
+              productCode: product.productCode,
               gramm: product.gramm,
               quantity: parseFloat(product.quantity),
               price: parseFloat(product.price),
@@ -844,7 +861,7 @@ const Invoices = ({ currentUser }) => {
         senderCompany: standardSenderCompany,
         customRestaurantName: manualRestaurantName,
         paymentType: standardPaymentType,
-        invoiceType: 'standard-design' // Mark as standard design invoice
+        type: 'standard' // Mark invoice type as standard
       };
 
       // If client was selected from list, save to client's subcollection
@@ -2431,77 +2448,27 @@ const Invoices = ({ currentUser }) => {
                   </Box>
                 ) : (
                   <Box sx={{ mb: 2.5 }}>
-                    <Grid container spacing={2.5}>
-                      <Grid item xs={12} sm={6}>
-                        <Box sx={{ mb: 1 }}>
-                          <Typography variant="body2" fontWeight="500" color="text.secondary">
-                            Продукт
-                          </Typography>
-                        </Box>
-                        <FormControl fullWidth size="medium">
-                          <Select
-                            value={product.productName}
-                            onChange={(e) => updateStandardProductField(product.id, 'productName', e.target.value)}
-                            displayEmpty
-                          >
-                            <MenuItem value="" disabled>
-                              Выберите продукт
-                            </MenuItem>
-                            {products.map((prod) => (
-                              <MenuItem key={prod.id} value={prod.id}>
-                                {prod.productName}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={12} sm={3}>
-                        <Box sx={{ mb: 1 }}>
-                          <Typography variant="body2" fontWeight="500" color="text.secondary">
-                            Упаковка
-                          </Typography>
-                        </Box>
-                        <FormControl fullWidth size="medium">
-                          <Select
-                            value={product.packageType}
-                            onChange={(e) => updateStandardProductField(product.id, 'packageType', e.target.value)}
-                            displayEmpty
-                          >
-                            <MenuItem value="" disabled>
-                              Выберите упаковку
-                            </MenuItem>
-                            {packageTypes.map((pkg) => (
-                              <MenuItem key={pkg.id} value={pkg.id}>
-                                {pkg.type}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={12} sm={3}>
-                        <Box sx={{ mb: 1 }}>
-                          <Typography variant="body2" fontWeight="500" color="text.secondary">
-                            Граммаж
-                          </Typography>
-                        </Box>
-                        <FormControl fullWidth size="medium">
-                          <Select
-                            value={product.gramm}
-                            onChange={(e) => updateStandardProductField(product.id, 'gramm', e.target.value)}
-                            displayEmpty
-                          >
-                            <MenuItem value="" disabled>
-                              Выберите граммаж
-                            </MenuItem>
-                            {grammOptions.map((option) => (
-                              <MenuItem key={option.value} value={option.value}>
-                                {option.label}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                    </Grid>
+                    <Typography variant="body2" fontWeight="500" color="text.secondary" sx={{ mb: 2 }}>
+                      Выберите дизайн из каталога
+                    </Typography>
+                    <StandardDesignPicker
+                      onSelect={(catalogueItemId, gramm, catalogueItem) =>
+                        handleStandardCatalogueSelect(product.id, catalogueItemId, gramm, catalogueItem)
+                      }
+                      selectedCatalogueItemId={product.catalogueItemID}
+                      selectedGramm={product.gramm}
+                      compact={true}
+                    />
+                    {product.catalogueItemID && (
+                      <Box sx={{ mt: 2, p: 2, backgroundColor: '#f0f9ff', borderRadius: 1 }}>
+                        <Typography variant="body2" fontWeight="600" color="primary">
+                          Выбрано: {product.productName} ({product.gramm} гр)
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Код: {product.productCode} • Упаковка: {product.packageType}
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
                 )}
 

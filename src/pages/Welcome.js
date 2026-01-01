@@ -492,13 +492,12 @@ const fetchClientData = async () => {
     setLoading(false);
   }
 };
-// Replace your existing fetchProductTypesData function with this fixed version:
-
+// Fetch productTypes data and join with catalogue data via catalogueItemID
 const fetchProductTypesData = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, "productTypes"));
-    
-    const validDocs = querySnapshot.docs.filter(docSnap => 
+
+    const validDocs = querySnapshot.docs.filter(docSnap =>
       docSnap && docSnap.id && docSnap.exists()
     );
 
@@ -506,52 +505,49 @@ const fetchProductTypesData = async () => {
       validDocs.map(async (docSnap) => {
         try {
           const data = docSnap.data();
-          
+
           if (!data) {
             console.warn("Product document has no data:", docSnap.id);
             return null;
           }
-          
-          // Fetch product name from products collection using productID_2
-          let productName = '';
-          if (data.productID_2) {
+
+          // Initialize default values
+          let productName = '-';
+          let packageTypeName = '-';
+          let imageURL = '';
+          let comment = '';
+          let usedMaterial = '';
+
+          // Fetch data from catalogue using catalogueItemID foreign key
+          if (data.catalogueItemID) {
             try {
-              const productRef = doc(db, "products", data.productID_2);
-              const productSnap = await getDoc(productRef);
-              if (productSnap.exists()) {
-                productName = productSnap.data().productName || '';
+              const catalogueRef = doc(db, "catalogue", data.catalogueItemID);
+              const catalogueSnap = await getDoc(catalogueRef);
+              if (catalogueSnap.exists()) {
+                const catalogueData = catalogueSnap.data();
+                productName = catalogueData.productName || '-';
+                packageTypeName = catalogueData.packageType || '-';
+                imageURL = catalogueData.imageURL || '';
+                comment = catalogueData.comment || '';
+                usedMaterial = catalogueData.usedMaterial || '';
               }
             } catch (error) {
-              console.error("Error fetching product name:", error);
+              console.error("Error fetching catalogue data:", error);
             }
           }
 
-          // Fetch package type from packageTypes collection using packageID
-          let packageTypeName = '';
-          if (data.packageID) {
-            try {
-              const packageRef = doc(db, "packageTypes", data.packageID);
-              const packageSnap = await getDoc(packageRef);
-              if (packageSnap.exists()) {
-                packageTypeName = packageSnap.data().type || packageSnap.data().name || '';
-              }
-            } catch (error) {
-              console.error("Error fetching package type:", error);
-            }
-          }
-          
-          let shellNum = data.shellNum || '-'; // Use shellNum directly from productTypes document
-          let paperRemaining = data.totalKG || 0; // Use totalKG as initial paper remaining
+          let shellNum = data.shellNum || '-';
+          let paperRemaining = data.totalKG || 0;
           let totalRolls = 0;
-          
-          // Try to get updated paper info from subcollection if it exists
+
+          // Get updated paper info from subcollection
           try {
             const paperInfoQuery = await getDocs(collection(db, "productTypes", docSnap.id, "paperInfo"));
             if (!paperInfoQuery.empty) {
               const paperInfoDoc = paperInfoQuery.docs[0];
               const paperInfoData = paperInfoDoc.data();
               paperRemaining = Number(paperInfoData.paperRemaining) || paperRemaining;
-              
+
               // Count individual rolls
               const rollsQuery = await getDocs(
                 collection(db, "productTypes", docSnap.id, "paperInfo", paperInfoDoc.id, "individualRolls")
@@ -561,19 +557,22 @@ const fetchProductTypesData = async () => {
           } catch (error) {
             console.error("Error fetching paperInfo:", error);
           }
-          
+
           return {
             id: docSnap.id,
-            name: data.name || '-', // Product name from productTypes document
-            type: productName || data.type || '-', // Product name from products collection
-            packaging: packageTypeName || data.packaging || '-', // Package type from packageTypes collection
-            gramm: data.gramm || '-',
-            shellNum,
-            paperRemaining,
-            totalRolls,
-            imageURL: data.imageURL || '', // Image URL from catalogue
-            // Store original data for debugging
-            originalData: data
+            productName, // From catalogue
+            type: productName, // From catalogue
+            packaging: packageTypeName, // From catalogue
+            imageURL, // From catalogue
+            comment, // From catalogue
+            usedMaterial, // From catalogue
+            gramm: data.gramm || '-', // User input
+            shellNum, // User input
+            paperRemaining, // Calculated
+            totalRolls, // Calculated
+            catalogueItemID: data.catalogueItemID, // Foreign key
+            productCode: data.productCode || '', // For reference
+            notifyWhen: data.notifyWhen || 0,
           };
         } catch (error) {
           console.error("Error processing product document:", docSnap.id, error);
@@ -1231,18 +1230,21 @@ const ClientsTable = () => (
         mb: 0.5
       }}
     >
-      {product.type}
+      {product.productName || '-'}
     </Typography>
-    <Typography
-      variant="body2"
-      sx={{
-        fontWeight: 400,
-        color: 'grey.600',
-        lineHeight: 1.2
-      }}
-    >
-      {product.name}
-    </Typography>
+    {product.comment && product.comment !== 'n/a' && (
+      <Typography
+        variant="body2"
+        sx={{
+          fontWeight: 400,
+          color: '#757575',
+          lineHeight: 1.2,
+          fontSize: '0.75rem'
+        }}
+      >
+        {product.comment}
+      </Typography>
+    )}
   </Box>
 </TableCell>
                 

@@ -54,6 +54,7 @@ const InvoiceHistory = () => {
   const [users, setUsers] = useState({});
   const [productsMap, setProductsMap] = useState({});
   const [packagesMap, setPackagesMap] = useState({});
+  const [catalogueMap, setCatalogueMap] = useState({});
   const [activeTab, setActiveTab] = useState('all'); // Default to 'all' tab to show all invoices
 
   useEffect(() => {
@@ -61,11 +62,11 @@ const InvoiceHistory = () => {
   }, []);
 
   useEffect(() => {
-    if (Object.keys(productsMap).length > 0 || Object.keys(packagesMap).length > 0) {
+    if (Object.keys(productsMap).length > 0 || Object.keys(packagesMap).length > 0 || Object.keys(catalogueMap).length > 0) {
       fetchInvoicesData();
       fetchUsers();
     }
-  }, [productsMap, packagesMap]);
+  }, [productsMap, packagesMap, catalogueMap]);
 
   useEffect(() => {
     handleSearchAndFilter();
@@ -87,8 +88,16 @@ const InvoiceHistory = () => {
         pkgMap[doc.id] = doc.data().type || '';
       });
 
+      // загрузка всех элементов каталога
+      const catalogueSnap = await getDocs(collection(db, "catalogue"));
+      const catMap = {};
+      catalogueSnap.forEach(doc => {
+        catMap[doc.id] = doc.data();
+      });
+
       setProductsMap(prodMap);
       setPackagesMap(pkgMap);
+      setCatalogueMap(catMap);
     } catch (error) {
       console.error("Error fetching reference data:", error);
     }
@@ -263,12 +272,26 @@ const InvoiceHistory = () => {
     let productName = 'Неизвестный продукт';
     let packageType = 'Неизвестная упаковка';
     let gramm = '';
+    let productCode = '';
 
     if (invoice.products && Array.isArray(invoice.products) && invoice.products.length === 1) {
       const product = invoice.products[0];
-      productName = productsMap[product.productID_2] || 'Неизвестный продукт';
-      packageType = packagesMap[product.packageID] || 'Неизвестная упаковка';
-      gramm = product.gramm;
+
+      // Check if this is a standard type invoice with catalogueItemID
+      if (invoice.type === 'standard' && product.catalogueItemID) {
+        const catalogueItem = catalogueMap[product.catalogueItemID];
+        if (catalogueItem) {
+          productName = catalogueItem.productName || 'Неизвестный продукт';
+          packageType = catalogueItem.packageType || 'Неизвестная упаковка';
+          productCode = catalogueItem.productCode || '';
+          gramm = product.gramm;
+        }
+      } else {
+        // Custom invoice - use old structure
+        productName = productsMap[product.productID_2] || 'Неизвестный продукт';
+        packageType = packagesMap[product.packageID] || 'Неизвестная упаковка';
+        gramm = product.gramm;
+      }
     } else {
       productName = invoice.clientProductName || 'Неизвестный продукт';
       packageType = invoice.clientPackageType || 'Неизвестная упаковка';
@@ -281,7 +304,7 @@ const InvoiceHistory = () => {
           {productName}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          {packageType}{gramm ? ` • ${gramm} гр` : ''}
+          {productCode && `${productCode} • `}{packageType}{gramm ? ` • ${gramm} гр` : ''}
         </Typography>
       </Box>
     );
@@ -325,16 +348,31 @@ const InvoiceHistory = () => {
     );
   };
 
-  const renderExpandedProducts = (products) => {
+  const renderExpandedProducts = (products, invoiceType) => {
     return (
       <Box sx={{ p: 2 }}>
         <Typography variant="subtitle2" fontWeight="600" gutterBottom>
           Продукты в накладной:
         </Typography>
         {products.map((product, index) => {
-          const productName = productsMap[product.productID_2] || 'Неизвестный продукт';
-          const packageType = packagesMap[product.packageID] || 'Неизвестная упаковка';
-          
+          let productName = 'Неизвестный продукт';
+          let packageType = 'Неизвестная упаковка';
+          let productCode = '';
+
+          // Check if this is a standard type invoice with catalogueItemID
+          if (invoiceType === 'standard' && product.catalogueItemID) {
+            const catalogueItem = catalogueMap[product.catalogueItemID];
+            if (catalogueItem) {
+              productName = catalogueItem.productName || 'Неизвестный продукт';
+              packageType = catalogueItem.packageType || 'Неизвестная упаковка';
+              productCode = catalogueItem.productCode || '';
+            }
+          } else {
+            // Custom invoice - use old structure
+            productName = productsMap[product.productID_2] || 'Неизвестный продукт';
+            packageType = packagesMap[product.packageID] || 'Неизвестная упаковка';
+          }
+
           return (
             <Card key={index} sx={{ mb: 1, backgroundColor: '#f8f9fa' }}>
               <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
@@ -344,7 +382,7 @@ const InvoiceHistory = () => {
                       {productName}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {packageType} • {product.gramm} гр
+                      {productCode && `${productCode} • `}{packageType} • {product.gramm} гр
                     </Typography>
                   </Box>
                   <Box textAlign="right">
@@ -529,8 +567,25 @@ const InvoiceHistory = () => {
                     <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>
                       {index + 1}
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: '#1976d2' }}>
-                      {invoice.invoiceNumber}
+                    <TableCell>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Typography variant="body2" fontWeight="600" color="#1976d2">
+                          {invoice.invoiceNumber}
+                        </Typography>
+                        {invoice.type === 'standard' && (
+                          <Chip
+                            label="Стандарт"
+                            size="small"
+                            sx={{
+                              height: '20px',
+                              fontSize: '0.7rem',
+                              backgroundColor: '#e3f2fd',
+                              color: '#1976d2',
+                              fontWeight: 600
+                            }}
+                          />
+                        )}
+                      </Box>
                     </TableCell>
                     <TableCell>
                       {formatDate(invoice.dateCreated)}
@@ -574,7 +629,7 @@ const InvoiceHistory = () => {
                     <TableRow>
                       <TableCell colSpan={9} sx={{ py: 0 }}>
                         <Collapse in={expandedRows.has(invoice.id)}>
-                          {renderExpandedProducts(invoice.products)}
+                          {renderExpandedProducts(invoice.products, invoice.type)}
                         </Collapse>
                       </TableCell>
                     </TableRow>
