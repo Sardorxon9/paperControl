@@ -18,7 +18,8 @@
       "Bash(node scripts/inspectProductTypes.mjs:*)",
       "Bash(node scripts/linkProductTypesToCatalogue.mjs:*)",
       "Bash(node scripts/migrateStandardClients.mjs:*)",
-      "Bash(node scripts/cleanupProductTypes.mjs:*)"
+      "Bash(node scripts/cleanupProductTypes.mjs:*)",
+      "Bash(npm info:*)"
     ]
   }
 }
