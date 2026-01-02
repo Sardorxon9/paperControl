@@ -1107,6 +1107,7 @@ const ClientsTable = () => (
             {[
               { id: 'index', label: '№' },
               { id: 'image', label: 'Дизайн' },
+              { id: 'productCode', label: 'Код продукта' },
               { id: 'type', label: 'Тип продукта' },
               { id: 'packaging', label: 'Упаковка' },
               { id: 'gramm', label: 'Граммовка' },
@@ -1219,6 +1220,17 @@ const ClientsTable = () => (
                   )}
                 </TableCell>
 
+                <TableCell sx={{ padding: '16px' }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 700
+                    }}
+                  >
+                    {product.productCode || '-'}
+                  </Typography>
+                </TableCell>
+
               <TableCell sx={{ padding: '16px' }}>
   <Box>
     <Typography
@@ -1239,7 +1251,7 @@ const ClientsTable = () => (
           fontWeight: 400,
           color: '#757575',
           lineHeight: 1.2,
-          fontSize: '0.75rem'
+          fontSize: '0.9rem'
         }}
       >
         {product.comment}
