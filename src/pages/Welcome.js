@@ -57,6 +57,7 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import CancelRoundedIcon from '@mui/icons-material/CancelRounded';
 import { checkAndNotifyLowPaper, sendLowPaperSummaryToAdmins } from "../services/paperNotificationService";
 import TelegramIcon from '@mui/icons-material/Telegram';
+import { searchClients } from '../utils/fuzzySearch';
 
 const getHiddenColumns = (userRole) => {
   if (userRole === 'admin') {
@@ -705,12 +706,7 @@ const fetchProductTypesData = async () => {
       setCurrentTab(newValue);
     };
 
-    const visibleClients = getFilteredClients().filter((client) =>
-      client &&
-      (client.restaurant || client.name || '')
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase())
-    );
+    const visibleClients = searchClients(getFilteredClients(), searchQuery);
 
     const sortedClients = [...visibleClients].sort((a, b) => {
       if (!a || !b) return 0;
@@ -1107,12 +1103,12 @@ const ClientsTable = () => (
             {[
               { id: 'index', label: '№' },
               { id: 'image', label: 'Дизайн' },
-              { id: 'productCode', label: 'Код продукта' },
+              { id: 'productCode', label: 'Код' },
               { id: 'type', label: 'Тип продукта' },
               { id: 'packaging', label: 'Упаковка' },
               { id: 'gramm', label: 'Граммовка' },
-              { id: 'totalRolls', label: 'Количество рулонов' },
-              { id: 'paperRemaining', label: 'Остаток (кг)' },
+              { id: 'totalRolls', label: 'Кол-во рулонов' },
+              { id: 'paperRemaining', label: 'Остаток' },
               { id: 'shellNum', label: 'Номер полки' },
               { id: 'actions', label: 'Подробно' }
             ].map((column) => (

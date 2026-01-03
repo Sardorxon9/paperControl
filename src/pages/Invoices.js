@@ -39,14 +39,14 @@ import {
   Chip,
   Switch
 } from '@mui/material';
-import { 
-  ArrowBack, 
-  Receipt, 
-  Download, 
-  Print, 
-  Search, 
-  Add, 
-  Delete 
+import {
+  ArrowBack,
+  Receipt,
+  Download,
+  Print,
+  Search,
+  Add,
+  Delete
 } from '@mui/icons-material';
 import { db } from "../services/firebase";
 import {
@@ -64,6 +64,7 @@ import { NumericFormat } from "react-number-format";
 import { History } from '@mui/icons-material';
 import InvoiceHistory from './InvoiceHistory';
 import StandardDesignPicker from '../components/shared/StandardDesignPicker';
+import { searchClients } from '../utils/fuzzySearch';
 
 const Invoices = ({ currentUser }) => {
   const navigate = useNavigate();
@@ -125,10 +126,7 @@ const Invoices = ({ currentUser }) => {
     { value: 'transfer', label: 'Перечисление' }
   ];
 
-  const filteredClients = clients.filter(client =>
-    (client.displayName || client.displayRestaurantName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (client.displayOrgName || client.branchOrgName || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredClients = searchClients(clients, searchQuery);
 
   // Fetch all required data on component mount
   useEffect(() => {

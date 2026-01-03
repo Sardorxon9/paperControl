@@ -182,6 +182,7 @@ export default function EditProductModal({ open, onClose, product, onProductUpda
     productCode: "",
     marketPlace: false,
     paperDocID: "",
+    gramm: "",
     imageURL: "",
     imageURL2: "",
     imageURL3: "",
@@ -205,6 +206,7 @@ export default function EditProductModal({ open, onClose, product, onProductUpda
         productCode: product.productCode || "",
         marketPlace: product.marketPlace || false,
         paperDocID: product.paperDocID || "",
+        gramm: product.gramm || "",
         imageURL: product.imageURL || DEFAULT_PLACEHOLDER_URL,
         imageURL2: product.imageURL2 || "",
         imageURL3: product.imageURL3 || "",
@@ -237,6 +239,7 @@ export default function EditProductModal({ open, onClose, product, onProductUpda
         productCode: formData.productCode.trim(),
         marketPlace: formData.marketPlace,
         paperDocID: formData.paperDocID.trim(),
+        gramm: formData.gramm.trim(),
         imageURL: formData.imageURL,
         imageURL2: formData.imageURL2,
         imageURL3: formData.imageURL3,
@@ -355,6 +358,18 @@ export default function EditProductModal({ open, onClose, product, onProductUpda
                   required
                   disabled={saving}
                   placeholder="Например: Белый сахар"
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Граммовка"
+                  value={formData.gramm}
+                  onChange={handleInputChange("gramm")}
+                  disabled={saving}
+                  placeholder="Например: 5, 8, 10"
+                  helperText="Возможные значения граммовки через запятую"
                 />
               </Grid>
 

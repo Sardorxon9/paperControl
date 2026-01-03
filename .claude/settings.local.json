@@ -19,7 +19,9 @@
       "Bash(node scripts/linkProductTypesToCatalogue.mjs:*)",
       "Bash(node scripts/migrateStandardClients.mjs:*)",
       "Bash(node scripts/cleanupProductTypes.mjs:*)",
-      "Bash(npm info:*)"
+      "Bash(npm info:*)",
+      "Bash(node -e:*)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }
