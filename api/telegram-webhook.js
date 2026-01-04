@@ -10,7 +10,52 @@ const FIRESTORE_API = `https://firestore.googleapis.com/v1/projects/${FIREBASE_P
 // User session storage
 const userSessions = {};
 
-// Fuzzy search implementation
+// Cyrillic to Latin transliteration (from fuzzySearch.js)
+function transliterateCyrillic(text) {
+  const cyrillicToLatin = {
+    'А': 'A', 'а': 'a',
+    'Б': 'B', 'б': 'b',
+    'В': 'V', 'в': 'v',
+    'Г': 'G', 'г': 'g',
+    'Д': 'D', 'д': 'd',
+    'Е': 'E', 'е': 'e',
+    'Ё': 'E', 'ё': 'e',
+    'Ж': 'J', 'ж': 'j',
+    'З': 'Z', 'з': 'z',
+    'И': 'I', 'и': 'i',
+    'Й': 'Y', 'й': 'y',
+    'К': 'K', 'к': 'k',
+    'Л': 'L', 'л': 'l',
+    'М': 'M', 'м': 'm',
+    'Н': 'N', 'н': 'n',
+    'О': 'O', 'о': 'o',
+    'П': 'P', 'п': 'p',
+    'Р': 'R', 'р': 'r',
+    'С': 'S', 'с': 's',
+    'Т': 'T', 'т': 't',
+    'У': 'U', 'у': 'u',
+    'Ф': 'F', 'ф': 'f',
+    'Х': 'H', 'х': 'h',
+    'Ц': 'TS', 'ц': 'ts',
+    'Ч': 'CH', 'ч': 'ch',
+    'Ш': 'SH', 'ш': 'sh',
+    'Щ': 'SCH', 'щ': 'sch',
+    'Ъ': '', 'ъ': '',
+    'Ы': 'Y', 'ы': 'y',
+    'Ь': '', 'ь': '',
+    'Э': 'E', 'э': 'e',
+    'Ю': 'YU', 'ю': 'yu',
+    'Я': 'YA', 'я': 'ya',
+    'Ў': 'O', 'ў': 'o',
+    'Қ': 'Q', 'қ': 'q',
+    'Ғ': 'G', 'ғ': 'g',
+    'Ҳ': 'H', 'ҳ': 'h'
+  };
+
+  return text.split('').map(char => cyrillicToLatin[char] || char).join('');
+}
+
+// Fuzzy search implementation with transliteration support
 function calculateLevenshteinDistance(a, b) {
   const matrix = [];
   const aLen = a.length;
@@ -47,19 +92,40 @@ function fuzzySearchClients(clients, query) {
   }
 
   const lowerQuery = query.toLowerCase().trim();
+  const transliteratedQuery = transliterateCyrillic(lowerQuery);
 
   const scored = clients.map(client => {
     const name = (client.name || '').toLowerCase();
     const orgName = (client.orgName || '').toLowerCase();
     const restaurant = (client.restaurant || '').toLowerCase();
 
-    if (name.includes(lowerQuery) || orgName.includes(lowerQuery) || restaurant.includes(lowerQuery)) {
+    // Also transliterate client fields for cross-language matching
+    const nameTranslit = transliterateCyrillic(name);
+    const orgNameTranslit = transliterateCyrillic(orgName);
+    const restaurantTranslit = transliterateCyrillic(restaurant);
+
+    // Check for exact substring matches (both original and transliterated)
+    if (name.includes(lowerQuery) || orgName.includes(lowerQuery) || restaurant.includes(lowerQuery) ||
+        nameTranslit.includes(transliteratedQuery) || orgNameTranslit.includes(transliteratedQuery) ||
+        restaurantTranslit.includes(transliteratedQuery) ||
+        name.includes(transliteratedQuery) || orgName.includes(transliteratedQuery) ||
+        restaurant.includes(transliteratedQuery)) {
       return { client, score: 0 };
     }
 
-    const nameDistance = calculateLevenshteinDistance(lowerQuery, name);
-    const orgDistance = calculateLevenshteinDistance(lowerQuery, orgName);
-    const restaurantDistance = calculateLevenshteinDistance(lowerQuery, restaurant);
+    // Calculate distance for both original and transliterated queries
+    const nameDistance = Math.min(
+      calculateLevenshteinDistance(lowerQuery, name),
+      calculateLevenshteinDistance(transliteratedQuery, nameTranslit)
+    );
+    const orgDistance = Math.min(
+      calculateLevenshteinDistance(lowerQuery, orgName),
+      calculateLevenshteinDistance(transliteratedQuery, orgNameTranslit)
+    );
+    const restaurantDistance = Math.min(
+      calculateLevenshteinDistance(lowerQuery, restaurant),
+      calculateLevenshteinDistance(transliteratedQuery, restaurantTranslit)
+    );
 
     const minDistance = Math.min(nameDistance, orgDistance, restaurantDistance);
 
@@ -465,19 +531,13 @@ export default async function handler(req, res) {
       if (text === '/start') {
         await handleStart(chatId);
       } else if (text === '📄 Узнать бумагу') {
-        await handleCheckPaper(chatId, userId);
-      } else {
-        // Check if user is in a session
-        const session = userSessions[userId];
-
-        if (session && session.state === 'awaiting_restaurant_name') {
-          await handleRestaurantInput(chatId, userId, text);
-        } else {
-          await sendMessage(
-            chatId,
-            'Используйте кнопку <b>"Узнать бумагу"</b> для проверки остатков.'
-          );
-        }
+        await sendMessage(
+          chatId,
+          '🔍 Пожалуйста, введите название ресторана:'
+        );
+      } else if (text && text.trim().length > 0) {
+        // ANY text input triggers restaurant search
+        await handleRestaurantInput(chatId, userId, text);
       }
 
       res.json({ ok: true });
