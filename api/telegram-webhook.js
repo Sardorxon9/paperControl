@@ -117,24 +117,38 @@ async function sendMessage(chatId, text, options = {}) {
   }
 }
 
-// Get all clients from Firestore
+// Get all clients from Firestore (with pagination)
 async function getAllClients() {
   try {
-    const response = await fetch(`${FIRESTORE_API}/clients?key=${FIREBASE_API_KEY}`);
-    const data = await response.json();
+    let allClients = [];
+    let pageToken = null;
 
-    if (!data.documents) {
-      return [];
-    }
+    // Fetch all pages
+    do {
+      const url = pageToken
+        ? `${FIRESTORE_API}/clients?key=${FIREBASE_API_KEY}&pageSize=300&pageToken=${pageToken}`
+        : `${FIRESTORE_API}/clients?key=${FIREBASE_API_KEY}&pageSize=300`;
 
-    return data.documents.map(doc => {
-      const clientData = firestoreDocToObject(doc);
-      const clientId = doc.name.split('/').pop();
-      return {
-        id: clientId,
-        ...clientData
-      };
-    });
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.documents) {
+        const clients = data.documents.map(doc => {
+          const clientData = firestoreDocToObject(doc);
+          const clientId = doc.name.split('/').pop();
+          return {
+            id: clientId,
+            ...clientData
+          };
+        });
+        allClients = allClients.concat(clients);
+      }
+
+      pageToken = data.nextPageToken || null;
+    } while (pageToken);
+
+    console.log('[DEBUG] Total clients fetched:', allClients.length);
+    return allClients;
   } catch (error) {
     console.error('Error fetching clients:', error);
     return [];
