@@ -1,23 +1,16 @@
 // api/telegram-webhook.js - Telegram Bot Webhook Handler
-const admin = require('firebase-admin');
-
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
-// Initialize Firebase Admin if not already initialized
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
-    projectId: process.env.FIREBASE_PROJECT_ID
-  });
-}
+// Firebase REST API configuration
+const FIREBASE_PROJECT_ID = 'paper-control-6bce2';
+const FIREBASE_API_KEY = 'AIzaSyBoYiTk7tqrpDKOvG9mDHHTlfP77MZ4sKA';
+const FIRESTORE_API = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`;
 
-const db = admin.firestore();
-
-// User session storage (in-memory for simplicity, consider Redis for production)
+// User session storage
 const userSessions = {};
 
-// Fuzzy search implementation (simplified version)
+// Fuzzy search implementation
 function calculateLevenshteinDistance(a, b) {
   const matrix = [];
   const aLen = a.length;
@@ -55,18 +48,15 @@ function fuzzySearchClients(clients, query) {
 
   const lowerQuery = query.toLowerCase().trim();
 
-  // Score each client based on similarity
   const scored = clients.map(client => {
     const name = (client.name || '').toLowerCase();
     const orgName = (client.orgName || '').toLowerCase();
     const restaurant = (client.restaurant || '').toLowerCase();
 
-    // Check for exact substring matches first
     if (name.includes(lowerQuery) || orgName.includes(lowerQuery) || restaurant.includes(lowerQuery)) {
-      return { client, score: 0 }; // Perfect match
+      return { client, score: 0 };
     }
 
-    // Calculate Levenshtein distance for fuzzy matching
     const nameDistance = calculateLevenshteinDistance(lowerQuery, name);
     const orgDistance = calculateLevenshteinDistance(lowerQuery, orgName);
     const restaurantDistance = calculateLevenshteinDistance(lowerQuery, restaurant);
@@ -76,14 +66,33 @@ function fuzzySearchClients(clients, query) {
     return { client, score: minDistance };
   });
 
-  // Filter results that are reasonably similar (distance threshold)
   const maxDistance = Math.max(3, Math.floor(lowerQuery.length * 0.4));
   const filtered = scored.filter(item => item.score <= maxDistance);
 
-  // Sort by score (best matches first)
   filtered.sort((a, b) => a.score - b.score);
 
   return filtered.map(item => item.client);
+}
+
+// Convert Firestore document to plain object
+function firestoreDocToObject(doc) {
+  const data = {};
+  if (!doc.fields) return data;
+
+  for (const [key, value] of Object.entries(doc.fields)) {
+    if (value.stringValue !== undefined) {
+      data[key] = value.stringValue;
+    } else if (value.integerValue !== undefined) {
+      data[key] = parseInt(value.integerValue);
+    } else if (value.doubleValue !== undefined) {
+      data[key] = parseFloat(value.doubleValue);
+    } else if (value.booleanValue !== undefined) {
+      data[key] = value.booleanValue;
+    } else if (value.nullValue !== undefined) {
+      data[key] = null;
+    }
+  }
+  return data;
 }
 
 // Send message helper
@@ -108,34 +117,56 @@ async function sendMessage(chatId, text, options = {}) {
   }
 }
 
-// Get client product info
-async function getClientProductInfo(clientId, productID_2, packageID) {
-  let productName = '';
-  let packageType = '';
+// Get all clients from Firestore
+async function getAllClients() {
+  try {
+    const response = await fetch(`${FIRESTORE_API}/clients?key=${FIREBASE_API_KEY}`);
+    const data = await response.json();
 
-  if (productID_2) {
-    try {
-      const productDoc = await db.collection('products').doc(productID_2).get();
-      if (productDoc.exists) {
-        productName = productDoc.data().productName || '';
-      }
-    } catch (error) {
-      console.error('Error fetching product:', error);
+    if (!data.documents) {
+      return [];
     }
-  }
 
-  if (packageID) {
-    try {
-      const packageDoc = await db.collection('packageTypes').doc(packageID).get();
-      if (packageDoc.exists) {
-        packageType = packageDoc.data().type || '';
-      }
-    } catch (error) {
-      console.error('Error fetching package type:', error);
-    }
+    return data.documents.map(doc => {
+      const clientData = firestoreDocToObject(doc);
+      const clientId = doc.name.split('/').pop();
+      return {
+        id: clientId,
+        ...clientData
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching clients:', error);
+    return [];
   }
+}
 
-  return { productName, packageType };
+// Get product name
+async function getProductName(productID) {
+  if (!productID) return '';
+  try {
+    const response = await fetch(`${FIRESTORE_API}/products/${productID}?key=${FIREBASE_API_KEY}`);
+    const data = await response.json();
+    const product = firestoreDocToObject(data);
+    return product.productName || '';
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    return '';
+  }
+}
+
+// Get package type
+async function getPackageType(packageID) {
+  if (!packageID) return '';
+  try {
+    const response = await fetch(`${FIRESTORE_API}/packageTypes/${packageID}?key=${FIREBASE_API_KEY}`);
+    const data = await response.json();
+    const pkg = firestoreDocToObject(data);
+    return pkg.type || '';
+  } catch (error) {
+    console.error('Error fetching package type:', error);
+    return '';
+  }
 }
 
 // Get gramm value for client
@@ -144,9 +175,13 @@ async function getGrammValue(client) {
     return client.gramm;
   } else if (client.productID_2 || client.packageID) {
     try {
-      const productTypesSnapshot = await db.collection('productTypes').get();
-      for (const doc of productTypesSnapshot.docs) {
-        const ptData = doc.data();
+      const response = await fetch(`${FIRESTORE_API}/productTypes?key=${FIREBASE_API_KEY}`);
+      const data = await response.json();
+
+      if (!data.documents) return '';
+
+      for (const doc of data.documents) {
+        const ptData = firestoreDocToObject(doc);
         const matchesProduct = !client.productID_2 || ptData.productID_2 === client.productID_2;
         const matchesPackage = !client.packageID || ptData.packageID === client.packageID;
 
@@ -164,15 +199,20 @@ async function getGrammValue(client) {
 // Get paper rolls for client
 async function getPaperRolls(clientId) {
   try {
-    const rollsSnapshot = await db.collection('clients').doc(clientId).collection('paperRolls').get();
-    const rolls = [];
+    const response = await fetch(`${FIRESTORE_API}/clients/${clientId}/paperRolls?key=${FIREBASE_API_KEY}`);
+    const data = await response.json();
 
-    rollsSnapshot.forEach((doc) => {
-      const data = doc.data();
-      const weight = Number(data.paperRemaining) || 0;
+    if (!data.documents) {
+      return [];
+    }
+
+    const rolls = [];
+    data.documents.forEach((doc) => {
+      const rollData = firestoreDocToObject(doc);
+      const weight = Number(rollData.paperRemaining) || 0;
       if (weight > 0) {
         rolls.push({
-          id: doc.id,
+          id: doc.name.split('/').pop(),
           weight: weight
         });
       }
@@ -188,35 +228,19 @@ async function getPaperRolls(clientId) {
 // Search for clients by restaurant name
 async function searchRestaurants(query) {
   try {
-    const clientsSnapshot = await db.collection('clients').get();
-    const clients = [];
-
-    for (const doc of clientsSnapshot.docs) {
-      const data = doc.data();
-      clients.push({
-        id: doc.id,
-        ...data
-      });
-    }
-
-    // Use fuzzy search
+    const clients = await getAllClients();
     const results = fuzzySearchClients(clients, query);
-
     return results;
   } catch (error) {
     console.error('Error searching restaurants:', error);
-    return [];
+    throw error;
   }
 }
 
 // Format paper info message
 async function formatPaperInfoMessage(client) {
-  const { productName, packageType } = await getClientProductInfo(
-    client.id,
-    client.productID_2,
-    client.packageID
-  );
-
+  const productName = await getProductName(client.productID_2);
+  const packageType = await getPackageType(client.packageID);
   const grammValue = await getGrammValue(client);
   const paperRolls = await getPaperRolls(client.id);
 
@@ -328,7 +352,7 @@ async function handleRestaurantInput(chatId, userId, query) {
       const productInfo = client.productID_2 ? `(ID: ${client.productID_2.substring(0, 8)}...)` : '';
       const label = `${client.name || client.restaurant} ${productInfo}`;
       return [{
-        text: label.substring(0, 60), // Limit button text length
+        text: label.substring(0, 60),
         callback_data: `select_${index}`
       }];
     });
@@ -376,7 +400,6 @@ async function handleProductSelection(chatId, userId, selectedIndex) {
 
 // Main webhook handler
 export default async function handler(req, res) {
-  // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -393,7 +416,7 @@ export default async function handler(req, res) {
 
   try {
     const update = req.body;
-    console.log('Telegram update received:', JSON.stringify(update, null, 2));
+    console.log('Telegram update received');
 
     // Handle callback query (button press)
     if (update.callback_query) {
@@ -436,7 +459,6 @@ export default async function handler(req, res) {
         if (session && session.state === 'awaiting_restaurant_name') {
           await handleRestaurantInput(chatId, userId, text);
         } else {
-          // Unknown command
           await sendMessage(
             chatId,
             'Используйте кнопку <b>"Узнать бумагу"</b> для проверки остатков.'
