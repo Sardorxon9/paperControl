@@ -21,7 +21,14 @@
       "Bash(node scripts/cleanupProductTypes.mjs:*)",
       "Bash(npm info:*)",
       "Bash(node -e:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git remote get-url:*)",
+      "Bash(git fetch:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)"
     ]
   }
 }
