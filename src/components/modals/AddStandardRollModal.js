@@ -339,13 +339,6 @@ const AddStandardRollModal = ({ open, onClose, onRollAdded, currentUser }) => {
       case 1:
         return (
           <Box>
-            <Typography variant="body2" sx={{ mb: 3, color: brandColors.textSecondary }}>
-              Укажите параметры хранения для{' '}
-              <strong>
-                {selectedCatalogueItem?.productName} ({selectedGramm} гр)
-              </strong>
-            </Typography>
-
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -355,7 +348,6 @@ const AddStandardRollModal = ({ open, onClose, onRollAdded, currentUser }) => {
                   onChange={handleInputChange('shellNum')}
                   required
                   placeholder="например: A-12"
-                  helperText="Где находится данный рулон на складе"
                 />
               </Grid>
 
@@ -367,7 +359,6 @@ const AddStandardRollModal = ({ open, onClose, onRollAdded, currentUser }) => {
                   value={formData.notifyWhen}
                   onChange={handleInputChange('notifyWhen')}
                   inputProps={{ step: '0.01', min: '0' }}
-                  helperText="Минимальный остаток бумаги для уведомления"
                 />
               </Grid>
             </Grid>

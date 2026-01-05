@@ -335,29 +335,28 @@ const StandardDesignPicker = ({
               const materialColors = getMaterialColor(item.usedMaterial);
 
               return (
-                <Card
-                  key={item.id}
-                  onClick={() => handleSelectProduct(item)}
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    p: 2,
-                    borderRadius: 2,
-                    transition: 'all 0.2s ease',
-                    boxShadow: 'none',
-                    border: '1px solid',
-                    borderColor: isItemSelected ? brandColors.primary : brandColors.border,
-                    borderLeft: isItemSelected ? `5px solid ${brandColors.primary}` : '1px solid',
-                    backgroundColor: isItemSelected ? '#f0f9ff' : 'white',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      borderColor: brandColors.primary,
-                      boxShadow: '0 3px 10px rgba(0,0,0,0.1)',
-                      transform: 'translateX(3px)',
-                    },
-                  }}
-                >
+                <React.Fragment key={item.id}>
+                  <Card
+                    onClick={() => handleSelectProduct(item)}
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      p: 2,
+                      borderRadius: 2,
+                      transition: 'all 0.2s ease',
+                      boxShadow: isItemSelected
+                        ? '0 4px 20px rgba(0,0,0,0.15)'
+                        : '0 2px 8px rgba(0,0,0,0.08)',
+                      border: isItemSelected ? '2px solid #147c72' : 'none',
+                      backgroundColor: isItemSelected ? '#f0f9ff' : 'white',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                        transform: 'translateY(-2px)',
+                      },
+                    }}
+                  >
                   {/* Thumbnail with Hover Effect */}
                   <Box
                     sx={{
@@ -494,70 +493,70 @@ const StandardDesignPicker = ({
                     />
                   )}
                 </Card>
+
+                {/* Gramm Selection - Appears inline below selected design */}
+                {isItemSelected && (
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      backgroundColor: '#f5f5f5',
+                      mt: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: '0.95rem',
+                        color: brandColors.textPrimary,
+                        mb: 1.5,
+                      }}
+                    >
+                      Выберите граммаж
+                    </Typography>
+                    <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ gap: 1 }}>
+                      {item.possibleGramms?.map((gramm) => {
+                        const selected = isSelected(item.id, gramm);
+                        return (
+                          <Chip
+                            key={gramm}
+                            label={`${gramm} гр`}
+                            onClick={() => handleSelectGramm(item, gramm)}
+                            icon={selected ? <CheckCircleIcon /> : null}
+                            sx={{
+                              backgroundColor: selected ? '#000000' : 'white',
+                              color: selected ? 'white' : brandColors.textPrimary,
+                              fontWeight: 600,
+                              fontSize: '0.88rem',
+                              height: '36px',
+                              minWidth: '70px',
+                              px: 1.5,
+                              border: `1.5px solid ${selected ? '#000000' : brandColors.border}`,
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                              '& .MuiChip-icon': {
+                                color: 'white',
+                                fontSize: 18,
+                              },
+                              '&:hover': {
+                                backgroundColor: selected ? '#333333' : '#f5f5f5',
+                                borderColor: '#000000',
+                                transform: 'scale(1.05)',
+                              },
+                            }}
+                          />
+                        );
+                      })}
+                    </Stack>
+                  </Paper>
+                )}
+              </React.Fragment>
               );
             })}
           </Stack>
         </Box>
-      )}
-
-      {/* Gramm Selection Section - Separate */}
-      {selectedItem && (
-        <Paper
-          elevation={0}
-          sx={{
-            p: 2.5,
-            borderRadius: 2,
-            border: `2px solid ${brandColors.primary}`,
-            backgroundColor: '#f0f9ff',
-            mt: 3,
-          }}
-        >
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 700,
-              fontSize: '1.05rem',
-              color: brandColors.textPrimary,
-              mb: 2,
-            }}
-          >
-            Выберите граммаж для: {selectedItem.productName}
-          </Typography>
-          <Stack direction="row" spacing={1.2} flexWrap="wrap" sx={{ gap: 1.2 }}>
-            {selectedItem.possibleGramms?.map((gramm) => {
-              const selected = isSelected(selectedItem.id, gramm);
-              return (
-                <Chip
-                  key={gramm}
-                  label={`${gramm} гр`}
-                  onClick={() => handleSelectGramm(selectedItem, gramm)}
-                  icon={selected ? <CheckCircleIcon /> : null}
-                  sx={{
-                    backgroundColor: selected ? brandColors.primary : 'white',
-                    color: selected ? 'white' : brandColors.textPrimary,
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
-                    height: '38px',
-                    minWidth: '75px',
-                    px: 1.5,
-                    border: `2px solid ${selected ? brandColors.primary : brandColors.border}`,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    '& .MuiChip-icon': {
-                      color: 'white',
-                      fontSize: 20,
-                    },
-                    '&:hover': {
-                      backgroundColor: selected ? brandColors.primaryHover : brandColors.primaryVeryLight,
-                      borderColor: brandColors.primary,
-                      transform: 'scale(1.08)',
-                    },
-                  }}
-                />
-              );
-            })}
-          </Stack>
-        </Paper>
       )}
 
       {/* Full Screen Image Dialog */}
