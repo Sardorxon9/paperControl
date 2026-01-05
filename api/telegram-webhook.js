@@ -333,7 +333,7 @@ async function formatPaperInfoMessage(client) {
   message += `🏢 <b>Ресторан:</b> ${restaurantName}\n`;
 
   if (orgName !== '-') {
-    message += `🏛 <b>Организация:</b> ${orgName}\n`;
+    message += `<b>Организация:</b> ${orgName}\n`;
   }
 
   message += `\n📦 <b>Продукт:</b> ${productName || 'Не указан'}`;
@@ -343,20 +343,20 @@ async function formatPaperInfoMessage(client) {
   }
 
   if (packageType) {
-    message += `\n📐 <b>Упаковка:</b> ${packageType}`;
+    message += `\n  ${packageType}`;
   }
 
-  message += `\n\n📜 <b>Рулоны бумаги:</b>\n`;
+  message += `\n\n <b>Рулоны бумаги:</b>\n`;
 
   if (paperRolls.length === 0) {
     message += `  ⚠️ Нет доступных рулонов\n`;
   } else {
     paperRolls.forEach((roll, index) => {
-      message += `  • Рулон ${index + 1}: <b>${roll.weight} кг</b>\n`;
+      message += `  • Рулон ${index + 1}: <b>${roll.weight.toFixed(2)} кг</b>\n`;
     });
   }
 
-  message += `\n🔢 <b>ИТОГО:</b> <b>${totalKg} кг</b>`;
+  message += `\n🔢 <b>ИТОГО:</b> <b>${totalKg.toFixed(2)} кг</b>`;
 
   return message;
 }
