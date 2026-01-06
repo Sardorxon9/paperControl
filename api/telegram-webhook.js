@@ -468,14 +468,22 @@ async function handleRestaurantInput(chatId, userId, query) {
       results: results
     };
 
-    const buttons = results.map((client, index) => {
-      const productInfo = client.productID_2 ? `(ID: ${client.productID_2.substring(0, 8)}...)` : '';
-      const label = `${client.name || client.restaurant} ${productInfo}`;
+    // Fetch product names for all results
+    const buttons = await Promise.all(results.map(async (client, index) => {
+      let productInfo = '';
+      if (client.productID_2) {
+        const productName = await getProductName(client.productID_2);
+        const packageType = await getPackageType(client.packageID);
+        const fullProduct = packageType ? `${productName} ${packageType}` : productName;
+        productInfo = fullProduct ? `(${fullProduct})` : '';
+      }
+      const restaurantName = (client.name || client.restaurant).toUpperCase();
+      const label = `${restaurantName} ${productInfo}`;
       return [{
         text: label.substring(0, 60),
         callback_data: `select_${index}`
       }];
-    });
+    }));
 
     await sendMessage(
       chatId,
