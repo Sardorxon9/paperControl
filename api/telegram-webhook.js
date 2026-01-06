@@ -104,38 +104,70 @@ function fuzzySearchClients(clients, query) {
     const orgNameTranslit = transliterateCyrillic(orgName);
     const restaurantTranslit = transliterateCyrillic(restaurant);
 
-    // Check for exact substring matches (both original and transliterated)
-    if (name.includes(lowerQuery) || orgName.includes(lowerQuery) || restaurant.includes(lowerQuery) ||
-        nameTranslit.includes(transliteratedQuery) || orgNameTranslit.includes(transliteratedQuery) ||
-        restaurantTranslit.includes(transliteratedQuery) ||
-        name.includes(transliteratedQuery) || orgName.includes(transliteratedQuery) ||
-        restaurant.includes(transliteratedQuery)) {
-      return { client, score: 0 };
+    let bestScore = Infinity;
+
+    // Check all three fields (name, orgName, restaurant)
+    const fields = [
+      { orig: name, translit: nameTranslit },
+      { orig: orgName, translit: orgNameTranslit },
+      { orig: restaurant, translit: restaurantTranslit }
+    ];
+
+    for (const field of fields) {
+      // 1. EXACT MATCH (score: 0)
+      if (field.orig === lowerQuery || field.translit === transliteratedQuery) {
+        bestScore = 0;
+        break;
+      }
+
+      // 2. PREFIX MATCH - starts with (score: 1) - KEY FIX!
+      if (field.orig.startsWith(lowerQuery) || field.translit.startsWith(transliteratedQuery)) {
+        if (bestScore > 1) {
+          bestScore = 1;
+        }
+      }
+
+      // 3. SUBSTRING MATCH - contains (score: 2)
+      if (field.orig.includes(lowerQuery) || field.translit.includes(transliteratedQuery) ||
+          field.orig.includes(transliteratedQuery) || field.translit.includes(lowerQuery)) {
+        if (bestScore > 2) {
+          bestScore = 2;
+        }
+      }
+
+      // 4. FUZZY MATCH - Levenshtein distance (score: 3+)
+      if (bestScore > 2) {
+        const distance1 = calculateLevenshteinDistance(lowerQuery, field.orig);
+        const distance2 = calculateLevenshteinDistance(transliteratedQuery, field.translit);
+        const minDistance = Math.min(distance1, distance2);
+
+        // Only consider if distance is reasonable
+        const maxAllowedDistance = Math.max(3, Math.floor(lowerQuery.length * 0.3));
+        if (minDistance <= maxAllowedDistance) {
+          const fuzzyScore = 3 + minDistance;
+          if (fuzzyScore < bestScore) {
+            bestScore = fuzzyScore;
+          }
+        }
+      }
     }
 
-    // Calculate distance for both original and transliterated queries
-    const nameDistance = Math.min(
-      calculateLevenshteinDistance(lowerQuery, name),
-      calculateLevenshteinDistance(transliteratedQuery, nameTranslit)
-    );
-    const orgDistance = Math.min(
-      calculateLevenshteinDistance(lowerQuery, orgName),
-      calculateLevenshteinDistance(transliteratedQuery, orgNameTranslit)
-    );
-    const restaurantDistance = Math.min(
-      calculateLevenshteinDistance(lowerQuery, restaurant),
-      calculateLevenshteinDistance(transliteratedQuery, restaurantTranslit)
-    );
-
-    const minDistance = Math.min(nameDistance, orgDistance, restaurantDistance);
-
-    return { client, score: minDistance };
+    return { client, score: bestScore };
   });
 
-  const maxDistance = Math.max(3, Math.floor(lowerQuery.length * 0.4));
-  const filtered = scored.filter(item => item.score <= maxDistance);
+  // Filter out items with no match (Infinity score)
+  const filtered = scored.filter(item => item.score !== Infinity);
 
-  filtered.sort((a, b) => a.score - b.score);
+  // Sort by score (lower is better)
+  filtered.sort((a, b) => {
+    if (a.score !== b.score) {
+      return a.score - b.score;
+    }
+    // If same score, sort alphabetically by name
+    const aName = (a.client.name || '').toLowerCase();
+    const bName = (b.client.name || '').toLowerCase();
+    return aName.localeCompare(bName);
+  });
 
   return filtered.map(item => item.client);
 }

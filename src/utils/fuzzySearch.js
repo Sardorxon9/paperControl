@@ -1,8 +1,8 @@
-import Fuse from 'fuse.js';
-
 /**
  * Enhanced search utility with fuzzy matching and transliteration support
  * Handles typos, misspellings, and Cyrillic-to-Latin conversion
+ *
+ * Search priority: exact match > prefix match > substring match > fuzzy match
  */
 
 /**
@@ -54,7 +54,46 @@ const transliterateCyrillic = (text) => {
 };
 
 /**
+ * Calculate Levenshtein distance between two strings
+ * Used for fuzzy matching when exact/prefix/substring matches fail
+ */
+const calculateLevenshteinDistance = (a, b) => {
+  const aLen = a.length;
+  const bLen = b.length;
+
+  if (aLen === 0) return bLen;
+  if (bLen === 0) return aLen;
+
+  const matrix = [];
+
+  for (let i = 0; i <= bLen; i++) {
+    matrix[i] = [i];
+  }
+
+  for (let j = 0; j <= aLen; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= bLen; i++) {
+    for (let j = 1; j <= aLen; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+
+  return matrix[bLen][aLen];
+};
+
+/**
  * Smart search that handles fuzzy matching and transliteration
+ * Prioritizes: exact match > prefix match > substring match > fuzzy match
  * @param {Array} items - Array of items to search through
  * @param {string} query - Search query
  * @param {Array} keys - Array of keys to search in (e.g., ['name', 'orgName'])
@@ -66,44 +105,79 @@ export const fuzzySearch = (items, query, keys, options = {}) => {
     return items;
   }
 
-  // Transliterate the query (handles Cyrillic to Latin)
-  const transliteratedQuery = transliterateCyrillic(query);
+  const lowerQuery = query.toLowerCase().trim();
+  const transliteratedQuery = transliterateCyrillic(lowerQuery);
 
-  // Default Fuse.js options optimized for restaurant/client names
-  const defaultOptions = {
-    keys: keys,
-    threshold: 0.4,        // 0 = exact match, 1 = match anything (0.4 is good for typos)
-    distance: 100,         // Maximum character distance
-    minMatchCharLength: 2, // Minimum character length to match
-    ignoreLocation: true,  // Don't care about position in the string
-    useExtendedSearch: false,
-    includeScore: false,
-    shouldSort: true,
-    ...options
-  };
+  // Score each item based on match quality
+  const scoredItems = items.map(item => {
+    let bestScore = Infinity;
+    let matchType = 'none';
 
-  // Create Fuse instance for original query
-  const fuseOriginal = new Fuse(items, defaultOptions);
+    // Check each key field
+    for (const key of keys) {
+      const fieldValue = (item[key] || '').toLowerCase();
+      const fieldValueTranslit = transliterateCyrillic(fieldValue);
 
-  // Search with original query
-  const resultsOriginal = fuseOriginal.search(query);
+      // 1. EXACT MATCH (score: 0)
+      if (fieldValue === lowerQuery || fieldValueTranslit === transliteratedQuery) {
+        bestScore = 0;
+        matchType = 'exact';
+        break;
+      }
 
-  // If transliterated query is different from original, search again
-  if (transliteratedQuery.toLowerCase() !== query.toLowerCase()) {
-    const fuseTransliterated = new Fuse(items, defaultOptions);
-    const resultsTransliterated = fuseTransliterated.search(transliteratedQuery);
+      // 2. PREFIX MATCH - starts with (score: 1) - KEY FIX!
+      if (fieldValue.startsWith(lowerQuery) || fieldValueTranslit.startsWith(transliteratedQuery)) {
+        if (bestScore > 1) {
+          bestScore = 1;
+          matchType = 'prefix';
+        }
+      }
 
-    // Combine results and remove duplicates
-    const combinedResults = [...resultsOriginal, ...resultsTransliterated];
-    const uniqueResults = Array.from(
-      new Map(combinedResults.map(result => [result.item.id || JSON.stringify(result.item), result])).values()
-    );
+      // 3. SUBSTRING MATCH - contains (score: 2)
+      if (fieldValue.includes(lowerQuery) || fieldValueTranslit.includes(transliteratedQuery) ||
+          fieldValue.includes(transliteratedQuery) || fieldValueTranslit.includes(lowerQuery)) {
+        if (bestScore > 2) {
+          bestScore = 2;
+          matchType = 'substring';
+        }
+      }
 
-    return uniqueResults.map(result => result.item);
-  }
+      // 4. FUZZY MATCH - Levenshtein distance (score: 3+)
+      if (bestScore > 2) {
+        const distance1 = calculateLevenshteinDistance(lowerQuery, fieldValue);
+        const distance2 = calculateLevenshteinDistance(transliteratedQuery, fieldValueTranslit);
+        const minDistance = Math.min(distance1, distance2);
 
-  // Return results from original query
-  return resultsOriginal.map(result => result.item);
+        // Only consider if distance is reasonable
+        const maxAllowedDistance = Math.max(3, Math.floor(lowerQuery.length * 0.3));
+        if (minDistance <= maxAllowedDistance) {
+          const fuzzyScore = 3 + minDistance;
+          if (fuzzyScore < bestScore) {
+            bestScore = fuzzyScore;
+            matchType = 'fuzzy';
+          }
+        }
+      }
+    }
+
+    return { item, score: bestScore, matchType };
+  });
+
+  // Filter out items with no match (Infinity score)
+  const matched = scoredItems.filter(scored => scored.score !== Infinity);
+
+  // Sort by score (lower is better)
+  matched.sort((a, b) => {
+    if (a.score !== b.score) {
+      return a.score - b.score;
+    }
+    // If same score, sort alphabetically by name
+    const aName = (a.item.name || a.item.productName || '').toLowerCase();
+    const bName = (b.item.name || b.item.productName || '').toLowerCase();
+    return aName.localeCompare(bName);
+  });
+
+  return matched.map(scored => scored.item);
 };
 
 /**
@@ -113,15 +187,12 @@ export const fuzzySearch = (items, query, keys, options = {}) => {
  * @returns {Array} - Filtered clients
  */
 export const searchClients = (clients, query) => {
+  // Reduced to 3 essential fields to minimize false positives
+  // Same as Telegram bot for consistency
   const keys = [
     'name',
     'restaurant',
-    'displayName',
-    'displayRestaurantName',
-    'orgName',
-    'displayOrgName',
-    'branchOrgName',
-    'branchName'
+    'orgName'
   ];
 
   return fuzzySearch(clients, query, keys);
