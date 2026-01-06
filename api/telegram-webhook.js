@@ -141,8 +141,16 @@ function fuzzySearchClients(clients, query) {
         const distance2 = calculateLevenshteinDistance(transliteratedQuery, field.translit);
         const minDistance = Math.min(distance1, distance2);
 
-        // Only consider if distance is reasonable
-        const maxAllowedDistance = Math.max(3, Math.floor(lowerQuery.length * 0.3));
+        // Tiered threshold: stricter for short queries, more permissive for long ones
+        let maxAllowedDistance;
+        if (lowerQuery.length <= 2) {
+          maxAllowedDistance = 0; // Exact/prefix/substring only
+        } else if (lowerQuery.length <= 4) {
+          maxAllowedDistance = 1; // Allow only 1 typo for short queries
+        } else {
+          maxAllowedDistance = Math.floor(lowerQuery.length * 0.25); // 25% tolerance for longer queries
+        }
+
         if (minDistance <= maxAllowedDistance) {
           const fuzzyScore = 3 + minDistance;
           if (fuzzyScore < bestScore) {
