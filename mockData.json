@@ -1,0 +1,525 @@
+{
+  "clients": [
+    {
+      "id": "client_001",
+      "name": "Osh Markazi",
+      "restaurant": "Osh Markazi",
+      "orgName": "OOO Milliy Taomlar",
+      "displayName": "Osh Markazi",
+      "productName": "Сахар 5г",
+      "packageType": "Стик",
+      "gramm": "5",
+      "shellNum": "A-12",
+      "paperRemaining": 67.5,
+      "totalRolls": 3,
+      "totalKg": 245.8,
+      "notifyWhen": 50,
+      "designType": "unique",
+      "imageURL": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400",
+      "addressShort": "Tashkent, Yunusabad district",
+      "comment": "Prefer morning deliveries",
+      "paperRolls": [
+        {
+          "id": "roll_001_1",
+          "paperRemaining": 28.3,
+          "dateCreated": "2024-12-15T08:30:00Z",
+          "rollNumber": 1
+        },
+        {
+          "id": "roll_001_2",
+          "paperRemaining": 24.7,
+          "dateCreated": "2024-12-20T14:15:00Z",
+          "rollNumber": 2
+        },
+        {
+          "id": "roll_001_3",
+          "paperRemaining": 14.5,
+          "dateCreated": "2025-01-03T09:45:00Z",
+          "rollNumber": 3
+        }
+      ],
+      "paperHistory": [
+        {
+          "id": "log_001_1",
+          "date": "2024-12-15T08:30:00Z",
+          "actionType": "paperIn",
+          "amount": 50.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "New delivery from supplier"
+        },
+        {
+          "id": "log_001_2",
+          "date": "2024-12-18T16:20:00Z",
+          "actionType": "paperOut",
+          "amount": 21.7,
+          "userID": "user_002",
+          "userName": "Dilshod Azimov",
+          "details": "Production usage"
+        },
+        {
+          "id": "log_001_3",
+          "date": "2024-12-20T14:15:00Z",
+          "actionType": "paperIn",
+          "amount": 50.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "New delivery"
+        },
+        {
+          "id": "log_001_4",
+          "date": "2025-01-03T09:45:00Z",
+          "actionType": "paperIn",
+          "amount": 30.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "Regular restock"
+        },
+        {
+          "id": "log_001_5",
+          "date": "2025-01-05T11:30:00Z",
+          "actionType": "paperOut",
+          "amount": 15.5,
+          "userID": "user_002",
+          "userName": "Dilshod Azimov",
+          "details": "Production usage"
+        }
+      ]
+    },
+    {
+      "id": "client_002",
+      "name": "Samarkand Darvoza",
+      "restaurant": "Samarkand Darvoza",
+      "orgName": "OOO Samarkand Foods",
+      "displayName": "Samarkand Darvoza",
+      "productName": "Сахар 10г",
+      "packageType": "Саше",
+      "gramm": "10",
+      "shellNum": "B-05",
+      "paperRemaining": 125.8,
+      "totalRolls": 4,
+      "totalKg": 580.3,
+      "notifyWhen": 80,
+      "designType": "unique",
+      "imageURL": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400",
+      "addressShort": "Tashkent, Mirabad district",
+      "comment": "VIP client - priority service",
+      "paperRolls": [
+        {
+          "id": "roll_002_1",
+          "paperRemaining": 42.5,
+          "dateCreated": "2024-11-28T10:00:00Z",
+          "rollNumber": 1
+        },
+        {
+          "id": "roll_002_2",
+          "paperRemaining": 38.2,
+          "dateCreated": "2024-12-05T13:20:00Z",
+          "rollNumber": 2
+        },
+        {
+          "id": "roll_002_3",
+          "paperRemaining": 31.6,
+          "dateCreated": "2024-12-18T15:45:00Z",
+          "rollNumber": 3
+        },
+        {
+          "id": "roll_002_4",
+          "paperRemaining": 13.5,
+          "dateCreated": "2025-01-02T08:15:00Z",
+          "rollNumber": 4
+        }
+      ],
+      "paperHistory": [
+        {
+          "id": "log_002_1",
+          "date": "2024-11-28T10:00:00Z",
+          "actionType": "paperIn",
+          "amount": 50.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "Initial stock"
+        },
+        {
+          "id": "log_002_2",
+          "date": "2024-12-05T13:20:00Z",
+          "actionType": "paperIn",
+          "amount": 50.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "Restock"
+        },
+        {
+          "id": "log_002_3",
+          "date": "2024-12-10T14:30:00Z",
+          "actionType": "paperOut",
+          "amount": 28.2,
+          "userID": "user_002",
+          "userName": "Dilshod Azimov",
+          "details": "Large production order"
+        },
+        {
+          "id": "log_002_4",
+          "date": "2024-12-18T15:45:00Z",
+          "actionType": "paperIn",
+          "amount": 50.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "Regular delivery"
+        },
+        {
+          "id": "log_002_5",
+          "date": "2025-01-02T08:15:00Z",
+          "actionType": "paperIn",
+          "amount": 30.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "New year restock"
+        }
+      ]
+    },
+    {
+      "id": "client_003",
+      "name": "Bon Appetit",
+      "restaurant": "Bon Appetit",
+      "orgName": "OOO French Cuisine",
+      "displayName": "Bon Appetit",
+      "productName": "Соль 1г",
+      "packageType": "Стик",
+      "gramm": "1",
+      "shellNum": "C-08",
+      "paperRemaining": 22.3,
+      "totalRolls": 2,
+      "totalKg": 178.5,
+      "notifyWhen": 40,
+      "designType": "unique",
+      "imageURL": "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=400",
+      "addressShort": "Tashkent, Yashnabad district",
+      "comment": "Low paper - needs urgent restock!",
+      "paperRolls": [
+        {
+          "id": "roll_003_1",
+          "paperRemaining": 15.8,
+          "dateCreated": "2024-12-22T11:30:00Z",
+          "rollNumber": 1
+        },
+        {
+          "id": "roll_003_2",
+          "paperRemaining": 6.5,
+          "dateCreated": "2025-01-04T14:00:00Z",
+          "rollNumber": 2
+        }
+      ],
+      "paperHistory": [
+        {
+          "id": "log_003_1",
+          "date": "2024-11-15T09:00:00Z",
+          "actionType": "paperIn",
+          "amount": 45.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "New client - initial stock"
+        },
+        {
+          "id": "log_003_2",
+          "date": "2024-11-28T15:45:00Z",
+          "actionType": "paperOut",
+          "amount": 35.2,
+          "userID": "user_002",
+          "userName": "Dilshod Azimov",
+          "details": "Heavy usage period"
+        },
+        {
+          "id": "log_003_3",
+          "date": "2024-12-05T10:20:00Z",
+          "actionType": "fixing",
+          "amount": 2.5,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "Correction - weight measurement error"
+        },
+        {
+          "id": "log_003_4",
+          "date": "2024-12-22T11:30:00Z",
+          "actionType": "paperIn",
+          "amount": 35.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "Emergency restock"
+        },
+        {
+          "id": "log_003_5",
+          "date": "2025-01-04T14:00:00Z",
+          "actionType": "paperIn",
+          "amount": 15.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "Partial delivery"
+        },
+        {
+          "id": "log_003_6",
+          "date": "2025-01-05T16:30:00Z",
+          "actionType": "paperOut",
+          "amount": 27.7,
+          "userID": "user_002",
+          "userName": "Dilshod Azimov",
+          "details": "Production run"
+        }
+      ]
+    },
+    {
+      "id": "client_004",
+      "name": "Istanbul Kebab",
+      "restaurant": "Istanbul Kebab",
+      "orgName": "OOO Turkish Delights",
+      "displayName": "Istanbul Kebab",
+      "productName": "Перец 1г",
+      "packageType": "Саше",
+      "gramm": "1",
+      "shellNum": "A-07",
+      "paperRemaining": 89.4,
+      "totalRolls": 3,
+      "totalKg": 312.7,
+      "notifyWhen": 60,
+      "designType": "unique",
+      "imageURL": "https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=400",
+      "addressShort": "Tashkent, Shaykhantakhur district",
+      "comment": "Regular customer - weekly orders",
+      "paperRolls": [
+        {
+          "id": "roll_004_1",
+          "paperRemaining": 36.8,
+          "dateCreated": "2024-12-10T09:15:00Z",
+          "rollNumber": 1
+        },
+        {
+          "id": "roll_004_2",
+          "paperRemaining": 32.1,
+          "dateCreated": "2024-12-20T10:30:00Z",
+          "rollNumber": 2
+        },
+        {
+          "id": "roll_004_3",
+          "paperRemaining": 20.5,
+          "dateCreated": "2025-01-03T13:45:00Z",
+          "rollNumber": 3
+        }
+      ],
+      "paperHistory": [
+        {
+          "id": "log_004_1",
+          "date": "2024-12-10T09:15:00Z",
+          "actionType": "paperIn",
+          "amount": 50.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "Scheduled delivery"
+        },
+        {
+          "id": "log_004_2",
+          "date": "2024-12-15T14:20:00Z",
+          "actionType": "paperOut",
+          "amount": 13.2,
+          "userID": "user_002",
+          "userName": "Dilshod Azimov",
+          "details": "Weekly production"
+        },
+        {
+          "id": "log_004_3",
+          "date": "2024-12-20T10:30:00Z",
+          "actionType": "paperIn",
+          "amount": 50.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "Regular restock"
+        },
+        {
+          "id": "log_004_4",
+          "date": "2024-12-27T11:15:00Z",
+          "actionType": "paperOut",
+          "amount": 17.9,
+          "userID": "user_002",
+          "userName": "Dilshod Azimov",
+          "details": "Holiday rush order"
+        },
+        {
+          "id": "log_004_5",
+          "date": "2025-01-03T13:45:00Z",
+          "actionType": "paperIn",
+          "amount": 30.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "Post-holiday restock"
+        },
+        {
+          "id": "log_004_6",
+          "date": "2025-01-05T15:00:00Z",
+          "actionType": "paperOut",
+          "amount": 9.5,
+          "userID": "user_002",
+          "userName": "Dilshod Azimov",
+          "details": "Regular usage"
+        }
+      ]
+    },
+    {
+      "id": "client_005",
+      "name": "Plov Center",
+      "restaurant": "Plov Center",
+      "orgName": "OOO National Foods Group",
+      "displayName": "Plov Center",
+      "productName": "Сахар 5г",
+      "packageType": "Саше",
+      "gramm": "5",
+      "shellNum": "B-14",
+      "paperRemaining": 156.2,
+      "totalRolls": 4,
+      "totalKg": 825.6,
+      "notifyWhen": 100,
+      "designType": "unique",
+      "imageURL": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400",
+      "addressShort": "Tashkent, Chilanzar district",
+      "comment": "High volume client - multiple locations",
+      "paperRolls": [
+        {
+          "id": "roll_005_1",
+          "paperRemaining": 47.3,
+          "dateCreated": "2024-11-25T08:00:00Z",
+          "rollNumber": 1
+        },
+        {
+          "id": "roll_005_2",
+          "paperRemaining": 44.8,
+          "dateCreated": "2024-12-08T09:30:00Z",
+          "rollNumber": 2
+        },
+        {
+          "id": "roll_005_3",
+          "paperRemaining": 39.5,
+          "dateCreated": "2024-12-22T11:00:00Z",
+          "rollNumber": 3
+        },
+        {
+          "id": "roll_005_4",
+          "paperRemaining": 24.6,
+          "dateCreated": "2025-01-02T10:15:00Z",
+          "rollNumber": 4
+        }
+      ],
+      "paperHistory": [
+        {
+          "id": "log_005_1",
+          "date": "2024-11-25T08:00:00Z",
+          "actionType": "paperIn",
+          "amount": 60.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "Bulk order delivery"
+        },
+        {
+          "id": "log_005_2",
+          "date": "2024-12-02T13:30:00Z",
+          "actionType": "paperOut",
+          "amount": 12.7,
+          "userID": "user_002",
+          "userName": "Dilshod Azimov",
+          "details": "Production for main location"
+        },
+        {
+          "id": "log_005_3",
+          "date": "2024-12-08T09:30:00Z",
+          "actionType": "paperIn",
+          "amount": 60.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "Scheduled restock"
+        },
+        {
+          "id": "log_005_4",
+          "date": "2024-12-15T14:45:00Z",
+          "actionType": "paperOut",
+          "amount": 15.2,
+          "userID": "user_002",
+          "userName": "Dilshod Azimov",
+          "details": "Branch location order"
+        },
+        {
+          "id": "log_005_5",
+          "date": "2024-12-22T11:00:00Z",
+          "actionType": "paperIn",
+          "amount": 60.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "Pre-holiday stock up"
+        },
+        {
+          "id": "log_005_6",
+          "date": "2024-12-28T16:00:00Z",
+          "actionType": "paperOut",
+          "amount": 20.5,
+          "userID": "user_002",
+          "userName": "Dilshod Azimov",
+          "details": "Holiday period usage"
+        },
+        {
+          "id": "log_005_7",
+          "date": "2025-01-02T10:15:00Z",
+          "actionType": "paperIn",
+          "amount": 40.0,
+          "userID": "user_001",
+          "userName": "Alisher Karimov",
+          "details": "New year delivery"
+        },
+        {
+          "id": "log_005_8",
+          "date": "2025-01-05T12:20:00Z",
+          "actionType": "paperOut",
+          "amount": 15.4,
+          "userID": "user_002",
+          "userName": "Dilshod Azimov",
+          "details": "Regular production run"
+        }
+      ]
+    }
+  ],
+  "products": [
+    {
+      "id": "prod_001",
+      "productName": "Сахар 5г"
+    },
+    {
+      "id": "prod_002",
+      "productName": "Сахар 10г"
+    },
+    {
+      "id": "prod_003",
+      "productName": "Соль 1г"
+    },
+    {
+      "id": "prod_004",
+      "productName": "Перец 1г"
+    }
+  ],
+  "packageTypes": [
+    {
+      "id": "pkg_001",
+      "type": "Стик"
+    },
+    {
+      "id": "pkg_002",
+      "type": "Саше"
+    }
+  ],
+  "users": [
+    {
+      "id": "user_001",
+      "name": "Alisher Karimov",
+      "role": "admin"
+    },
+    {
+      "id": "user_002",
+      "name": "Dilshod Azimov",
+      "role": "worker"
+    }
+  ]
+}

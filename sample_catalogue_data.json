@@ -1,0 +1,118 @@
+[
+  {
+    "id": "cat001",
+    "productName": "Premium Arabica Coffee Stick",
+    "productCode": "ACF-STK-2024-001",
+    "packageType": "стик",
+    "usedMaterial": "BOPP/PE",
+    "imageURL": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400",
+    "imageURL2": "https://images.unsplash.com/photo-1511920170033-f8396924c348?w=400",
+    "imageURL3": "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400",
+    "paperDocID": "paper_doc_001",
+    "possibleGramms": [5, 10, 15, 20]
+  },
+  {
+    "id": "cat002",
+    "productName": "Green Tea Matcha Sachet",
+    "productCode": "GTM-SCH-2024-002",
+    "packageType": "саше",
+    "usedMaterial": "PET/AL/PE",
+    "imageURL": "https://images.unsplash.com/photo-1564890369478-c89ca6d9cde9?w=400",
+    "imageURL2": "https://images.unsplash.com/photo-1627435601361-ec25f5b1d0e5?w=400",
+    "paperDocID": "paper_doc_002",
+    "possibleGramms": [2, 3, 5]
+  },
+  {
+    "id": "cat003",
+    "productName": "Instant Cappuccino Mix Stick",
+    "productCode": "CAP-STK-2024-003",
+    "packageType": "стик",
+    "usedMaterial": "BOPP/PE",
+    "imageURL": "https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=400",
+    "imageURL2": "https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400",
+    "imageURL3": "https://images.unsplash.com/photo-1534778101976-62847782c213?w=400",
+    "imageURL4": "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400",
+    "paperDocID": "paper_doc_003",
+    "possibleGramms": [12, 15, 18]
+  },
+  {
+    "id": "cat004",
+    "productName": "Organic Sugar Sachet",
+    "productCode": "SUG-SCH-2024-004",
+    "packageType": "саше",
+    "usedMaterial": "Glassine Paper",
+    "imageURL": "https://images.unsplash.com/photo-1587735243615-c03f25aaff15?w=400",
+    "paperDocID": "n/a",
+    "possibleGramms": [5, 8, 10]
+  },
+  {
+    "id": "cat005",
+    "productName": "Hot Chocolate Premium Stick",
+    "productCode": "HCH-STK-2024-005",
+    "packageType": "стик",
+    "usedMaterial": "PET/AL/PE",
+    "imageURL": "https://images.unsplash.com/photo-1542990253-0d0f5be5f0ed?w=400",
+    "imageURL2": "https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?w=400",
+    "imageURL3": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400",
+    "imageURL4": "https://images.unsplash.com/photo-1606312619070-d48b4cbc2b52?w=400",
+    "imageURL5": "https://images.unsplash.com/photo-1569908196185-de6ba22e59a5?w=400",
+    "paperDocID": "paper_doc_005",
+    "possibleGramms": [20, 25, 30]
+  },
+  {
+    "id": "cat006",
+    "productName": "Black Tea Earl Grey Sachet",
+    "productCode": "BTE-SCH-2024-006",
+    "packageType": "саше",
+    "usedMaterial": "BOPP/PE",
+    "imageURL": "https://images.unsplash.com/photo-1597318112093-6e3675e08036?w=400",
+    "imageURL2": "https://images.unsplash.com/photo-1576092768223-235608e16b5d?w=400",
+    "paperDocID": "paper_doc_006",
+    "possibleGramms": [2, 3]
+  },
+  {
+    "id": "cat007",
+    "productName": "Protein Shake Mix Stick",
+    "productCode": "PRT-STK-2024-007",
+    "packageType": "стик",
+    "usedMaterial": "PET/AL/PE",
+    "imageURL": "https://images.unsplash.com/photo-1579722821273-0f6c7d44362f?w=400",
+    "paperDocID": "paper_doc_007",
+    "possibleGramms": [25, 30, 35, 40]
+  },
+  {
+    "id": "cat008",
+    "productName": "Honey Sachet Single Serve",
+    "productCode": "HON-SCH-2024-008",
+    "packageType": "саше",
+    "usedMaterial": "Glassine Paper",
+    "imageURL": "https://images.unsplash.com/photo-1587049352846-4a222e784053?w=400",
+    "imageURL2": "https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400",
+    "imageURL3": "https://images.unsplash.com/photo-1516684732162-798a0062be99?w=400",
+    "paperDocID": "paper_doc_008",
+    "possibleGramms": [10, 15, 20]
+  },
+  {
+    "id": "cat009",
+    "productName": "Espresso Instant Coffee Stick",
+    "productCode": "ESP-STK-2024-009",
+    "packageType": "стик",
+    "usedMaterial": "BOPP/PE",
+    "imageURL": "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?w=400",
+    "imageURL2": "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=400",
+    "paperDocID": "n/a",
+    "possibleGramms": [3, 5, 7]
+  },
+  {
+    "id": "cat010",
+    "productName": "Stevia Natural Sweetener Sachet",
+    "productCode": "STV-SCH-2024-010",
+    "packageType": "саше",
+    "usedMaterial": "PET/PE",
+    "imageURL": "https://images.unsplash.com/photo-1582169296194-e4d644c48063?w=400",
+    "imageURL2": "https://images.unsplash.com/photo-1599940824399-b87987ceb72a?w=400",
+    "imageURL3": "https://images.unsplash.com/photo-1556909212-d5b604d0c90d?w=400",
+    "paperDocID": "paper_doc_010",
+    "possibleGramms": [1, 2]
+  }
+]

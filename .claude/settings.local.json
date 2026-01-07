@@ -28,7 +28,11 @@
       "Bash(git remote get-url:*)",
       "Bash(git fetch:*)",
       "Bash(find:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(dir:*)",
+      "Bash(node scripts/findClientsWithDefaultImage.mjs:*)",
+      "Bash(node scripts/fetchCatalogueData.mjs:*)",
+      "Bash(node scripts/lightweightCatalogue.mjs:*)"
     ]
   }
 }

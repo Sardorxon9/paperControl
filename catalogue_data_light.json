@@ -1,0 +1,220 @@
+[
+  {
+    "id": "0xSlmRJwLu0UQCqnEN9z",
+    "productName": "Сливка в саше упаковках",
+    "productCode": "SH-SLIV-02",
+    "packageType": "Саше",
+    "usedMaterial": "Сливки",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/slivka_ldid3T0wB.jpg",
+    "paperDocID": "n/a",
+    "possibleGramms": [
+      3
+    ]
+  },
+  {
+    "id": "1a3cXBBLocOHEtQvlV8d",
+    "productName": "Сахар Белый в Стик упаковках",
+    "productCode": "ST-OQ-300-2-UZM",
+    "packageType": "Стик",
+    "usedMaterial": "Белый сахар",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/85_R6m5ANBd0.jpg",
+    "paperDocID": "lLK6qCl0TMZupamtSQD8",
+    "possibleGramms": [
+      4,
+      5
+    ],
+    "imageURL2": "https://ik.imagekit.io/php1jcf0t/755_MGns7fQKk.jpg"
+  },
+  {
+    "id": "4asoAgi8Kg8f0NSfZL3j",
+    "productName": "Сахар Белый в Стик упаковках",
+    "productCode": "ST-OQ-02",
+    "packageType": "Стик",
+    "usedMaterial": "Белый сахар",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/d1j6bgviub335orm6o3g_7AWmyejlS.jpg",
+    "paperDocID": "n/a",
+    "possibleGramms": [
+      4,
+      5
+    ]
+  },
+  {
+    "id": "8WTEfGnK9Og5qHlvxGNT",
+    "productName": "Сахар Белый в Стик упаковках",
+    "productCode": "ST-OQ-300-1-UZM",
+    "packageType": "Стик",
+    "usedMaterial": "Белый сахар",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/yashil300_Didgy33ggM.jpg",
+    "paperDocID": "pCN1988gA6GBEk3qsO2J",
+    "possibleGramms": [
+      4,
+      5
+    ]
+  },
+  {
+    "id": "D9NEir7ocANgrsUMqiDg",
+    "productName": "Сахарозаменитель в Саше упаковках",
+    "productCode": "SH-SZ-01",
+    "packageType": "Саше",
+    "usedMaterial": "Сахарозаменитель",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/New_Project__19__7m5tVNY-5.jpg",
+    "paperDocID": "n/a",
+    "possibleGramms": [
+      3
+    ]
+  },
+  {
+    "id": "F0RdiZCZfFUTTVs1g9M3",
+    "productName": "Сахар Белый в Стик упаковках",
+    "productCode": "ST-OQ-300UZM",
+    "packageType": "Стик",
+    "usedMaterial": "Белый сахар",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg",
+    "paperDocID": "n/a",
+    "possibleGramms": [
+      4,
+      5
+    ]
+  },
+  {
+    "id": "FFDuw8Kn7akIonHpk5pm",
+    "productName": "Сливки в Саше упаковках",
+    "productCode": "SH-SLIV-01",
+    "packageType": "Саше",
+    "usedMaterial": "Сливки",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/slivka_POVsAJ6ke.jpg",
+    "paperDocID": "5OaZ2sVoi1LAl2fGLKQd",
+    "possibleGramms": [
+      3
+    ]
+  },
+  {
+    "id": "M4Go9MXjZNuTmYYL1muI",
+    "productName": "Сахар Белый в Стик упаковках",
+    "productCode": "ST-OQ-01",
+    "packageType": "Стик",
+    "usedMaterial": "Белый сахар",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/Gemini_Generated_Image_mp4qrhmp4qrhmp4q_X5FKO_4U9.png",
+    "paperDocID": "n/a",
+    "possibleGramms": [
+      4,
+      5
+    ]
+  },
+  {
+    "id": "UEtGGhCSrA7hrjmwwUQk",
+    "productName": "Сахар Белый в Стик упаковках",
+    "productCode": "ST-OQ-100YNDX",
+    "packageType": "Стик",
+    "usedMaterial": "Белый сахар",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/New_Project__18__mOuq91IMf.jpg",
+    "paperDocID": "n/a",
+    "possibleGramms": [
+      4,
+      5
+    ]
+  },
+  {
+    "id": "gxMHlJRSbUL1wW3KHidl",
+    "productName": "Brown Sugar",
+    "productCode": "ST-JG-02",
+    "packageType": "Стик",
+    "usedMaterial": "Коричневый сахар",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/Gemini_Generated_Image_vrcf67vrcf67vrcf_LeLkRDqCf.jpg",
+    "paperDocID": "n/a",
+    "possibleGramms": [
+      4,
+      5
+    ]
+  },
+  {
+    "id": "lWyIhecEjKxYuuMBu9cw",
+    "productName": "Сахар Коричневый в Стик упаковках",
+    "productCode": "ST-JG-01",
+    "packageType": "Стик",
+    "usedMaterial": "Коричневый сахар",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/Gemini_Generated_Image_xgej8yxgej8yxgej_VRmz5SLog.png",
+    "paperDocID": "n/a",
+    "possibleGramms": [
+      4,
+      5
+    ]
+  },
+  {
+    "id": "mOzI94OVFu9hkeQOGC3o",
+    "productName": "Сахар Коричневый в Саше упаковках",
+    "productCode": "SH-JG-01",
+    "packageType": "Саше",
+    "usedMaterial": "Коричневый сахар",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/IMG_7354_Aty2Qi8oo.jpeg",
+    "paperDocID": "n/a",
+    "possibleGramms": [
+      4,
+      5
+    ]
+  },
+  {
+    "id": "oBtKMI5i41NgVuFTsxpR",
+    "productName": "Сахар саше белый",
+    "productCode": "SH-OQ-02",
+    "packageType": "Саше",
+    "usedMaterial": "Белый сахар",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/New_Project__49__73ntiXcGJS.jpg",
+    "paperDocID": "n/a",
+    "possibleGramms": [
+      4,
+      5
+    ]
+  },
+  {
+    "id": "ozRRCvYdUE11XEz127EV",
+    "productName": "Сахар Белый в Саше упаковках",
+    "productCode": "SH-OQ-01",
+    "packageType": "Саше",
+    "usedMaterial": "Белый сахар",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg",
+    "paperDocID": "n/a",
+    "possibleGramms": [
+      4,
+      5
+    ]
+  },
+  {
+    "id": "rymHxO5TaonDqTFxg70N",
+    "productName": "Соль в Саше упаковках",
+    "productCode": "SH-TUZ-01",
+    "packageType": "Саше",
+    "usedMaterial": "Соль",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/default_placeholder.jpg",
+    "paperDocID": "n/a",
+    "possibleGramms": [
+      3
+    ]
+  },
+  {
+    "id": "vfZmMzo5eQ6gAtVyFwje",
+    "productName": "Сахар Белый в Стик упаковках",
+    "productCode": "ST-OQ-100UZM",
+    "packageType": "Стик",
+    "usedMaterial": "Белый сахар",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/Standart-dizayn/uzm100.jpg",
+    "paperDocID": "n/a",
+    "possibleGramms": [
+      4,
+      5
+    ]
+  },
+  {
+    "id": "wQnTILS450CUv2vZqgbY",
+    "productName": "Сахар Тростниковый",
+    "productCode": "SH-JG-02",
+    "packageType": "Саше",
+    "usedMaterial": "Коричневый сахар",
+    "imageURL": "https://ik.imagekit.io/php1jcf0t/Catalogue/IMG_7350_XIT8pIptnY.jpeg",
+    "paperDocID": "n/a",
+    "possibleGramms": [
+      4,
+      5
+    ]
+  }
+]
