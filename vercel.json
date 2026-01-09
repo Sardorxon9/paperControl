@@ -1,12 +1,6 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "build",
-  "functions": {
-    "api/generate-commercial-proposal.js": {
-      "maxDuration": 60,
-      "memory": 3008
-    }
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",

@@ -7,14 +7,8 @@ const FIREBASE_PROJECT_ID = 'paper-control-6bce2';
 const FIREBASE_API_KEY = 'AIzaSyBoYiTk7tqrpDKOvG9mDHHTlfP77MZ4sKA';
 const FIRESTORE_API = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`;
 
-// Import proposal config for admin IDs
-const proposalConfig = require('./proposal-config');
-
 // User session storage
 const userSessions = {};
-
-// Admin chat IDs from config
-const ADMIN_CHAT_IDS = proposalConfig.adminChatIds;
 
 // Cyrillic to Latin transliteration (from fuzzySearch.js)
 function transliterateCyrillic(text) {
@@ -407,31 +401,21 @@ async function formatPaperInfoMessage(client) {
   return message;
 }
 
-// Check if user is admin
-function isAdmin(chatId) {
-  return ADMIN_CHAT_IDS.includes(chatId);
-}
-
 // Handle /start command
 async function handleStart(chatId, userId) {
-  const isUserAdmin = isAdmin(chatId);
-
   const keyboard = {
-    keyboard: isUserAdmin ? [
-      [{ text: '📄 Узнать бумагу' }],
-      [{ text: '📝 Создать ком.предложение' }]
-    ] : [
+    keyboard: [
       [{ text: '📄 Узнать бумагу' }]
     ],
     resize_keyboard: true,
     persistent: true
   };
 
-  const welcomeMessage = isUserAdmin
-    ? '👋 Добро пожаловать!\n\n✅ <b>Вы администратор</b>\n\n📄 <b>Узнать бумагу</b> - проверка остатков\n📝 <b>Создать ком.предложение</b> - генерация PDF'
-    : '👋 Добро пожаловать!\n\nИспользуйте кнопку <b>"Узнать бумагу"</b> для проверки остатков бумаги в ресторане.';
-
-  await sendMessage(chatId, welcomeMessage, { reply_markup: keyboard });
+  await sendMessage(
+    chatId,
+    '👋 Добро пожаловать!\n\nИспользуйте кнопку <b>"Узнать бумагу"</b> для проверки остатков бумаги в ресторане.',
+    { reply_markup: keyboard }
+  );
 }
 
 // Handle "Узнать бумагу" button
@@ -542,195 +526,6 @@ async function handleProductSelection(chatId, userId, selectedIndex) {
   delete userSessions[userId];
 }
 
-// Handle "Создать ком.предложение" button
-async function handleCreateProposal(chatId, userId) {
-  // Check if user is admin
-  if (!isAdmin(chatId)) {
-    await sendMessage(chatId, '❌ У вас нет доступа к этой функции.');
-    return;
-  }
-
-  userSessions[userId] = { state: 'awaiting_company_name' };
-
-  await sendMessage(
-    chatId,
-    '📝 <b>Создание коммерческого предложения</b>\n\nПожалуйста, введите название компании:'
-  );
-}
-
-// Send PDF document to Telegram
-async function sendDocument(chatId, pdfBuffer, fileName, caption) {
-  try {
-    // Create multipart/form-data boundary
-    const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
-
-    // Build the multipart body
-    const parts = [];
-
-    // Add chat_id
-    parts.push(`--${boundary}\r\n`);
-    parts.push(`Content-Disposition: form-data; name="chat_id"\r\n\r\n`);
-    parts.push(`${chatId}\r\n`);
-
-    // Add caption
-    parts.push(`--${boundary}\r\n`);
-    parts.push(`Content-Disposition: form-data; name="caption"\r\n\r\n`);
-    parts.push(`${caption}\r\n`);
-
-    // Add parse_mode
-    parts.push(`--${boundary}\r\n`);
-    parts.push(`Content-Disposition: form-data; name="parse_mode"\r\n\r\n`);
-    parts.push(`HTML\r\n`);
-
-    // Add document
-    parts.push(`--${boundary}\r\n`);
-    parts.push(`Content-Disposition: form-data; name="document"; filename="${fileName}"\r\n`);
-    parts.push(`Content-Type: application/pdf\r\n\r\n`);
-
-    // Convert string parts to buffer
-    const header = Buffer.from(parts.join(''), 'utf-8');
-    const footer = Buffer.from(`\r\n--${boundary}--\r\n`, 'utf-8');
-
-    // Combine all parts
-    const body = Buffer.concat([
-      header,
-      Buffer.from(pdfBuffer),
-      footer
-    ]);
-
-    // Send to Telegram
-    const response = await fetch(`${TELEGRAM_API_URL}/sendDocument`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        'Content-Length': body.length
-      },
-      body: body
-    });
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error sending document:', error);
-    throw error;
-  }
-}
-
-// Handle company name input and generate PDF
-// Updated: 2026-01-09 - Fixed body consumption bug
-async function handleCompanyNameInput(chatId, userId, companyName) {
-  try {
-    // Send "processing" message
-    await sendMessage(
-      chatId,
-      '⏳ Генерирую коммерческое предложение...\nЭто может занять несколько секунд.'
-    );
-
-    // Get the server URL
-    const serverUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'https://paper-control.vercel.app';
-
-    console.log('Calling PDF generation API at:', serverUrl);
-
-    // Call the PDF generation API with 60 second timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
-
-    let response;
-    try {
-      // USING V2 endpoint to bypass caching issues
-      response = await fetch(`${serverUrl}/api/generate-proposal-v2`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          clientName: companyName
-        }),
-        signal: controller.signal
-      });
-    } finally {
-      clearTimeout(timeoutId);
-    }
-
-    console.log('Fetch completed. Status:', response.status, 'OK:', response.ok);
-
-    // Read the body ONCE as arrayBuffer (works for both success and error)
-    const bodyBuffer = await response.arrayBuffer();
-    console.log('Body buffer size:', bodyBuffer.byteLength, 'bytes');
-
-    if (!response.ok) {
-      console.log('Response not OK, parsing error...');
-
-      // Convert buffer to text for error message
-      const decoder = new TextDecoder('utf-8');
-      const errorText = decoder.decode(bodyBuffer);
-      console.error('Error response:', errorText.substring(0, 500));
-
-      // Try to parse as JSON for better formatting
-      let errorDetails;
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorDetails = JSON.stringify(errorJson, null, 2);
-      } catch (e) {
-        errorDetails = errorText.substring(0, 1000) || `HTTP ${response.status}`;
-      }
-
-      throw new Error(`PDF API Error [${response.status}]:\n${errorDetails}`);
-    }
-
-    // Success - bodyBuffer contains the PDF
-    console.log('PDF generated successfully, size:', bodyBuffer.byteLength, 'bytes');
-    const pdfBuffer = bodyBuffer;
-
-    // Send PDF to user via Telegram
-    const fileName = `WhiteRay-Proposal-${companyName.replace(/\s+/g, '-')}.pdf`;
-    const caption = `📄 Коммерческое предложение для <b>${companyName}</b>`;
-
-    const telegramResult = await sendDocument(chatId, pdfBuffer, fileName, caption);
-
-    if (telegramResult.ok) {
-      console.log('PDF sent successfully to chat:', chatId);
-      await sendMessage(chatId, '✅ Коммерческое предложение успешно создано!');
-    } else {
-      console.error('Failed to send PDF:', telegramResult);
-      const telegramError = JSON.stringify(telegramResult, null, 2);
-      throw new Error(`Telegram sendDocument failed: ${telegramError}`);
-    }
-
-    // Reset session
-    delete userSessions[userId];
-
-  } catch (error) {
-    console.error('Error in handleCompanyNameInput:', error);
-
-    // Check if it's a timeout error
-    if (error.name === 'AbortError') {
-      await sendMessage(
-        chatId,
-        '⏱️ <b>Timeout Error:</b>\n\n' +
-        'PDF generation took too long (>60 seconds).\n\n' +
-        '<b>Possible causes:</b>\n' +
-        '• Vercel function timeout (10s limit on free tier)\n' +
-        '• Puppeteer cold start is slow\n' +
-        '• Chromium failed to load\n\n' +
-        '<b>Solution:</b> Try again in 30 seconds (after warm-up)'
-      );
-    } else {
-      // Send detailed error message for debugging
-      const errorDetails = `❌ <b>ОШИБКА:</b>\n\n` +
-        `<b>Тип:</b> ${error.name}\n` +
-        `<b>Сообщение:</b> ${error.message}\n\n` +
-        `<b>Stack:</b>\n<code>${error.stack ? error.stack.substring(0, 500) : 'N/A'}</code>\n\n` +
-        `<i>Отправьте этот текст разработчику для исправления</i>`;
-
-      await sendMessage(chatId, errorDetails);
-    }
-
-    delete userSessions[userId];
-  }
-}
-
 // Main webhook handler
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -792,16 +587,9 @@ export default async function handler(req, res) {
           '🔍 Пожалуйста, введите название ресторана:'
         );
         userSessions[userId] = { state: 'awaiting_restaurant_name' };
-      } else if (text === '📝 Создать ком.предложение') {
-        await handleCreateProposal(chatId, userId);
       } else if (text && text.trim().length > 0) {
-        // Handle text input based on session state
-        if (session && session.state === 'awaiting_company_name') {
-          await handleCompanyNameInput(chatId, userId, text);
-        } else {
-          // Default: restaurant search
-          await handleRestaurantInput(chatId, userId, text);
-        }
+        // Default: restaurant search
+        await handleRestaurantInput(chatId, userId, text);
       }
 
       res.json({ ok: true });
