@@ -631,7 +631,10 @@ async function handleCompanyNameInput(chatId, userId, companyName) {
 
     console.log('Calling PDF generation API at:', serverUrl);
 
-    // Call the PDF generation API
+    // Call the PDF generation API with 60 second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
     const response = await fetch(`${serverUrl}/api/generate-commercial-proposal`, {
       method: 'POST',
       headers: {
@@ -639,8 +642,11 @@ async function handleCompanyNameInput(chatId, userId, companyName) {
       },
       body: JSON.stringify({
         clientName: companyName
-      })
+      }),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       let errorDetails;
@@ -680,14 +686,29 @@ async function handleCompanyNameInput(chatId, userId, companyName) {
   } catch (error) {
     console.error('Error in handleCompanyNameInput:', error);
 
-    // Send detailed error message for debugging
-    const errorDetails = `❌ <b>ОШИБКА:</b>\n\n` +
-      `<b>Тип:</b> ${error.name}\n` +
-      `<b>Сообщение:</b> ${error.message}\n\n` +
-      `<b>Stack:</b>\n<code>${error.stack ? error.stack.substring(0, 500) : 'N/A'}</code>\n\n` +
-      `<i>Отправьте этот текст разработчику для исправления</i>`;
+    // Check if it's a timeout error
+    if (error.name === 'AbortError') {
+      await sendMessage(
+        chatId,
+        '⏱️ <b>Timeout Error:</b>\n\n' +
+        'PDF generation took too long (>60 seconds).\n\n' +
+        '<b>Possible causes:</b>\n' +
+        '• Vercel function timeout (10s limit on free tier)\n' +
+        '• Puppeteer cold start is slow\n' +
+        '• Chromium failed to load\n\n' +
+        '<b>Solution:</b> Try again in 30 seconds (after warm-up)'
+      );
+    } else {
+      // Send detailed error message for debugging
+      const errorDetails = `❌ <b>ОШИБКА:</b>\n\n` +
+        `<b>Тип:</b> ${error.name}\n` +
+        `<b>Сообщение:</b> ${error.message}\n\n` +
+        `<b>Stack:</b>\n<code>${error.stack ? error.stack.substring(0, 500) : 'N/A'}</code>\n\n` +
+        `<i>Отправьте этот текст разработчику для исправления</i>`;
 
-    await sendMessage(chatId, errorDetails);
+      await sendMessage(chatId, errorDetails);
+    }
+
     delete userSessions[userId];
   }
 }

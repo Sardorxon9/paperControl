@@ -108,20 +108,31 @@ async function generatePDF(clientName) {
 
     console.log('Launching browser...');
 
-    // Launch browser with Chromium
+    // Launch browser with Chromium (optimized for speed)
     const browser = await puppeteer.launch({
-      args: chromium.args,
+      args: [
+        ...chromium.args,
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+        '--disable-setuid-sandbox',
+        '--no-first-run',
+        '--no-sandbox',
+        '--no-zygote',
+        '--single-process'
+      ],
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
+      timeout: 30000, // 30 second timeout for browser launch
     });
 
     console.log('Browser launched. Creating page...');
     const page = await browser.newPage();
 
-    // Set content
+    // Set content (faster: don't wait for network idle)
     await page.setContent(htmlContent, {
-      waitUntil: 'networkidle0'
+      waitUntil: 'domcontentloaded', // Faster than 'networkidle0'
+      timeout: 15000 // 15 second timeout
     });
 
     console.log('Generating PDF...');
