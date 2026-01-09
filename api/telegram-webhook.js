@@ -638,7 +638,8 @@ async function handleCompanyNameInput(chatId, userId, companyName) {
 
     let response;
     try {
-      response = await fetch(`${serverUrl}/api/generate-commercial-proposal`, {
+      // USING V2 endpoint to bypass caching issues
+      response = await fetch(`${serverUrl}/api/generate-proposal-v2`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
