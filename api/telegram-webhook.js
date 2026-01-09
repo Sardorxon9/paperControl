@@ -635,53 +635,51 @@ async function handleCompanyNameInput(chatId, userId, companyName) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
 
-    const response = await fetch(`${serverUrl}/api/generate-commercial-proposal`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        clientName: companyName
-      }),
-      signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
-
-    console.log('Response status:', response.status);
-    console.log('Response ok:', response.ok);
-
-    // Clone the response so we can read the body multiple times if needed
-    const responseClone = response.clone();
-
-    if (!response.ok) {
-      console.log('Response not OK, reading error details...');
-
-      // Try to get error details from cloned response
-      let errorDetails = `Status: ${response.status}`;
-      try {
-        const errorText = await responseClone.text();
-        console.error('Error response body:', errorText);
-
-        // Try to parse as JSON
-        try {
-          const errorJson = JSON.parse(errorText);
-          errorDetails = JSON.stringify(errorJson, null, 2);
-        } catch (e) {
-          errorDetails = errorText || `HTTP ${response.status}`;
-        }
-      } catch (readError) {
-        console.error('Failed to read error response:', readError);
-        errorDetails = `HTTP ${response.status} - Could not read response body`;
-      }
-
-      throw new Error(`PDF API Error [${response.status}]: ${errorDetails}`);
+    let response;
+    try {
+      response = await fetch(`${serverUrl}/api/generate-commercial-proposal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clientName: companyName
+        }),
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeoutId);
     }
 
-    // Get PDF buffer from original response
-    console.log('Reading PDF buffer...');
-    const pdfBuffer = await response.arrayBuffer();
-    console.log('PDF generated, size:', pdfBuffer.byteLength, 'bytes');
+    console.log('Fetch completed. Status:', response.status, 'OK:', response.ok);
+
+    // Read the body ONCE as arrayBuffer (works for both success and error)
+    const bodyBuffer = await response.arrayBuffer();
+    console.log('Body buffer size:', bodyBuffer.byteLength, 'bytes');
+
+    if (!response.ok) {
+      console.log('Response not OK, parsing error...');
+
+      // Convert buffer to text for error message
+      const decoder = new TextDecoder('utf-8');
+      const errorText = decoder.decode(bodyBuffer);
+      console.error('Error response:', errorText.substring(0, 500));
+
+      // Try to parse as JSON for better formatting
+      let errorDetails;
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorDetails = JSON.stringify(errorJson, null, 2);
+      } catch (e) {
+        errorDetails = errorText.substring(0, 1000) || `HTTP ${response.status}`;
+      }
+
+      throw new Error(`PDF API Error [${response.status}]:\n${errorDetails}`);
+    }
+
+    // Success - bodyBuffer contains the PDF
+    console.log('PDF generated successfully, size:', bodyBuffer.byteLength, 'bytes');
+    const pdfBuffer = bodyBuffer;
 
     // Send PDF to user via Telegram
     const fileName = `WhiteRay-Proposal-${companyName.replace(/\s+/g, '-')}.pdf`;
