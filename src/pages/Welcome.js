@@ -153,11 +153,25 @@ export default function Welcome({ user, userRole, onLogout }) {
     return clientData.filter(client => {
       const clientPackageType = client.fetchedPackageType || client.packaging || '';
       const clientProduct = client.fetchedProductName || client.productTypeName || '';
-      
+
       const matchesPackage = !selectedPackageType || clientPackageType === selectedPackageType;
-      const matchesProducts = selectedProducts.length === 0 || 
+      const matchesProducts = selectedProducts.length === 0 ||
                             selectedProducts.some(prod => clientProduct.includes(prod));
-      
+
+      return matchesPackage && matchesProducts;
+    });
+  };
+
+  // Filter product types based on selected package type and products
+  const getFilteredProductTypes = () => {
+    return productTypesData.filter(product => {
+      const productPackageType = product.packaging || '';
+      const productName = product.productName || product.type || '';
+
+      const matchesPackage = !selectedPackageType || productPackageType === selectedPackageType;
+      const matchesProducts = selectedProducts.length === 0 ||
+                            selectedProducts.some(prod => productName.includes(prod));
+
       return matchesPackage && matchesProducts;
     });
   };
@@ -731,9 +745,9 @@ const fetchProductTypesData = async () => {
       return 0;
     });
 
-    const sortedProductTypes = [...productTypesData].sort((a, b) => {
+    const sortedProductTypes = [...getFilteredProductTypes()].sort((a, b) => {
       if (!a || !b) return 0;
-      
+
       if (sortByProduct === 'type') {
         const typeA = (a.type || '').toLowerCase();
         const typeB = (b.type || '').toLowerCase();
@@ -806,48 +820,7 @@ const fetchProductTypesData = async () => {
 
 
   // Updated ClientsTable component
-// Updated ClientsTable component
 const ClientsTable = () => (
-  <>
-    {/* Filter Dropdowns */}
-    <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-      <FormControl sx={{ minWidth: 200 }}>
-        <InputLabel>Тип упаковки</InputLabel>
-        <Select
-          value={selectedPackageType}
-          label="Тип упаковки"
-          onChange={(e) => setSelectedPackageType(e.target.value)}
-        >
-          <MenuItem value="">
-            <em>Все типы упаковки</em>
-          </MenuItem>
-          {packageTypes.map((type) => (
-            <MenuItem key={type} value={type}>
-              {type}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      <FormControl sx={{ minWidth: 200 }}>
-        <InputLabel>Продукт</InputLabel>
-        <Select
-          multiple
-          value={selectedProducts}
-          label="Продукт"
-          onChange={(e) => setSelectedProducts(e.target.value)}
-          renderValue={(selected) => selected.join(', ')}
-        >
-          {products.map((product) => (
-            <MenuItem key={product} value={product}>
-              <Checkbox checked={selectedProducts.indexOf(product) > -1} />
-              <ListItemText primary={product} />
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-    </Box>
-
     <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
       <Table sx={{ minWidth: 650 }}>
         <TableHead>
@@ -1087,7 +1060,6 @@ const ClientsTable = () => (
         </TableBody>
       </Table>
     </TableContainer>
-  </>
 );
 
   const handleImageClick = (imageUrl) => {
@@ -1333,100 +1305,94 @@ const ClientsTable = () => (
               />
             </Box>
 
-            {currentTab === 0 && (
-              <Stack direction="row" alignItems="center" spacing={1.5}>
-                <TextField
-                  size="small"
-                  variant="outlined"
-                  placeholder="Поиск по названию"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  sx={{ minWidth: 240 }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchRoundedIcon color="action" />
-                      </InputAdornment>
-                    ),
-                    endAdornment: searchQuery && (
-                      <InputAdornment position="end">
-                        <IconButton
-                          aria-label="clear search"
-                          onClick={() => setSearchQuery('')}
-                          edge="end"
-                          size="small"
-                        >
-                          <CancelRoundedIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <TextField
+                size="small"
+                variant="outlined"
+                placeholder="Поиск по названию"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                sx={{ minWidth: 240 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchRoundedIcon color="action" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchQuery && (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="clear search"
+                        onClick={() => setSearchQuery('')}
+                        edge="end"
+                        size="small"
+                      >
+                        <CancelRoundedIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
-                {userRole === 'admin' && (
-                  <>
-                  {userRole === 'admin' && (
-  <Button
-    variant="contained"
+              {userRole === 'admin' && (
+                <>
+                  <Button
+                    variant="contained"
+                    startIcon={<TelegramIcon />}
+                    onClick={handleSendLowPaperSummary}
+                    disabled={sendingSummary}
+                    sx={{
+                      backgroundColor: '#24A1DE',
+                      '&:hover': { backgroundColor: '#0674abff' },
+                      fontSize: '0.85rem',
+                      px: 2.5,
+                      py: 0.8,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    {sendingSummary ? 'Отправка...' : 'Сводка бумаг'}
+                  </Button>
 
-    startIcon={<TelegramIcon />}
-    onClick={handleSendLowPaperSummary}
-    disabled={sendingSummary}
-    
-    sx={{
-      
-       backgroundColor: '#24A1DE',
-      '&:hover': { backgroundColor: '#0674abff' },
-      fontSize: '0.85rem',
-      px: 2.5,
-      py: 0.8,
-      borderRadius: 2,
-      textTransform: 'none',
-      whiteSpace: "nowrap"
-    }}
-  >
-    {sendingSummary ? 'Отправка...' : 'Сводка бумаг'}
-  </Button>
-)}
-                    <Button
-                      variant="contained"
-                      startIcon={<AddIcon />}
-                      onClick={handleOpenAddClientModal}
-                      sx={{
-                        backgroundColor: '#04907F',
-                        '&:hover': { backgroundColor: '#037569' },
-                        fontSize: '0.85rem',
-                        px: 2.5,
-                        py: 0.8,
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        whiteSpace: "nowrap"
-                      }}
-                    >
-                      Новый клиент
-                    </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={handleOpenAddClientModal}
+                    sx={{
+                      backgroundColor: '#04907F',
+                      '&:hover': { backgroundColor: '#037569' },
+                      fontSize: '0.85rem',
+                      px: 2.5,
+                      py: 0.8,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    Новый клиент
+                  </Button>
 
-                    <Button
-                      variant="contained"
-                      startIcon={<AddIcon />}
-                      onClick={() => setShowAddStandardRollModal(true)}
-                      sx={{
-                        backgroundColor: '#04907F',
-                        '&:hover': { backgroundColor: '#037569' },
-                        fontSize: '0.85rem',
-                        px: 2.5,
-                        py: 0.8,
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        whiteSpace: "nowrap"
-                      }}
-                    >
-                      Добавить стандартный дизайн
-                    </Button>
-                  </>
-                )}
-              </Stack>
-            )}
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => setShowAddStandardRollModal(true)}
+                    sx={{
+                      backgroundColor: '#04907F',
+                      '&:hover': { backgroundColor: '#037569' },
+                      fontSize: '0.85rem',
+                      px: 2.5,
+                      py: 0.8,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    Добавить стандартный дизайн
+                  </Button>
+                </>
+              )}
+            </Stack>
 
             <Stack direction="row" spacing={2} alignItems="center">
               <Box
@@ -1487,6 +1453,45 @@ const ClientsTable = () => (
             <Tab label="Клиенты и этикетки" />
             <Tab label="Стандартные рулоны" />
           </Tabs>
+        </Box>
+
+        {/* Filter Dropdowns - shown on both tabs */}
+        <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Тип упаковки</InputLabel>
+            <Select
+              value={selectedPackageType}
+              label="Тип упаковки"
+              onChange={(e) => setSelectedPackageType(e.target.value)}
+            >
+              <MenuItem value="">
+                <em>Все типы упаковки</em>
+              </MenuItem>
+              {packageTypes.map((type) => (
+                <MenuItem key={type} value={type}>
+                  {type}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Продукт</InputLabel>
+            <Select
+              multiple
+              value={selectedProducts}
+              label="Продукт"
+              onChange={(e) => setSelectedProducts(e.target.value)}
+              renderValue={(selected) => selected.join(', ')}
+            >
+              {products.map((product) => (
+                <MenuItem key={product} value={product}>
+                  <Checkbox checked={selectedProducts.indexOf(product) > -1} />
+                  <ListItemText primary={product} />
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
 
         {currentTab === 0 && (

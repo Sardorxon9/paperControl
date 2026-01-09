@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhiteRay PRO - Коммерческое предложение</title>
+    <style>
+        /* Google Fonts Alternative - Using system fonts for performance */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #fff;
+            color: #1c2726;
+            line-height: 1.5;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 842px;
+            margin: 0 auto;
+            background: white;
+        }
+
+        /* Page 1 - Cover Page */
+        .page-cover {
+            height: 595px;
+            background: linear-gradient(135deg, #19776b 0%, #087465 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logo-area {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 492px;
+            height: 309px;
+            background: radial-gradient(56.17% 109.64% at 49.88% -0.23%, #FFF 0%, #FFF 41.61%, rgba(255, 255, 255, 0.62) 100%);
+            border-radius: 0 0 69px 79px;
+        }
+
+        .logo-content {
+            position: absolute;
+            top: 41px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 420px;
+            text-align: center;
+        }
+
+        .logo-text {
+            width: 308px;
+            height: 78px;
+            margin: 0 auto;
+        }
+
+        .tagline-section {
+            margin-top: 28px;
+        }
+
+        .tagline-items {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            font-size: 19.4px;
+            font-weight: 600;
+            color: #048877;
+            letter-spacing: 2.3px;
+            margin-bottom: 4px;
+        }
+
+        .dot-separator {
+            width: 4px;
+            height: 4px;
+            background: #048877;
+            border-radius: 50%;
+        }
+
+        .main-heading {
+            font-size: 28.6px;
+            font-weight: 600;
+            color: #0e1a1b;
+            line-height: 1.05;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 14.8px;
+            font-weight: 500;
+            color: rgba(31, 70, 61, 0.77);
+            letter-spacing: 0.74px;
+            text-transform: uppercase;
+        }
+
+        .cover-title-section {
+            position: absolute;
+            top: 357px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 407px;
+            text-align: center;
+        }
+
+        .cover-intro {
+            font-size: 20px;
+            font-weight: 500;
+            color: white;
+            margin-bottom: 0;
+        }
+
+        .cover-title {
+            font-size: 34px;
+            font-weight: 700;
+            color: white;
+            margin: 7px 0;
+        }
+
+        .cover-date {
+            font-size: 14.8px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.76);
+        }
+
+        .cover-website {
+            font-size: 14.8px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.82);
+            margin-top: 38px;
+        }
+
+        /* Page 2 - About Us */
+        .page-about {
+            min-height: 581px;
+            background: #f2fffd;
+            padding: 44px 110px;
+            position: relative;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .about-text {
+            text-align: center;
+            margin-bottom: 14px;
+        }
+
+        .about-text p {
+            font-size: 14px;
+            line-height: 1.4;
+            color: rgba(46, 58, 56, 0.87);
+            font-weight: 500;
+        }
+
+        .brand-name {
+            color: #087465;
+            font-weight: 600;
+        }
+
+        .about-highlight {
+            font-weight: 600;
+            color: rgba(24, 33, 32, 0.92);
+        }
+
+        .products-showcase {
+            background: linear-gradient(177deg, rgba(227, 246, 244, 1) 3.6%, rgba(203, 235, 231, 1) 103%);
+            margin-top: 56px;
+            margin-left: -110px;
+            margin-right: -110px;
+            padding: 40px 110px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 16px;
+            width: 260px;
+            padding: 15px 16px;
+        }
+
+        .product-header {
+            margin-bottom: 3px;
+        }
+
+        .product-title {
+            font-size: 14.8px;
+            font-weight: 800;
+            color: #092520;
+            margin-bottom: 4px;
+        }
+
+        .product-subtitle {
+            font-size: 10px;
+            font-weight: 600;
+            color: #0e917f;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .product-image-container {
+            height: 214px;
+            position: relative;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .product-image-container img {
+            position: absolute;
+            max-width: none;
+        }
+
+        /* Page 3 - Pricing */
+        .page-pricing {
+            min-height: 828px;
+            background: linear-gradient(180deg, #eefffd 0%, #ddf0ee 100%);
+            padding: 79px 102px 40px;
+        }
+
+        .pricing-cards {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .price-card {
+            background: white;
+            border-radius: 13px;
+            width: 303px;
+            box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .price-header {
+            padding: 15px 22px;
+            color: white;
+        }
+
+        .price-header.green {
+            background: #19776b;
+        }
+
+        .price-header.brown {
+            background: #383736;
+        }
+
+        .price-product-name {
+            font-size: 16.8px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .price-product-desc {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .price-body {
+            padding: 22px;
+        }
+
+        .price-main {
+            border-bottom: 1px solid #8995ac;
+            padding-bottom: 12px;
+            margin-bottom: 22px;
+        }
+
+        .price-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1d2830;
+        }
+
+        .price-amount {
+            font-size: 22.4px;
+            font-weight: 700;
+            color: #1c2726;
+            float: right;
+        }
+
+        .specs-list {
+            margin-bottom: 22px;
+        }
+
+        .spec-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 11px;
+            font-size: 13px;
+        }
+
+        .spec-label {
+            color: #606b7b;
+            font-weight: 500;
+        }
+
+        .spec-value {
+            color: #1c2726;
+            font-weight: 700;
+        }
+
+        .cliche-box {
+            background: #f5f6f6;
+            border-radius: 9px;
+            padding: 15px;
+            margin-bottom: 22px;
+        }
+
+        .cliche-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #19776b;
+            margin-bottom: 7px;
+        }
+
+        .cliche-detail {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11.2px;
+        }
+
+        .total-section {
+            text-align: right;
+        }
+
+        .total-label {
+            font-size: 11.2px;
+            color: #6a7282;
+            margin-bottom: 4px;
+        }
+
+        .total-amount {
+            font-size: 20.7px;
+            font-weight: 700;
+            color: #1c2726;
+        }
+
+        .total-amount .cliche-text {
+            font-weight: 400;
+            color: #9ca3af;
+        }
+
+        .cliche-info-box {
+            background: rgba(255, 255, 255, 0.66);
+            border-radius: 10px;
+            padding: 24px 20px;
+            margin-top: 24px;
+        }
+
+        .info-heading {
+            font-size: 16px;
+            font-weight: 700;
+            color: black;
+            margin-bottom: 8px;
+        }
+
+        .info-text {
+            font-size: 14px;
+            color: #40565e;
+            line-height: 1.45;
+            margin-bottom: 12px;
+        }
+
+        .info-highlight {
+            font-size: 16px;
+            font-weight: 600;
+            color: #121d1b;
+            margin-bottom: 16px;
+        }
+
+        .info-emphasis {
+            color: #09594f;
+            font-weight: 700;
+            text-decoration: underline;
+        }
+
+        /* Page 4 - Process & Footer */
+        .page-process {
+            min-height: 736px;
+            background: #ddf0ee;
+            padding: 26px 97px 0;
+        }
+
+        .process-box {
+            background: #f9fafb;
+            border: 1px solid #f3f4f6;
+            border-radius: 13px;
+            padding: 24px;
+            margin-bottom: 10px;
+        }
+
+        .process-title {
+            font-size: 21px;
+            font-weight: 700;
+            color: #1c2726;
+            margin-bottom: 15px;
+        }
+
+        .process-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .process-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 19px;
+            padding: 16px 0;
+        }
+
+        .step-number {
+            width: 27px;
+            height: 27px;
+            background: white;
+            border: 1px solid #d1d5dc;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #19776b;
+            flex-shrink: 0;
+            box-shadow: 0px 1px 2px -1px rgba(0,0,0,0.1);
+        }
+
+        .step-content h4 {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #0d131c;
+            margin-bottom: 2px;
+        }
+
+        .step-content p {
+            font-size: 13.5px;
+            font-weight: 500;
+            color: #516077;
+            line-height: 1.4;
+        }
+
+        .delivery-box {
+            background: white;
+            border-radius: 15px;
+            padding: 24px 27px;
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .delivery-icon {
+            width: 46px;
+            height: 46px;
+            background: #eff4f3;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .delivery-content h4 {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #1c2726;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+
+        .delivery-content p {
+            font-size: 11.5px;
+            color: #4a5565;
+            line-height: 1.6;
+        }
+
+        .delivery-highlight {
+            color: #19776b;
+            font-weight: 700;
+        }
+
+        /* Footer */
+        .footer {
+            background: #1c2726;
+            padding: 24px 56px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-left {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .footer-logo {
+            width: 115px;
+            height: 29px;
+        }
+
+        .footer-address {
+            font-size: 12px;
+            color: #99a1af;
+            font-weight: 500;
+        }
+
+        .footer-cta {
+            font-size: 12px;
+            color: #f2f6fe;
+            font-weight: 600;
+        }
+
+        .footer-right {
+            text-align: right;
+        }
+
+        .footer-phone {
+            font-size: 20px;
+            font-weight: 700;
+            color: #d6eae6;
+            margin-bottom: 4px;
+        }
+
+        .footer-website {
+            font-size: 12px;
+            color: #99a1af;
+            font-weight: 500;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .container {
+                max-width: 100%;
+            }
+
+            .page-cover,
+            .page-about,
+            .page-pricing,
+            .page-process {
+                padding: 40px 20px;
+            }
+
+            .pricing-cards {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .products-showcase {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .footer {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .footer-right {
+                text-align: center;
+            }
+        }
+
+        /* Utility Classes */
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-0 {
+            margin-bottom: 0;
+        }
+
+        .mt-0 {
+            margin-top: 0;
+        }
+
+        /* Print Styles */
+        @media print {
+            .page-cover,
+            .page-about,
+            .page-pricing,
+            .page-process {
+                page-break-after: always;
+            }
+        }
+
+        /* Delivery Icon SVG Placeholder */
+        .delivery-icon svg {
+            width: 23px;
+            height: 23px;
+            fill: #19776b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Page 1: Cover Page -->
+        <section class="page-cover">
+            <div class="logo-area">
+                <div class="logo-content">
+                    <!-- Logo Image Placeholder -->
+                    <div class="logo-text">
+                        <img src="https://www.figma.com/api/mcp/asset/7ad1dcc3-a1a5-4538-b4d8-2282269c241a" alt="WhiteRay Logo" style="width: 100%; height: 100%; object-fit: contain;">
+                    </div>
+                    
+                    <div class="tagline-section">
+                        <div class="tagline-items">
+                            <span>САХАР</span>
+                            <div class="dot-separator"></div>
+                            <span>СОЛЬ</span>
+                            <div class="dot-separator"></div>
+                            <span>СЛИВКИ</span>
+                        </div>
+                        <h2 class="main-heading">с Вашим индивидуальным<br>дизайном</h2>
+                        <p class="subtitle">В СТИК / САШЕТ УПАКОВКАХ</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cover-title-section">
+                <p class="cover-intro">Коммерческое предложение для</p>
+                <h1 class="cover-title" data-client-name>AYDAR-ARNASOY RESORT</h1>
+                <p class="cover-date" data-proposal-date>8 Январь, 2026</p>
+                <p class="cover-website">www.whiteray.uz</p>
+            </div>
+        </section>
+
+        <!-- Page 2: About Us -->
+        <section class="page-about">
+            <h2 class="section-title">Коротко о нас</h2>
+            
+            <div class="about-text">
+                <p>
+                    Компания <span class="brand-name">White Ray</span> основанная в 2012 году и специализируется на фасовке сахара и других сыпучих продуктов в порционные стик и саше упаковки.
+                </p>
+            </div>
+
+            <div class="about-text">
+                <p class="about-highlight">
+                    Более 14 лет мы являемся надёжным партнёром для ресторанов, кафе, резортов, отелей, кофеен и других заведений сегмента HoReCa, обеспечивая их продукцией высокого качества и сервисом, которому доверяют.
+                </p>
+            </div>
+
+            <div class="products-showcase">
+                <!-- Stick Package Card -->
+                <div class="product-card">
+                    <div class="product-header">
+                        <h3 class="product-title">СТИК УПАКОВКА</h3>
+                        <p class="product-subtitle">Длинный, узкий формат</p>
+                    </div>
+                    <div class="product-image-container">
+                        <img src="https://www.figma.com/api/mcp/asset/3707d112-3595-455e-b7e0-01f798146560" alt="Stick Package" style="left: 20px; top: 6px; width: 195px; transform: rotate(7.6deg);">
+                        <img src="https://www.figma.com/api/mcp/asset/97a84cc7-2f45-479c-a56f-18409d3d7b40" alt="Stick Package 2" style="left: -2px; top: -14px; width: 206px; transform: rotate(2.1deg);">
+                    </div>
+                </div>
+
+                <!-- Sachet Package Card -->
+                <div class="product-card">
+                    <div class="product-header">
+                        <h3 class="product-title">САШЕТ УПАКОВКА</h3>
+                        <p class="product-subtitle">прямоугольная форма</p>
+                    </div>
+                    <div class="product-image-container">
+                        <img src="https://www.figma.com/api/mcp/asset/b806f386-10fc-4f77-8506-a8ee1dabb334" alt="Sachet Package" style="left: -10px; top: 0; width: 148px; transform: rotate(341.4deg);">
+                        <img src="https://www.figma.com/api/mcp/asset/d5c47be2-21f1-4af0-aa21-855c2227d013" alt="Sachet Package 2" style="left: 87px; top: 59px; width: 126px; transform: rotate(7.9deg);">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Page 3: Pricing -->
+        <section class="page-pricing">
+            <h2 class="section-title">Что мы предлагаем</h2>
+
+            <div class="pricing-cards">
+                <!-- White Sugar Card -->
+                <div class="price-card">
+                    <div class="price-header green">
+                        <h3 class="price-product-name" data-p1-name>Белый сахар</h3>
+                        <p class="price-product-desc" data-p1-desc>Сахар в стик-упаковке</p>
+                    </div>
+                    <div class="price-body">
+                        <div class="price-main">
+                            <span class="price-label">Цена за шт</span>
+                            <span class="price-amount" data-p1-price>150 сум</span>
+                            <div style="clear: both;"></div>
+                        </div>
+
+                        <div class="specs-list">
+                            <div class="spec-item">
+                                <span class="spec-label">Формат / Вес:</span>
+                                <span class="spec-value" data-p1-format>Стик / 5 г</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Мин. партия:</span>
+                                <span class="spec-value" data-p1-minbatch>20 000 шт</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Стоимость партии:</span>
+                                <span class="spec-value" data-p1-batchcost>3 000 000 сум</span>
+                            </div>
+                        </div>
+
+                        <div class="cliche-box">
+                            <div class="cliche-title">Клише (разово):</div>
+                            <div class="cliche-detail">
+                                <span data-p1-cliche-colors>1 цвет</span>
+                                <span data-p1-cliche-price>250 000 сум</span>
+                            </div>
+                        </div>
+
+                        <div class="total-section">
+                            <div class="total-label">Итого ориентировочно</div>
+                            <div class="total-amount" data-p1-total>3 000 000 UZS <span class="cliche-text">+ клише</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Brown Sugar Card -->
+                <div class="price-card">
+                    <div class="price-header brown">
+                        <h3 class="price-product-name" data-p2-name>Тростниковый сахар</h3>
+                        <p class="price-product-desc" data-p2-desc>Коричневый сахар в стик упаковках</p>
+                    </div>
+                    <div class="price-body">
+                        <div class="price-main">
+                            <span class="price-label">Цена за шт</span>
+                            <span class="price-amount" data-p2-price>400 сум</span>
+                            <div style="clear: both;"></div>
+                        </div>
+
+                        <div class="specs-list">
+                            <div class="spec-item">
+                                <span class="spec-label">Формат / Вес:</span>
+                                <span class="spec-value" data-p2-format>Стик / 4 г</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Мин. партия:</span>
+                                <span class="spec-value" data-p2-minbatch>10 000 шт</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Стоимость партии:</span>
+                                <span class="spec-value" data-p2-batchcost>4 000 000 сум</span>
+                            </div>
+                        </div>
+
+                        <div class="cliche-box">
+                            <div class="cliche-title">Клише (разово):</div>
+                            <div class="cliche-detail">
+                                <span data-p2-cliche-colors>1 цвета</span>
+                                <span data-p2-cliche-price>250 000 сум</span>
+                            </div>
+                        </div>
+
+                        <div class="total-section">
+                            <div class="total-label">Итого</div>
+                            <div class="total-amount" data-p2-total>4 000 000 UZS <span class="cliche-text">+ клише</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cliche-info-box">
+                <h3 class="info-heading">Оплата "Клише" :</h3>
+                <p class="info-text">
+                    Клише - это специальная печатная форма, которая изготавливается индивидуально под дизайн вашей упаковки. Она необходима для переноса изображения, логотипа и текста на упаковку при печати.
+                </p>
+                <p class="info-highlight">
+                    Полная окончательная сумма рассчитвается после рассмотрения вашего дизайна.
+                </p>
+                <p class="info-highlight">
+                    Стоимость одного клише за один цвет составляет <span data-cliche-info-price>250 000 сум</span>.
+                </p>
+                <p class="info-text">
+                    <span class="info-emphasis">Данная оплата производится один раз</span> и не повторяется при последующих заказах, если дизайн и содержание упаковки не меняются.
+                </p>
+            </div>
+        </section>
+
+        <!-- Page 4: Process & Footer -->
+        <section class="page-process">
+            <h2 class="section-title">Процесс работы</h2>
+
+            <div class="process-box">
+                <div class="process-steps">
+                    <div class="process-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Подготовка дизайна</h4>
+                            <p>Мы подготавливаем дизайн упаковки на основе ваших макетов</p>
+                        </div>
+                    </div>
+
+                    <div class="process-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Согласование макета</h4>
+                            <p>Направляем вам на согласование</p>
+                        </div>
+                    </div>
+
+                    <div class="process-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Предоплата</h4>
+                            <p>После утверждения дизайна вносится предоплата не менее 50%</p>
+                        </div>
+                    </div>
+
+                    <div class="process-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h4>Запуск производства</h4>
+                            <p>Запускаем производство</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="delivery-box">
+                <div class="delivery-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" fill="#19776b"/>
+                    </svg>
+                </div>
+                <div class="delivery-content">
+                    <h4>Доставка</h4>
+                    <p>
+                        При заказе от 10 коробок - <span class="delivery-highlight">бесплатно</span> по г. Ташкент
+                    </p>
+                    <p>В остальных случаях - самовывоз.</p>
+                </div>
+            </div>
+
+            <footer class="footer">
+                <div class="footer-left">
+                    <div class="footer-logo">
+                        <img src="https://www.figma.com/api/mcp/asset/70e3341c-4436-47ea-8b19-b715d929b9d3" alt="WhiteRay Logo" style="width: 100%; height: 100%; object-fit: contain;">
+                    </div>
+                    <p class="footer-address">г. Ташкент, Юнусабад 17-6</p>
+                    <p class="footer-cta">Будем рады сотрудничеству!</p>
+                </div>
+                <div class="footer-right">
+                    <p class="footer-phone">+998 97 716 61 33</p>
+                    <p class="footer-website">www.whiteray.uz</p>
+                </div>
+            </footer>
+        </section>
+    </div>
+
+    <script>
+        // ========================================
+        // CONFIGURATION - Edit these values
+        // ========================================
+        
+        const CONFIG = {
+            // Client Information
+            clientName: 'AYDAR-ARNASOY RESORT',
+            proposalDate: new Date('2026-01-08'), // Format: YYYY-MM-DD
+            
+            // Product 1: White Sugar
+            product1: {
+                name: 'Белый сахар',
+                description: 'Сахар в стик-упаковке',
+                pricePerUnit: 150, // сум
+                format: 'Стик / 5 г',
+                minBatch: 20000, // штук
+                clicheColors: 1,
+                clichePricePerColor: 250000 // сум
+            },
+            
+            // Product 2: Brown Sugar
+            product2: {
+                name: 'Тростниковый сахар',
+                description: 'Коричневый сахар в стик упаковках',
+                pricePerUnit: 400, // сум
+                format: 'Стик / 4 г',
+                minBatch: 10000, // штук
+                clicheColors: 1,
+                clichePricePerColor: 250000 // сум
+            }
+        };
+        
+        // ========================================
+        // CALCULATIONS
+        // ========================================
+        
+        function calculateProduct(product) {
+            const batchCost = product.pricePerUnit * product.minBatch;
+            const clicheCost = product.clicheColors * product.clichePricePerColor;
+            const total = batchCost + clicheCost;
+            
+            return {
+                batchCost: batchCost,
+                clicheCost: clicheCost,
+                total: total
+            };
+        }
+        
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        }
+        
+        function formatDate(date) {
+            const months = [
+                'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+            ];
+            
+            const day = date.getDate();
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+            
+            return `${day} ${month}, ${year}`;
+        }
+        
+        // ========================================
+        // UPDATE DOM
+        // ========================================
+        
+        function updatePage() {
+            // Calculate values
+            const product1Calc = calculateProduct(CONFIG.product1);
+            const product2Calc = calculateProduct(CONFIG.product2);
+            
+            // Update Client Name
+            const clientNameElements = document.querySelectorAll('[data-client-name]');
+            clientNameElements.forEach(el => {
+                el.textContent = CONFIG.clientName;
+            });
+            
+            // Update Date
+            const dateElements = document.querySelectorAll('[data-proposal-date]');
+            dateElements.forEach(el => {
+                el.textContent = formatDate(CONFIG.proposalDate);
+            });
+            
+            // Update Product 1 (White Sugar)
+            document.querySelector('[data-p1-name]').textContent = CONFIG.product1.name;
+            document.querySelector('[data-p1-desc]').textContent = CONFIG.product1.description;
+            document.querySelector('[data-p1-price]').textContent = formatNumber(CONFIG.product1.pricePerUnit) + ' сум';
+            document.querySelector('[data-p1-format]').textContent = CONFIG.product1.format;
+            document.querySelector('[data-p1-minbatch]').textContent = formatNumber(CONFIG.product1.minBatch) + ' шт';
+            document.querySelector('[data-p1-batchcost]').textContent = formatNumber(product1Calc.batchCost) + ' сум';
+            document.querySelector('[data-p1-cliche-colors]').textContent = CONFIG.product1.clicheColors + ' цвет';
+            document.querySelector('[data-p1-cliche-price]').textContent = formatNumber(CONFIG.product1.clichePricePerColor) + ' сум';
+            document.querySelector('[data-p1-total]').innerHTML = formatNumber(product1Calc.batchCost) + ' UZS <span class="cliche-text">+ клише</span>';
+            
+            // Update Product 2 (Brown Sugar)
+            document.querySelector('[data-p2-name]').textContent = CONFIG.product2.name;
+            document.querySelector('[data-p2-desc]').textContent = CONFIG.product2.description;
+            document.querySelector('[data-p2-price]').textContent = formatNumber(CONFIG.product2.pricePerUnit) + ' сум';
+            document.querySelector('[data-p2-format]').textContent = CONFIG.product2.format;
+            document.querySelector('[data-p2-minbatch]').textContent = formatNumber(CONFIG.product2.minBatch) + ' шт';
+            document.querySelector('[data-p2-batchcost]').textContent = formatNumber(product2Calc.batchCost) + ' сум';
+            document.querySelector('[data-p2-cliche-colors]').textContent = CONFIG.product2.clicheColors + ' цвета';
+            document.querySelector('[data-p2-cliche-price]').textContent = formatNumber(CONFIG.product2.clichePricePerColor) + ' сум';
+            document.querySelector('[data-p2-total]').innerHTML = formatNumber(product2Calc.batchCost) + ' UZS <span class="cliche-text">+ клише</span>';
+            
+            // Update Cliche Info Section
+            document.querySelector('[data-cliche-info-price]').textContent = formatNumber(CONFIG.product1.clichePricePerColor) + ' сум';
+        }
+        
+        // ========================================
+        // INITIALIZE
+        // ========================================
+        
+        // Run on page load
+        document.addEventListener('DOMContentLoaded', updatePage);
+        
+        // ========================================
+        // OPTIONAL: Smooth Scrolling & Animations
+        // ========================================
+        
+        // Add smooth scrolling behavior
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Add print functionality
+        function printProposal() {
+            window.print();
+        }
+
+        // Add animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.price-card, .product-card, .process-step').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>
