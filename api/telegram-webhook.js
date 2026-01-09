@@ -616,6 +616,7 @@ async function sendDocument(chatId, pdfBuffer, fileName, caption) {
 }
 
 // Handle company name input and generate PDF
+// Updated: 2026-01-09 - Fixed body consumption bug
 async function handleCompanyNameInput(chatId, userId, companyName) {
   try {
     // Send "processing" message
