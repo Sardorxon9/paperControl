@@ -643,9 +643,16 @@ async function handleCompanyNameInput(chatId, userId, companyName) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('PDF generation failed:', errorText);
-      throw new Error(`PDF generation failed: ${response.status}`);
+      let errorDetails;
+      try {
+        const errorJson = await response.json();
+        errorDetails = JSON.stringify(errorJson, null, 2);
+        console.error('PDF generation failed (JSON):', errorJson);
+      } catch (e) {
+        errorDetails = await response.text();
+        console.error('PDF generation failed (Text):', errorDetails);
+      }
+      throw new Error(`PDF API Error [${response.status}]: ${errorDetails}`);
     }
 
     // Get PDF buffer
@@ -663,7 +670,8 @@ async function handleCompanyNameInput(chatId, userId, companyName) {
       await sendMessage(chatId, '✅ Коммерческое предложение успешно создано!');
     } else {
       console.error('Failed to send PDF:', telegramResult);
-      throw new Error('Failed to send PDF via Telegram');
+      const telegramError = JSON.stringify(telegramResult, null, 2);
+      throw new Error(`Telegram sendDocument failed: ${telegramError}`);
     }
 
     // Reset session
@@ -671,10 +679,15 @@ async function handleCompanyNameInput(chatId, userId, companyName) {
 
   } catch (error) {
     console.error('Error in handleCompanyNameInput:', error);
-    await sendMessage(
-      chatId,
-      '❌ Произошла ошибка при создании коммерческого предложения.\nПожалуйста, попробуйте позже.'
-    );
+
+    // Send detailed error message for debugging
+    const errorDetails = `❌ <b>ОШИБКА:</b>\n\n` +
+      `<b>Тип:</b> ${error.name}\n` +
+      `<b>Сообщение:</b> ${error.message}\n\n` +
+      `<b>Stack:</b>\n<code>${error.stack ? error.stack.substring(0, 500) : 'N/A'}</code>\n\n` +
+      `<i>Отправьте этот текст разработчику для исправления</i>`;
+
+    await sendMessage(chatId, errorDetails);
     delete userSessions[userId];
   }
 }
@@ -759,6 +772,29 @@ export default async function handler(req, res) {
     res.json({ ok: true });
   } catch (error) {
     console.error('Error in webhook handler:', error);
-    res.status(500).json({ error: 'Internal server error', details: error.message });
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+
+    // Try to send error to user if we have chat info
+    try {
+      if (update && update.message && update.message.chat) {
+        const chatId = update.message.chat.id;
+        const errorMsg = `❌ <b>Webhook Error:</b>\n\n${error.message}\n\n<code>${error.stack ? error.stack.substring(0, 400) : 'N/A'}</code>`;
+        await sendMessage(chatId, errorMsg);
+      }
+    } catch (sendError) {
+      console.error('Failed to send error message to user:', sendError);
+    }
+
+    res.status(500).json({
+      error: 'Internal server error',
+      errorName: error.name,
+      errorMessage: error.message,
+      errorStack: error.stack ? error.stack.substring(0, 500) : 'N/A',
+      details: error.message
+    });
   }
 }

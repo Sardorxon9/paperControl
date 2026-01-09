@@ -147,6 +147,9 @@ async function generatePDF(clientName) {
 
   } catch (error) {
     console.error('Error generating PDF:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
     throw error;
   }
 }
@@ -198,9 +201,18 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error in generate-commercial-proposal handler:', error);
+    console.error('Full error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+
     res.status(500).json({
       success: false,
       error: 'Failed to generate PDF',
+      errorName: error.name,
+      errorMessage: error.message,
+      errorStack: error.stack ? error.stack.substring(0, 1000) : 'N/A',
       details: error.message
     });
   }
