@@ -649,15 +649,20 @@ async function handleCompanyNameInput(chatId, userId, companyName) {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      // Read body as text first (can only read once!)
+      const errorText = await response.text();
+      console.error('PDF generation failed [Status:', response.status, ']');
+      console.error('Response body:', errorText);
+
+      // Try to parse as JSON for better formatting
       let errorDetails;
       try {
-        const errorJson = await response.json();
+        const errorJson = JSON.parse(errorText);
         errorDetails = JSON.stringify(errorJson, null, 2);
-        console.error('PDF generation failed (JSON):', errorJson);
       } catch (e) {
-        errorDetails = await response.text();
-        console.error('PDF generation failed (Text):', errorDetails);
+        errorDetails = errorText;
       }
+
       throw new Error(`PDF API Error [${response.status}]: ${errorDetails}`);
     }
 
