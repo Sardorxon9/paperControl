@@ -648,25 +648,38 @@ async function handleCompanyNameInput(chatId, userId, companyName) {
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      // Read body as text first (can only read once!)
-      const errorText = await response.text();
-      console.error('PDF generation failed [Status:', response.status, ']');
-      console.error('Response body:', errorText);
+    console.log('Response status:', response.status);
+    console.log('Response ok:', response.ok);
 
-      // Try to parse as JSON for better formatting
-      let errorDetails;
+    // Clone the response so we can read the body multiple times if needed
+    const responseClone = response.clone();
+
+    if (!response.ok) {
+      console.log('Response not OK, reading error details...');
+
+      // Try to get error details from cloned response
+      let errorDetails = `Status: ${response.status}`;
       try {
-        const errorJson = JSON.parse(errorText);
-        errorDetails = JSON.stringify(errorJson, null, 2);
-      } catch (e) {
-        errorDetails = errorText;
+        const errorText = await responseClone.text();
+        console.error('Error response body:', errorText);
+
+        // Try to parse as JSON
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorDetails = JSON.stringify(errorJson, null, 2);
+        } catch (e) {
+          errorDetails = errorText || `HTTP ${response.status}`;
+        }
+      } catch (readError) {
+        console.error('Failed to read error response:', readError);
+        errorDetails = `HTTP ${response.status} - Could not read response body`;
       }
 
       throw new Error(`PDF API Error [${response.status}]: ${errorDetails}`);
     }
 
-    // Get PDF buffer
+    // Get PDF buffer from original response
+    console.log('Reading PDF buffer...');
     const pdfBuffer = await response.arrayBuffer();
     console.log('PDF generated, size:', pdfBuffer.byteLength, 'bytes');
 
