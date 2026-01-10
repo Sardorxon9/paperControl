@@ -165,6 +165,13 @@ export default function Analytics({ user, userRole, onLogout }) {
         };
       }));
 
+      // --- Fetch Catalogue ---
+      const catalogueSnapshot = await getDocs(collection(db, "catalogue"));
+      const catalogueMap = {};
+      catalogueSnapshot.docs.forEach((doc) => {
+        catalogueMap[doc.id] = doc.data();
+      });
+
       // --- Fetch ProductTypes and their logs (standard papers) ---
       const productTypesSnapshot = await getDocs(collection(db, "productTypes"));
       const productTypesList = [];
@@ -197,9 +204,23 @@ export default function Analytics({ user, userRole, onLogout }) {
 
           // Collect logs from last 30 days
           if (logDate >= thirtyDaysAgo) {
+            // Get product details from catalogue if catalogueItemID exists
+            let productName = productType.name || productType.productName || "Стандартная бумага";
+            let productCode = productType.productCode || '';
+            let comment = productType.comment || '';
+
+            if (productType.catalogueItemID && catalogueMap[productType.catalogueItemID]) {
+              const catalogueItem = catalogueMap[productType.catalogueItemID];
+              productName = catalogueItem.productName || productName;
+              productCode = catalogueItem.productCode || productCode;
+              comment = catalogueItem.comment || comment;
+            }
+
             logsList.push({
               date: logDate,
-              restaurantName: productType.name || "Стандартная бумага",
+              restaurantName: productName,
+              productCode: productCode,
+              comment: comment,
               actionType: log.actionType,
               amount: log.amount,
               isProductType: true
@@ -1441,14 +1462,27 @@ const centerTextPlugin = {
                         <TableRow key={index} hover>
                           <TableCell>{log.date.toLocaleString('ru-RU')}</TableCell>
                           <TableCell>
-                            <Typography variant="body2" noWrap sx={{ maxWidth: 250 }}>
-                              {log.restaurantName}
-                              {log.isProductType && (
-                                <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
-                                  (Стандарт)
+                            {log.isProductType && log.productCode ? (
+                              <Box>
+                                <Typography variant="body2" fontWeight="600">
+                                  {log.restaurantName} ({log.productCode})
                                 </Typography>
-                              )}
-                            </Typography>
+                                {log.comment && log.comment !== 'n/a' && (
+                                  <Typography variant="caption" color="text.secondary" display="block">
+                                    {log.comment}
+                                  </Typography>
+                                )}
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" noWrap sx={{ maxWidth: 250 }}>
+                                {log.restaurantName}
+                                {log.isProductType && (
+                                  <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                                    (Стандарт)
+                                  </Typography>
+                                )}
+                              </Typography>
+                            )}
                           </TableCell>
                           <TableCell>
                             {log.actionType === "paperIn" ? (

@@ -273,6 +273,7 @@ const InvoiceHistory = () => {
     let packageType = 'Неизвестная упаковка';
     let gramm = '';
     let productCode = '';
+    let comment = '';
 
     if (invoice.products && Array.isArray(invoice.products) && invoice.products.length === 1) {
       const product = invoice.products[0];
@@ -284,6 +285,7 @@ const InvoiceHistory = () => {
           productName = catalogueItem.productName || 'Неизвестный продукт';
           packageType = catalogueItem.packageType || 'Неизвестная упаковка';
           productCode = catalogueItem.productCode || '';
+          comment = catalogueItem.comment || '';
           gramm = product.gramm;
         }
       } else {
@@ -298,6 +300,23 @@ const InvoiceHistory = () => {
       gramm = invoice.gramm;
     }
 
+    // For standard invoices, show: name (productCode) and comment below
+    if (invoice.type === 'standard' && productCode) {
+      return (
+        <Box>
+          <Typography variant="body2" fontWeight="600">
+            {productName} ({productCode})
+          </Typography>
+          {comment && comment !== 'n/a' && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {comment}
+            </Typography>
+          )}
+        </Box>
+      );
+    }
+
+    // For custom invoices, show old format
     return (
       <Box>
         <Typography variant="body2" fontWeight="600">
@@ -358,6 +377,7 @@ const InvoiceHistory = () => {
           let productName = 'Неизвестный продукт';
           let packageType = 'Неизвестная упаковка';
           let productCode = '';
+          let comment = '';
 
           // Check if this is a standard type invoice with catalogueItemID
           if (invoiceType === 'standard' && product.catalogueItemID) {
@@ -366,6 +386,7 @@ const InvoiceHistory = () => {
               productName = catalogueItem.productName || 'Неизвестный продукт';
               packageType = catalogueItem.packageType || 'Неизвестная упаковка';
               productCode = catalogueItem.productCode || '';
+              comment = catalogueItem.comment || '';
             }
           } else {
             // Custom invoice - use old structure
@@ -378,12 +399,27 @@ const InvoiceHistory = () => {
               <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
                 <Box display="flex" justifyContent="space-between" alignItems="center">
                   <Box>
-                    <Typography variant="body2" fontWeight="600">
-                      {productName}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {productCode && `${productCode} • `}{packageType} • {product.gramm} гр
-                    </Typography>
+                    {invoiceType === 'standard' && productCode ? (
+                      <>
+                        <Typography variant="body2" fontWeight="600">
+                          {productName} ({productCode})
+                        </Typography>
+                        {comment && comment !== 'n/a' && (
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            {comment}
+                          </Typography>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <Typography variant="body2" fontWeight="600">
+                          {productName}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {productCode && `${productCode} • `}{packageType} • {product.gramm} гр
+                        </Typography>
+                      </>
+                    )}
                   </Box>
                   <Box textAlign="right">
                     <Typography variant="body2">
