@@ -36,10 +36,10 @@ import Work from '@mui/icons-material/Work';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import {
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper as MuiPaper, Tooltip as MuiTooltip, IconButton, ToggleButtonGroup, ToggleButton
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper as MuiPaper, Tooltip as MuiTooltip, ToggleButtonGroup, ToggleButton
 } from "@mui/material";
 import { ArrowDownward, ArrowUpward, ViewModule, ViewList } from "@mui/icons-material";
-import { subDays, subMonths, format, startOfDay, endOfDay, startOfWeek, startOfMonth, endOfWeek, endOfMonth } from "date-fns";
+import { subDays, subMonths, format, startOfDay, endOfDay, startOfWeek, startOfMonth, endOfWeek } from "date-fns";
 import { ru } from 'date-fns/locale';
 import { DatePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -89,10 +89,19 @@ export default function Analytics({ user, userRole, onLogout }) {
   const [logsPerPage] = useState(20);
   const [chartScale, setChartScale] = useState('daily'); // daily, weekly, monthly
   const [paperUsageView, setPaperUsageView] = useState('cards'); // 'cards' or 'table'
+  const [yearFilter, setYearFilter] = useState('2026'); // 'all', '2026', '2025'
+  const [totalPaperBought, setTotalPaperBought] = useState(0);
 
   // Helper function to format numbers with spaces
   const formatNumber = (num) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  };
+
+  // Helper function to check if date matches year filter
+  const matchesYearFilter = (date) => {
+    if (yearFilter === 'all') return true;
+    const year = date.getFullYear();
+    return year.toString() === yearFilter;
   };
 
   // Handle opening client usage history modal
@@ -118,6 +127,7 @@ export default function Analytics({ user, userRole, onLogout }) {
       const dailyUsageMap = {};
 
       // --- Iterate through Clients ---
+      let totalPaperBoughtAmount = 0;
       const clientPaperUsage = await Promise.all(clientSnapshot.docs.map(async (clientDoc) => {
         const client = { id: clientDoc.id, ...clientDoc.data() };
         clientList.push(client);
@@ -136,16 +146,23 @@ export default function Analytics({ user, userRole, onLogout }) {
             earliestDate = logDate;
           }
 
-          // Calculate paper usage (only paperOut actions)
+          // Calculate paper usage (only paperOut actions) - filter by year
           if (log.actionType === 'paperOut') {
-            totalPaperUsed += log.amount || 0;
+            if (matchesYearFilter(logDate)) {
+              totalPaperUsed += log.amount || 0;
 
-            // Track daily usage for the chart
-            const dateKey = format(logDate, 'yyyy-MM-dd');
-            if (!dailyUsageMap[dateKey]) {
-              dailyUsageMap[dateKey] = 0;
+              // Track daily usage for the chart
+              const dateKey = format(logDate, 'yyyy-MM-dd');
+              if (!dailyUsageMap[dateKey]) {
+                dailyUsageMap[dateKey] = 0;
+              }
+              dailyUsageMap[dateKey] += log.amount || 0;
             }
-            dailyUsageMap[dateKey] += log.amount || 0;
+          }
+
+          // Calculate total paper bought (paperIn actions) - filter by year
+          if (log.actionType === 'paperIn' && matchesYearFilter(logDate)) {
+            totalPaperBoughtAmount += log.amount || 0;
           }
 
           // Collect logs from last 30 days
@@ -192,14 +209,21 @@ export default function Analytics({ user, userRole, onLogout }) {
             earliestDate = logDate;
           }
 
-          // Calculate paper usage (only paperOut actions)
+          // Calculate paper usage (only paperOut actions) - filter by year
           if (log.actionType === 'paperOut') {
-            // Track daily usage for the chart
-            const dateKey = format(logDate, 'yyyy-MM-dd');
-            if (!dailyUsageMap[dateKey]) {
-              dailyUsageMap[dateKey] = 0;
+            if (matchesYearFilter(logDate)) {
+              // Track daily usage for the chart
+              const dateKey = format(logDate, 'yyyy-MM-dd');
+              if (!dailyUsageMap[dateKey]) {
+                dailyUsageMap[dateKey] = 0;
+              }
+              dailyUsageMap[dateKey] += log.amount || 0;
             }
-            dailyUsageMap[dateKey] += log.amount || 0;
+          }
+
+          // Calculate total paper bought (paperIn actions) - filter by year
+          if (log.actionType === 'paperIn' && matchesYearFilter(logDate)) {
+            totalPaperBoughtAmount += log.amount || 0;
           }
 
           // Collect logs from last 30 days
@@ -265,6 +289,11 @@ export default function Analytics({ user, userRole, onLogout }) {
 
       invoicesSnapshot.docs.forEach((doc) => {
         const invoice = doc.data();
+        const invoiceDate = invoice.dateCreated?.toDate ? invoice.dateCreated.toDate() : new Date(invoice.dateCreated);
+
+        // Skip if doesn't match year filter
+        if (!matchesYearFilter(invoiceDate)) return;
+
         const clientId = invoice.clientId;
         const totalAmount = invoice.totalInvoiceAmount || 0;
         const paymentType = invoice.paymentType;
@@ -348,6 +377,7 @@ export default function Analytics({ user, userRole, onLogout }) {
       setTopPaperUsageClients(topPaperUsage);
       setEarliestLogDate(earliestDate);
       setDailyUsageData(dailyUsageArray);
+      setTotalPaperBought(parseFloat(totalPaperBoughtAmount.toFixed(2)));
     } catch (err) {
       console.error("Error fetching data:", err);
     } finally {
@@ -357,7 +387,7 @@ export default function Analytics({ user, userRole, onLogout }) {
 
   useEffect(() => {
     fetchClientData();
-  }, []);
+  }, [yearFilter]);
 
   // Prepare data for the donut chart
   const chartData = {
@@ -805,9 +835,51 @@ const centerTextPlugin = {
     </Box>
 
     <Container maxWidth={false} sx={{ maxWidth: "2000px", py: 2 }}>
-      <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ mb: 5 }}>
-        Аналитика
-      </Typography>
+      <Box sx={{ mb: 5 }}>
+        <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ mb: 3 }}>
+          Аналитика
+        </Typography>
+
+        {/* Year Filter Toggle */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="body1" fontWeight="600">
+            Период:
+          </Typography>
+          <ToggleButtonGroup
+            value={yearFilter}
+            exclusive
+            onChange={(_, newValue) => {
+              if (newValue !== null) setYearFilter(newValue);
+            }}
+            size="medium"
+            sx={{
+              '& .MuiToggleButton-root': {
+                px: 3,
+                py: 1,
+                minWidth: '100px',
+                color: '#666',
+                borderColor: '#0F9D8C',
+                fontWeight: 500,
+                '&.Mui-selected': {
+                  bgcolor: '#0F9D8C',
+                  color: '#fff',
+                  borderColor: '#0F9D8C',
+                  '&:hover': {
+                    bgcolor: '#0c7a6e'
+                  }
+                },
+                '&:hover': {
+                  bgcolor: 'rgba(15, 157, 140, 0.08)'
+                }
+              }
+            }}
+          >
+            <ToggleButton value="all">Все время</ToggleButton>
+            <ToggleButton value="2026">2026</ToggleButton>
+            <ToggleButton value="2025">2025</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+      </Box>
 
       {loading ? (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
@@ -815,10 +887,10 @@ const centerTextPlugin = {
         </Box>
       ) : (
         <Stack spacing={5}>
-          {/* 1st Container - 3 Stats Cards */}
+          {/* 1st Container - 4 Stats Cards */}
           <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
             <Grid container spacing={4}>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
                 <Box
                   sx={{
                     background: 'linear-gradient(135deg, #0F9D8C 0%, #0c7a6e 100%)',
@@ -843,7 +915,7 @@ const centerTextPlugin = {
                 </Box>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
                 <Box
                   sx={{
                     backgroundColor: '#E2F0EE',
@@ -867,7 +939,7 @@ const centerTextPlugin = {
                 </Box>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
                 <Box
                   sx={{
                     backgroundColor: '#E8F0FE',
@@ -887,6 +959,30 @@ const centerTextPlugin = {
                   </Typography>
                   <Typography variant="body2" color="#5F7A9B" sx={{ mt: 1 }}>
                     {packageStats.total > 0 ? Math.round((packageStats.sachet / packageStats.total) * 100) : 0}% от всех
+                  </Typography>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} md={3}>
+                <Box
+                  sx={{
+                    backgroundColor: '#FFF4E5',
+                    borderRadius: 3,
+                    p: 3,
+                    height: '180px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Typography variant="h6" fontWeight="bold" gutterBottom color="#E65100">
+                    {yearFilter === 'all' ? 'Приход бумаги' : `Приход бумаги за ${yearFilter} год`}
+                  </Typography>
+                  <Typography variant="h3" fontWeight="bold" color="#E65100">
+                    {totalPaperBought}
+                  </Typography>
+                  <Typography variant="body2" color="#B74D00" sx={{ mt: 1 }}>
+                    КГ куплено
                   </Typography>
                 </Box>
               </Grid>
@@ -921,7 +1017,7 @@ const centerTextPlugin = {
               <Grid item xs={12} md={4}>
                 <Box>
                   <Typography variant="h6" fontWeight="bold" gutterBottom>
-                    Форма оплаты
+                    {yearFilter === 'all' ? 'Форма оплаты' : `Форма оплаты за ${yearFilter} год`}
                   </Typography>
                   <Box sx={{ position: 'relative', height: 350, mt: 2 }}>
                     <Doughnut data={paymentChartData} options={paymentChartOptions} plugins={[centerTextPlugin]} />
@@ -934,7 +1030,7 @@ const centerTextPlugin = {
           {/* Top 10 Clients by Invoice Amount - Full Width */}
           <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
             <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Топ 10 клиентов по сумме накладных
+              {yearFilter === 'all' ? 'Топ 10 клиентов по сумме накладных' : `Топ 10 клиентов по сумме накладных за ${yearFilter} год`}
             </Typography>
             <Box sx={{ position: 'relative', height: 500, mt: 3 }}>
               <Bar data={topClientsChartData} options={topClientsChartOptions} />
@@ -946,7 +1042,7 @@ const centerTextPlugin = {
             <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
               <Box>
                 <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  Топ 15 клиентов по расходу бумаги
+                  {yearFilter === 'all' ? 'Топ 15 клиентов по расходу бумаги' : `Топ 15 клиентов по расходу бумаги за ${yearFilter} год`}
                 </Typography>
                 {earliestLogDate && (
                   <Typography variant="caption" color="text.secondary">
@@ -959,7 +1055,7 @@ const centerTextPlugin = {
               <ToggleButtonGroup
                 value={paperUsageView}
                 exclusive
-                onChange={(e, newView) => {
+                onChange={(_, newView) => {
                   if (newView !== null) setPaperUsageView(newView);
                 }}
                 size="small"
@@ -1294,7 +1390,7 @@ const centerTextPlugin = {
           <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
             <Box sx={{ mb: 3 }}>
               <Typography variant="h6" fontWeight="bold" gutterBottom>
-                Расход бумаги (все клиенты)
+                {yearFilter === 'all' ? 'Расход бумаги (все клиенты)' : `Расход бумаги (все клиенты) за ${yearFilter} год`}
               </Typography>
 
               {/* Scale Selector */}
@@ -1403,7 +1499,7 @@ const centerTextPlugin = {
           {/* 4th Container - Sender Company Mini Table */}
           <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
             <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Накладные по организациям
+              {yearFilter === 'all' ? 'Накладные по организациям' : `Накладные по организациям за ${yearFilter} год`}
             </Typography>
             <TableContainer component={MuiPaper} sx={{ mt: 2 }}>
               <Table size="small">
@@ -1442,7 +1538,7 @@ const centerTextPlugin = {
           {/* 5th Container - Recent Logs (Full Width) */}
           <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
             <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Недавние лог-записи (последние 30 дней)
+              Недавние лог-записи
             </Typography>
             <TableContainer component={MuiPaper} sx={{ mt: 2, borderRadius: 2 }}>
               <Table>
