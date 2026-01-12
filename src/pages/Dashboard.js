@@ -100,17 +100,34 @@ const Dashboard = ({
             <Typography variant="body2" color="text.secondary" gutterBottom sx={{ flexGrow: 1 }}>
               Просмотр аналитики и отчетов по клиентам и бумаге
             </Typography>
-            <Button 
-              variant="contained" 
-              sx={{
-                backgroundColor: '#4285F4',
-                '&:hover': { backgroundColor: '#3367d6' }
-              }}
-              startIcon={<AnalyticsIcon />}
-              onClick={() => navigate('/analytics')}
-            >
-              Открыть
-            </Button>
+            <Stack spacing={1}>
+              <Button
+                variant="contained"
+                sx={{
+                  backgroundColor: '#6366f1',
+                  '&:hover': { backgroundColor: '#5558e3' }
+                }}
+                startIcon={<AnalyticsIcon />}
+                onClick={() => navigate('/analytics-v2')}
+              >
+                Аналитика V2 (NEW)
+              </Button>
+              <Button
+                variant="outlined"
+                sx={{
+                  borderColor: '#4285F4',
+                  color: '#4285F4',
+                  '&:hover': {
+                    backgroundColor: 'rgba(66, 133, 244, 0.04)',
+                    borderColor: '#3367d6'
+                  }
+                }}
+                startIcon={<AnalyticsIcon />}
+                onClick={() => navigate('/analytics')}
+              >
+                Аналитика (Classic)
+              </Button>
+            </Stack>
           </Paper>
         )}
 

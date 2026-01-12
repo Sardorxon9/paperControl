@@ -9,6 +9,7 @@ import AuthPages from './pages/AuthPages';
 import Dashboard from './pages/Dashboard';
 import Welcome from './pages/Welcome';
 import Analytics from './pages/Analytics';
+import AnalyticsV2 from './pages/AnalyticsV2';
 import Invoices from './pages/Invoices';
 import InvoiceHistory from './pages/InvoiceHistory';
 import Catalogue from './pages/Catalogue';
@@ -117,6 +118,14 @@ function App() {
 
       <Route path="/analytics" element={
         <Analytics
+          user={user}
+          userRole={userRole}
+          onLogout={handleLogout}
+        />
+      } />
+
+      <Route path="/analytics-v2" element={
+        <AnalyticsV2
           user={user}
           userRole={userRole}
           onLogout={handleLogout}
