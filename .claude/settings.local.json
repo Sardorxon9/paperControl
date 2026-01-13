@@ -32,7 +32,9 @@
       "Bash(dir:*)",
       "Bash(node scripts/findClientsWithDefaultImage.mjs:*)",
       "Bash(node scripts/fetchCatalogueData.mjs:*)",
-      "Bash(node scripts/lightweightCatalogue.mjs:*)"
+      "Bash(node scripts/lightweightCatalogue.mjs:*)",
+      "Bash(del nul)",
+      "WebSearch"
     ]
   }
 }
