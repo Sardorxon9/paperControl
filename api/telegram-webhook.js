@@ -376,6 +376,10 @@ async function formatPaperInfoMessage(client) {
     message += `<b>Организация:</b> ${orgName}\n`;
   }
 
+  if (client.shellNum) {
+    message += `📍 <b>Номер полки:</b> ${client.shellNum}\n`;
+  }
+
   message += `\n📦 <b>Продукт:</b> ${productName || 'Не указан'}`;
 
   if (grammValue) {
