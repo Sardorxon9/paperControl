@@ -357,6 +357,108 @@ async function searchRestaurants(query) {
   }
 }
 
+// Get all productTypes from Firestore
+async function getAllProductTypes() {
+  try {
+    let all = [];
+    let pageToken = null;
+    do {
+      const url = pageToken
+        ? `${FIRESTORE_API}/productTypes?key=${FIREBASE_API_KEY}&pageSize=300&pageToken=${pageToken}`
+        : `${FIRESTORE_API}/productTypes?key=${FIREBASE_API_KEY}&pageSize=300`;
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data.documents) {
+        data.documents.forEach(doc => {
+          const pt = firestoreDocToObject(doc);
+          pt.id = doc.name.split('/').pop();
+          all.push(pt);
+        });
+      }
+      pageToken = data.nextPageToken || null;
+    } while (pageToken);
+    return all;
+  } catch (error) {
+    console.error('Error fetching productTypes:', error);
+    return [];
+  }
+}
+
+// Fuzzy search productTypes by comment field (same algorithm, comment + productCode)
+function fuzzySearchProductTypes(productTypes, query) {
+  if (!query || query.trim() === '') return productTypes;
+
+  const lowerQuery = query.toLowerCase().trim();
+  const transliteratedQuery = transliterateCyrillic(lowerQuery);
+
+  // Normalize: collapse multiple spaces
+  const normalize = str => str.replace(/\s+/g, ' ').trim();
+
+  const scored = productTypes.map(pt => {
+    const comment = normalize((pt.comment || '').toLowerCase());
+    const productCode = normalize((pt.productCode || '').toLowerCase());
+    const commentTranslit = transliterateCyrillic(comment);
+    const codeTranslit = transliterateCyrillic(productCode);
+
+    const normalizedQuery = normalize(lowerQuery);
+    const normalizedTranslit = normalize(transliteratedQuery);
+
+    let bestScore = Infinity;
+
+    const fields = [
+      { orig: comment, translit: commentTranslit },
+      { orig: productCode, translit: codeTranslit }
+    ];
+
+    for (const field of fields) {
+      if (!field.orig) continue;
+
+      if (field.orig === normalizedQuery || field.translit === normalizedTranslit) {
+        bestScore = 0; break;
+      }
+      if (field.orig.startsWith(normalizedQuery) || field.translit.startsWith(normalizedTranslit)) {
+        if (bestScore > 1) bestScore = 1;
+      }
+      if (
+        field.orig.includes(normalizedQuery) || field.translit.includes(normalizedTranslit) ||
+        field.orig.includes(normalizedTranslit) || field.translit.includes(normalizedQuery)
+      ) {
+        if (bestScore > 2) bestScore = 2;
+      }
+      if (bestScore > 2) {
+        const d1 = calculateLevenshteinDistance(normalizedQuery, field.orig);
+        const d2 = calculateLevenshteinDistance(normalizedTranslit, field.translit);
+        const minDist = Math.min(d1, d2);
+        let maxAllowed;
+        if (normalizedQuery.length <= 2) maxAllowed = 0;
+        else if (normalizedQuery.length <= 4) maxAllowed = 1;
+        else maxAllowed = Math.floor(normalizedQuery.length * 0.3);
+        if (minDist <= maxAllowed) {
+          const s = 3 + minDist;
+          if (s < bestScore) bestScore = s;
+        }
+      }
+    }
+
+    return { pt, score: bestScore };
+  });
+
+  return scored
+    .filter(item => item.score !== Infinity)
+    .sort((a, b) => a.score - b.score)
+    .map(item => item.pt);
+}
+
+// Get clients that match a given productType (by productID_2 + packageID)
+async function getClientsForProductType(productType) {
+  const allClients = await getAllClients();
+  return allClients.filter(c => {
+    const matchProduct = productType.productID_2 ? c.productID_2 === productType.productID_2 : true;
+    const matchPackage = productType.packageID ? c.packageID === productType.packageID : true;
+    return matchProduct && matchPackage;
+  });
+}
+
 // Format paper info message
 async function formatPaperInfoMessage(client) {
   const productName = await getProductName(client.productID_2);
@@ -409,7 +511,8 @@ async function formatPaperInfoMessage(client) {
 async function handleStart(chatId, userId) {
   const keyboard = {
     keyboard: [
-      [{ text: '📄 Узнать бумагу' }]
+      [{ text: '📄 Узнать бумагу' }, { text: '📦 Узнать бумагу (Стандарт)' }],
+      [{ text: '📋 Лист комментов' }]
     ],
     resize_keyboard: true,
     persistent: true
@@ -417,7 +520,7 @@ async function handleStart(chatId, userId) {
 
   await sendMessage(
     chatId,
-    '👋 Добро пожаловать!\n\nИспользуйте кнопку <b>"Узнать бумагу"</b> для проверки остатков бумаги в ресторане.',
+    '👋 Добро пожаловать!\n\nВыберите действие:',
     { reply_markup: keyboard }
   );
 }
@@ -430,6 +533,73 @@ async function handleCheckPaper(chatId, userId) {
     chatId,
     '🔍 Пожалуйста, введите название ресторана:'
   );
+}
+
+// Handle "Узнать бумагу (Стандарт)" button
+async function handleCheckPaperStandard(chatId, userId) {
+  userSessions[userId] = { state: 'awaiting_standard_name' };
+  await sendMessage(chatId, '🔍 Введите название продукта или комментарий (например: сарик 300):');
+}
+
+// Handle standard paper (productType comment) input
+async function handleStandardInput(chatId, userId, query) {
+  const allProductTypes = await getAllProductTypes();
+  const withComment = allProductTypes.filter(pt => pt.comment);
+  const matched = fuzzySearchProductTypes(withComment, query);
+
+  if (matched.length === 0) {
+    await sendMessage(chatId, '❌ Продукт не найден. Попробуйте ещё раз или нажмите «Лист комментов» для просмотра списка.');
+    return;
+  }
+
+  // Take best match (top result)
+  const productType = matched[0];
+  const clients = await getClientsForProductType(productType);
+
+  if (clients.length === 0) {
+    await sendMessage(chatId, `❌ Клиенты для продукта <b>${productType.comment}</b> не найдены.`);
+    delete userSessions[userId];
+    return;
+  }
+
+  if (clients.length === 1) {
+    const message = await formatPaperInfoMessage(clients[0]);
+    await sendMessage(chatId, message);
+    delete userSessions[userId];
+  } else {
+    userSessions[userId] = { state: 'selecting_std_product', results: clients };
+
+    const buttons = clients.map((client, index) => {
+      const name = (client.name || client.restaurant || 'Клиент').toUpperCase();
+      const label = `${name}`.substring(0, 60);
+      return [{ text: label, callback_data: `std_select_${index}` }];
+    });
+
+    await sendMessage(
+      chatId,
+      `📋 Найдено <b>${clients.length}</b> клиентов для «${productType.comment}». Выберите:`,
+      { reply_markup: { inline_keyboard: buttons } }
+    );
+  }
+}
+
+// Handle "Лист комментов" button — list all productTypes with a comment
+async function handleListComments(chatId, userId) {
+  const allProductTypes = await getAllProductTypes();
+  const withComment = allProductTypes.filter(pt => pt.comment);
+
+  if (withComment.length === 0) {
+    await sendMessage(chatId, '📭 Нет продуктов с комментариями.');
+    return;
+  }
+
+  let message = `📋 <b>Список продуктов (Стандарт):</b>\n\n`;
+  withComment.forEach((pt, i) => {
+    message += `${i + 1}. <b>${pt.comment}</b>\n`;
+    message += `   🔖 Код: <code>${pt.productCode || '—'}</code>\n`;
+  });
+
+  await sendMessage(chatId, message);
 }
 
 // Handle restaurant name input
@@ -564,7 +734,22 @@ export default async function handler(req, res) {
         body: JSON.stringify({ callback_query_id: callbackQuery.id })
       });
 
-      if (data.startsWith('select_')) {
+      if (data.startsWith('std_select_')) {
+        const index = parseInt(data.replace('std_select_', ''));
+        const session = userSessions[userId];
+        if (!session || !session.results) {
+          await sendMessage(chatId, '❌ Сессия истекла. Пожалуйста, начните снова.');
+        } else {
+          const client = session.results[index];
+          if (!client) {
+            await sendMessage(chatId, '❌ Ошибка выбора. Попробуйте ещё раз.');
+          } else {
+            const message = await formatPaperInfoMessage(client);
+            await sendMessage(chatId, message);
+          }
+          delete userSessions[userId];
+        }
+      } else if (data.startsWith('select_')) {
         const index = parseInt(data.replace('select_', ''));
         await handleProductSelection(chatId, userId, index);
       }
@@ -586,14 +771,19 @@ export default async function handler(req, res) {
       if (text === '/start') {
         await handleStart(chatId, userId);
       } else if (text === '📄 Узнать бумагу') {
-        await sendMessage(
-          chatId,
-          '🔍 Пожалуйста, введите название ресторана:'
-        );
-        userSessions[userId] = { state: 'awaiting_restaurant_name' };
+        await handleCheckPaper(chatId, userId);
+      } else if (text === '📦 Узнать бумагу (Стандарт)') {
+        await handleCheckPaperStandard(chatId, userId);
+      } else if (text === '📋 Лист комментов') {
+        await handleListComments(chatId, userId);
       } else if (text && text.trim().length > 0) {
-        // Default: restaurant search
-        await handleRestaurantInput(chatId, userId, text);
+        const session = userSessions[userId];
+        if (session?.state === 'awaiting_standard_name') {
+          await handleStandardInput(chatId, userId, text);
+        } else {
+          // Default: restaurant search
+          await handleRestaurantInput(chatId, userId, text);
+        }
       }
 
       res.json({ ok: true });

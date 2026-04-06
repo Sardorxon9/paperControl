@@ -34,7 +34,13 @@
       "Bash(node scripts/fetchCatalogueData.mjs:*)",
       "Bash(node scripts/lightweightCatalogue.mjs:*)",
       "Bash(del nul)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(claude mcp:*)",
+      "mcp__firebase__firebase_get_environment",
+      "mcp__firebase__firebase_list_projects",
+      "mcp__firebase__firebase_update_environment",
+      "mcp__firebase__firebase_read_resources",
+      "Bash(node:*)"
     ]
   }
 }
