@@ -449,15 +449,6 @@ function fuzzySearchProductTypes(productTypes, query) {
     .map(item => item.pt);
 }
 
-// Get clients that match a given productType (by productID_2 + packageID)
-async function getClientsForProductType(productType) {
-  const allClients = await getAllClients();
-  return allClients.filter(c => {
-    const matchProduct = productType.productID_2 ? c.productID_2 === productType.productID_2 : true;
-    const matchPackage = productType.packageID ? c.packageID === productType.packageID : true;
-    return matchProduct && matchPackage;
-  });
-}
 
 // Format paper info message
 async function formatPaperInfoMessage(client) {
@@ -564,6 +555,54 @@ async function getClientById(clientId) {
     console.error('Error fetching client by id:', error);
     return null;
   }
+}
+
+// Format paper info message for a standard productType
+// Structure: productTypes/{id}/paperInfo/{docId}/individualRolls
+async function formatStandardProductMessage(pt) {
+  // Fetch paperInfo sub-document
+  const piRes = await fetch(`${FIRESTORE_API}/productTypes/${pt.id}/paperInfo?key=${FIREBASE_API_KEY}&pageSize=1`);
+  const piData = await piRes.json();
+
+  let rolls = [];
+  let totalKg = 0;
+
+  if (piData.documents && piData.documents.length > 0) {
+    const piDoc = piData.documents[0];
+    const piId = piDoc.name.split('/').pop();
+
+    // Fetch individual rolls
+    const rollsRes = await fetch(`${FIRESTORE_API}/productTypes/${pt.id}/paperInfo/${piId}/individualRolls?key=${FIREBASE_API_KEY}&pageSize=100`);
+    const rollsData = await rollsRes.json();
+
+    if (rollsData.documents) {
+      rollsData.documents.forEach(doc => {
+        const rd = firestoreDocToObject(doc);
+        const w = Number(rd.paperRemaining) || 0;
+        if (w > 0) rolls.push({ weight: w });
+      });
+    }
+    totalKg = rolls.reduce((s, r) => s + r.weight, 0);
+  }
+
+  const name = pt.name || pt.productCode || 'Не указан';
+  let msg = `📋 <b>Информация о бумаге (Стандарт)</b>\n\n`;
+  msg += `📦 <b>Продукт:</b> ${name}\n`;
+  if (pt.comment) msg += `💬 <b>Комментарий:</b> ${pt.comment}\n`;
+  msg += `🔖 <b>Код:</b> <code>${pt.productCode || '—'}</code>\n`;
+  if (pt.shellNum) msg += `📍 <b>Полка:</b> ${pt.shellNum}\n`;
+  if (pt.gramm) msg += `⚖️ <b>Граммаж:</b> ${pt.gramm} гр\n`;
+
+  msg += `\n 🧻 <b>Рулоны бумаги:</b>\n`;
+  if (rolls.length === 0) {
+    msg += `  ⚠️ Нет доступных рулонов\n`;
+  } else {
+    rolls.forEach((roll, i) => {
+      msg += `  • Рулон ${i + 1}: <b>${roll.weight.toFixed(2)} кг</b>\n`;
+    });
+  }
+  msg += `\n🔢 <b>ИТОГО:</b> <b>${totalKg.toFixed(2)} кг</b>`;
+  return msg;
 }
 
 // Handle "Лист комментов" button — list all productTypes with a comment
@@ -718,39 +757,14 @@ export default async function handler(req, res) {
       });
 
       if (data.startsWith('stdpt_')) {
-        // User selected a productType — find its clients
+        // User selected a productType — show its own paper info directly
         const ptId = data.replace('stdpt_', '');
         const allPT = await getAllProductTypes();
         const productType = allPT.find(pt => pt.id === ptId);
         if (!productType) {
           await sendMessage(chatId, '❌ Продукт не найден.');
         } else {
-          const clients = await getClientsForProductType(productType);
-          if (clients.length === 0) {
-            await sendMessage(chatId, `❌ Клиенты не найдены для «${productType.comment}».`);
-          } else if (clients.length === 1) {
-            const message = await formatPaperInfoMessage(clients[0]);
-            await sendMessage(chatId, message);
-          } else {
-            const buttons = clients.map(client => {
-              const name = (client.name || client.restaurant || 'Клиент').toUpperCase();
-              return [{ text: name.substring(0, 60), callback_data: `stdcl_${client.id}` }];
-            });
-            await sendMessage(
-              chatId,
-              `📋 Найдено <b>${clients.length}</b> клиентов для «${productType.comment}». Выберите:`,
-              { reply_markup: { inline_keyboard: buttons } }
-            );
-          }
-        }
-      } else if (data.startsWith('stdcl_')) {
-        // User selected a specific client from standard search
-        const clientId = data.replace('stdcl_', '');
-        const client = await getClientById(clientId);
-        if (!client) {
-          await sendMessage(chatId, '❌ Клиент не найден.');
-        } else {
-          const message = await formatPaperInfoMessage(client);
+          const message = await formatStandardProductMessage(productType);
           await sendMessage(chatId, message);
         }
       } else if (data.startsWith('select_')) {
