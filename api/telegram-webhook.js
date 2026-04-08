@@ -535,51 +535,34 @@ async function handleCheckPaper(chatId, userId) {
   );
 }
 
-// Handle "Узнать бумагу (Стандарт)" button
-async function handleCheckPaperStandard(chatId, userId) {
-  userSessions[userId] = { state: 'awaiting_standard_name' };
-  await sendMessage(chatId, '🔍 Введите название продукта или комментарий (например: сарик 300):');
-}
-
-// Handle standard paper (productType comment) input
-async function handleStandardInput(chatId, userId, query) {
+// Handle "Узнать бумагу (Стандарт)" button — shows product list as inline buttons (no session state)
+async function handleCheckPaperStandard(chatId) {
   const allProductTypes = await getAllProductTypes();
   const withComment = allProductTypes.filter(pt => pt.comment);
-  const matched = fuzzySearchProductTypes(withComment, query);
 
-  if (matched.length === 0) {
-    await sendMessage(chatId, '❌ Продукт не найден. Попробуйте ещё раз или нажмите «Лист комментов» для просмотра списка.');
+  if (withComment.length === 0) {
+    await sendMessage(chatId, '❌ Нет продуктов с комментариями.');
     return;
   }
 
-  // Take best match (top result)
-  const productType = matched[0];
-  const clients = await getClientsForProductType(productType);
+  const buttons = withComment.map(pt => [{
+    text: `${pt.comment}  (${pt.productCode || '—'})`,
+    callback_data: `stdpt_${pt.id}`
+  }]);
 
-  if (clients.length === 0) {
-    await sendMessage(chatId, `❌ Клиенты для продукта <b>${productType.comment}</b> не найдены.`);
-    delete userSessions[userId];
-    return;
-  }
+  await sendMessage(chatId, '📦 Выберите продукт:', { reply_markup: { inline_keyboard: buttons } });
+}
 
-  if (clients.length === 1) {
-    const message = await formatPaperInfoMessage(clients[0]);
-    await sendMessage(chatId, message);
-    delete userSessions[userId];
-  } else {
-    userSessions[userId] = { state: 'selecting_std_product', results: clients };
-
-    const buttons = clients.map((client, index) => {
-      const name = (client.name || client.restaurant || 'Клиент').toUpperCase();
-      const label = `${name}`.substring(0, 60);
-      return [{ text: label, callback_data: `std_select_${index}` }];
-    });
-
-    await sendMessage(
-      chatId,
-      `📋 Найдено <b>${clients.length}</b> клиентов для «${productType.comment}». Выберите:`,
-      { reply_markup: { inline_keyboard: buttons } }
-    );
+// Get a single client by Firestore document ID
+async function getClientById(clientId) {
+  try {
+    const response = await fetch(`${FIRESTORE_API}/clients/${clientId}?key=${FIREBASE_API_KEY}`);
+    const data = await response.json();
+    if (!data.fields) return null;
+    return { id: clientId, ...firestoreDocToObject(data) };
+  } catch (error) {
+    console.error('Error fetching client by id:', error);
+    return null;
   }
 }
 
@@ -734,20 +717,41 @@ export default async function handler(req, res) {
         body: JSON.stringify({ callback_query_id: callbackQuery.id })
       });
 
-      if (data.startsWith('std_select_')) {
-        const index = parseInt(data.replace('std_select_', ''));
-        const session = userSessions[userId];
-        if (!session || !session.results) {
-          await sendMessage(chatId, '❌ Сессия истекла. Пожалуйста, начните снова.');
+      if (data.startsWith('stdpt_')) {
+        // User selected a productType — find its clients
+        const ptId = data.replace('stdpt_', '');
+        const allPT = await getAllProductTypes();
+        const productType = allPT.find(pt => pt.id === ptId);
+        if (!productType) {
+          await sendMessage(chatId, '❌ Продукт не найден.');
         } else {
-          const client = session.results[index];
-          if (!client) {
-            await sendMessage(chatId, '❌ Ошибка выбора. Попробуйте ещё раз.');
-          } else {
-            const message = await formatPaperInfoMessage(client);
+          const clients = await getClientsForProductType(productType);
+          if (clients.length === 0) {
+            await sendMessage(chatId, `❌ Клиенты не найдены для «${productType.comment}».`);
+          } else if (clients.length === 1) {
+            const message = await formatPaperInfoMessage(clients[0]);
             await sendMessage(chatId, message);
+          } else {
+            const buttons = clients.map(client => {
+              const name = (client.name || client.restaurant || 'Клиент').toUpperCase();
+              return [{ text: name.substring(0, 60), callback_data: `stdcl_${client.id}` }];
+            });
+            await sendMessage(
+              chatId,
+              `📋 Найдено <b>${clients.length}</b> клиентов для «${productType.comment}». Выберите:`,
+              { reply_markup: { inline_keyboard: buttons } }
+            );
           }
-          delete userSessions[userId];
+        }
+      } else if (data.startsWith('stdcl_')) {
+        // User selected a specific client from standard search
+        const clientId = data.replace('stdcl_', '');
+        const client = await getClientById(clientId);
+        if (!client) {
+          await sendMessage(chatId, '❌ Клиент не найден.');
+        } else {
+          const message = await formatPaperInfoMessage(client);
+          await sendMessage(chatId, message);
         }
       } else if (data.startsWith('select_')) {
         const index = parseInt(data.replace('select_', ''));
@@ -773,17 +777,12 @@ export default async function handler(req, res) {
       } else if (text === '📄 Узнать бумагу') {
         await handleCheckPaper(chatId, userId);
       } else if (text === '📦 Узнать бумагу (Стандарт)') {
-        await handleCheckPaperStandard(chatId, userId);
+        await handleCheckPaperStandard(chatId);
       } else if (text === '📋 Лист комментов') {
         await handleListComments(chatId, userId);
       } else if (text && text.trim().length > 0) {
-        const session = userSessions[userId];
-        if (session?.state === 'awaiting_standard_name') {
-          await handleStandardInput(chatId, userId, text);
-        } else {
-          // Default: restaurant search
-          await handleRestaurantInput(chatId, userId, text);
-        }
+        // Default: restaurant search
+        await handleRestaurantInput(chatId, userId, text);
       }
 
       res.json({ ok: true });
