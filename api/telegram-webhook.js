@@ -740,18 +740,57 @@ async function handleProductSelection(chatId, userId, selectedIndex) {
 
 const ORDERS_GROUP_CHAT_ID = process.env.ORDERS_GROUP_CHAT_ID;
 
-// Display + canonical label maps
-const PACKAGE_LABELS = { stick: 'Stick', sachet: 'Sachet' };               // confirmation card
-const PACKAGE_GROUP = { stick: 'stick', sachet: 'sachet' };                // group message (parens)
-const SUGAR_LABELS = { white: 'Oq', brown: 'Jigarrang' };                  // confirmation card
-const SUGAR_PRODUCT_NAME = { white: 'Oq shakar', brown: 'Jigarrang shakar' }; // productName + group
-// Compact codes for callback_data (Telegram 64-byte limit)
-const PKG_CODE = { stick: 'st', sachet: 'sa' };
-const PKG_FROM_CODE = { st: 'stick', sa: 'sachet' };
-const SUGAR_CODE = { white: 'w', brown: 'b' };
-const SUGAR_FROM_CODE = { w: 'white', b: 'brown' };
+// Known packageTypes doc ids (see DATABASE_GUIDE) — fast path before a Firestore read
+const PACKAGE_ID_STICK = 'sKHbhJ8Ik7QpVUCEgbpP';
+const PACKAGE_ID_SACHET = 'fhLBOV7ai4N7MZDPkSCL';
 
-const ORDER_EXAMPLE = '<code>Restoran / 14 та / стик / ок</code>';
+const ORDER_EXAMPLE = '<code>Лес айлес / 14 та</code>';
+
+// Normalize any package label/string to canonical 'stick' | 'sachet' | ''
+function normalizePackage(raw) {
+  if (!raw) return '';
+  const s = raw.toLowerCase().trim();
+  if (/стик|stik|stick/.test(s)) return 'stick';
+  if (/саше|сашет|sashe|sachet/.test(s)) return 'sachet';
+  return '';
+}
+
+// Best-effort sugar color from a product name (white/brown), else null
+function detectSugarFromName(name) {
+  if (!name) return null;
+  const s = transliterateCyrillic(name.toLowerCase());
+  if (/jigar|korich|brown/.test(s)) return 'brown';
+  if (/\boq\b|oq |belyy|bel|white/.test(s)) return 'white';
+  return null;
+}
+
+// Resolve the product/package fixed on a client document (the "1 fixed product").
+// Handles both unique design (productID_2 + packageID) and standard design
+// (denormalized productName + packageType on the client).
+async function resolveClientProduct(client) {
+  let productId = null, productName = '', packageRaw = '';
+
+  if (client.productID_2) {
+    // Unique design
+    productId = client.productID_2;
+    productName = await getProductName(client.productID_2);
+    if (client.packageID === PACKAGE_ID_STICK) packageRaw = 'стик';
+    else if (client.packageID === PACKAGE_ID_SACHET) packageRaw = 'саше';
+    else if (client.packageID) packageRaw = await getPackageType(client.packageID);
+  } else if (client.productName || client.productTypeID) {
+    // Standard design (denormalized fields)
+    productId = client.productTypeID || null;
+    productName = client.productName || '';
+    packageRaw = client.packageType || '';
+  }
+
+  return {
+    productId,
+    productName,
+    packageType: normalizePackage(packageRaw),
+    sugarType: detectSugarFromName(productName)
+  };
+}
 
 // Fetch all users (small collection) — used for admin authorization
 async function getAllUsers() {
@@ -821,6 +860,8 @@ function parseOrderInput(text) {
   let packageType = null, sugarType = null, quantity = null;
   const restParts = [];
 
+  // package/sugar are OPTIONAL — we still classify-and-consume them so they don't
+  // pollute the restaurant name, and use them later to disambiguate when needed.
   for (const seg of segments) {
     if (packageType === null) { const p = classifyPackage(seg); if (p) { packageType = p; continue; } }
     if (sugarType === null) { const s = classifySugar(seg); if (s) { sugarType = s; continue; } }
@@ -832,8 +873,6 @@ function parseOrderInput(text) {
   const missing = [];
   if (!restaurant) missing.push('mijoz nomi');
   if (quantity === null) missing.push('miqdor (masalan: 14 та)');
-  if (!packageType) missing.push('tur (стик yoki сашет)');
-  if (!sugarType) missing.push('shakar rangi (ок yoki корич)');
 
   return { restaurant, quantity, packageType, sugarType, missing };
 }
@@ -842,9 +881,13 @@ function getClientFullName(client) {
   return client.name || client.displayName || client.restaurant || client.orgName || "Noma'lum";
 }
 
-// Treat any text with 2+ slashes as a create-order attempt (the format has 3).
+// An order line is "restaurant / qty ..." — detect by a slash plus a quantity-looking
+// segment, so a plain search like "AC/DC" is NOT mistaken for an order.
 function isCreateOrderText(text) {
-  return typeof text === 'string' && (text.match(/\//g) || []).length >= 2;
+  if (typeof text !== 'string' || !text.includes('/')) return false;
+  const segs = text.split('/').map(s => s.trim()).filter(Boolean);
+  if (segs.length < 2) return false;
+  return segs.some(s => classifyQuantity(s) !== null);
 }
 
 // Exact-match check for restaurant confidence — reuses transliterateCyrillic only
@@ -863,15 +906,17 @@ function extractRawInput(messageText) {
   return line ? line.replace(/^📝\s*/, '').trim() : '';
 }
 
-function buildConfirmCard(client, parsed, rawInput) {
+// Product is resolved from the client record (the "fixed product"), so the card/
+// callback only need quantity + clientId.
+function buildConfirmCard(client, prod, quantity, rawInput) {
+  const pkg = prod.packageType ? ` (${prod.packageType})` : '';
   const text =
     `<b>Buyurtma:</b>\n` +
     `🏢 Mijoz: ${getClientFullName(client)}\n` +
-    `📦 Tur: ${PACKAGE_LABELS[parsed.packageType]}\n` +
-    `🍬 Shakar: ${SUGAR_LABELS[parsed.sugarType]}\n` +
-    `🔢 Miqdor: ${parsed.quantity} quti\n` +
+    `📦 Mahsulot: ${prod.productName || '—'}${pkg}\n` +
+    `🔢 Miqdor: <b>${quantity}</b> ta\n` +
     `📝 ${rawInput}`;
-  const cb = `oc:k:${PKG_CODE[parsed.packageType]}:${SUGAR_CODE[parsed.sugarType]}:${parsed.quantity}:${client.id}`;
+  const cb = `oc:k:${quantity}:${client.id}`;
   const reply_markup = {
     inline_keyboard: [[
       { text: '✅ Tasdiqlash', callback_data: cb },
@@ -882,16 +927,14 @@ function buildConfirmCard(client, parsed, rawInput) {
 }
 
 function parseOrderCallback(data) {
-  // oc:e | oc:k:<pkg>:<sugar>:<qty>:<clientId...> | oc:p:<pkg>:<sugar>:<qty>:<clientId...>
+  // oc:e | oc:k:<qty>:<clientId...> | oc:p:<qty>:<clientId...>
   const parts = data.split(':');
   const action = parts[1];
   if (action === 'e') return { action };
   return {
     action,
-    packageType: PKG_FROM_CODE[parts[2]],
-    sugarType: SUGAR_FROM_CODE[parts[3]],
-    quantity: parseInt(parts[4], 10),
-    clientId: parts.slice(5).join(':') // clientId last so stray ':' can't corrupt other fields
+    quantity: parseInt(parts[2], 10),
+    clientId: parts.slice(3).join(':') // clientId last so stray ':' can't corrupt other fields
   };
 }
 
@@ -916,10 +959,10 @@ async function createOrderDoc(order) {
     fields: {
       clientId: { stringValue: order.clientId },
       clientName: { stringValue: order.clientName },
-      packageType: { stringValue: order.packageType },
-      sugarType: { stringValue: order.sugarType },
+      packageType: { stringValue: order.packageType || '' },
+      sugarType: order.sugarType ? { stringValue: order.sugarType } : { nullValue: null },
       productId: order.productId ? { stringValue: order.productId } : { nullValue: null },
-      productName: { stringValue: order.productName },
+      productName: { stringValue: order.productName || '' },
       quantity: { integerValue: String(order.quantity) },
       unit: { stringValue: 'box' },
       status: { stringValue: 'new' },
@@ -961,13 +1004,13 @@ async function postOrderToGroup(order) {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit'
   });
+  const pkg = order.packageType ? ` (${order.packageType})` : '';
   const text =
-    `🆕 Yangi buyurtma\n\n` +
-    `🏢 ${order.clientName}\n` +
-    `📦 ${order.productName} (${PACKAGE_GROUP[order.packageType]})\n` +
-    `🔢 ${order.quantity} quti\n` +
-    `🗓 ${dateStr}\n` +
-    `👤 ${order.adminName}`;
+    `🆕 Yangi buyurtma\n\n\n` +
+    `<b>${order.clientName}</b>\n\n` +
+    `${order.productName || '—'}${pkg}\n` +
+    `📦 <b>${order.quantity}</b> ta\n\n` +
+    `${dateStr}`;
 
   const result = await sendMessage(ORDERS_GROUP_CHAT_ID, text);
   if (!result || !result.ok) {
@@ -985,9 +1028,37 @@ async function handleCreateOrderPrompt(chatId, userId) {
   }
   await sendMessage(
     chatId,
-    `➕ <b>Yangi buyurtma</b>\n\nBuyurtmani bitta qatorda yuboring:\n${ORDER_EXAMPLE}\n\n` +
-    `• <b>Tur:</b> стик yoki сашет\n• <b>Shakar:</b> ок (oq) yoki корич (jigarrang)`
+    `➕ <b>Yangi buyurtma</b>\n\nMijoz nomi va miqdorni yuboring:\n${ORDER_EXAMPLE}\n\n` +
+    `Mahsulot mijozga biriktirilgan bo'lsa, avtomatik tanlanadi. ` +
+    `Bir nechta mahsulot bo'lsa, qaysi birini tanlash so'raladi.`
   );
+}
+
+// Resolve which client/product(s) an order maps to. Prefers exact restaurant
+// matches; attaches each client's fixed product; optionally narrows by any
+// package/sugar the admin typed. Returns [{ client, prod }].
+async function resolveCandidates(clients, parsed) {
+  const matches = fuzzySearchClients(clients, parsed.restaurant);
+  if (!matches.length) return [];
+
+  const exact = matches.filter(c => isExactClientMatch(c, parsed.restaurant));
+  const base = exact.length ? exact : matches.slice(0, 6);
+
+  let withProd = await Promise.all(
+    base.map(async client => ({ client, prod: await resolveClientProduct(client) }))
+  );
+
+  // Use typed package/sugar (if any) only to disambiguate; ignore if it empties the set.
+  if (parsed.packageType) {
+    const f = withProd.filter(x => x.prod.packageType === parsed.packageType);
+    if (f.length) withProd = f;
+  }
+  if (parsed.sugarType) {
+    const f = withProd.filter(x => x.prod.sugarType === parsed.sugarType);
+    if (f.length) withProd = f;
+  }
+
+  return withProd;
 }
 
 // Entry: admin typed the order line — gate -> parse -> resolve -> confirmation card
@@ -1018,32 +1089,29 @@ async function handleCreateOrderEntry(chatId, userId, text) {
       return;
     }
 
-    // 3) RESOLVE restaurant via existing fuzzy matcher
+    // 3) RESOLVE the client's fixed product(s) for the matched restaurant
     const clients = await getAllClients();
-    const matches = fuzzySearchClients(clients, parsed.restaurant);
-    if (matches.length === 0) {
+    const candidates = await resolveCandidates(clients, parsed);
+    if (candidates.length === 0) {
       await sendMessage(chatId, `❌ "<b>${parsed.restaurant}</b>" restorani topilmadi. Nomini tekshirib qayta yuboring.`);
       return;
     }
 
-    // 4) CONFIDENCE: single match or one exact match -> card; otherwise let admin choose
-    const exact = matches.filter(c => isExactClientMatch(c, parsed.restaurant));
-    let chosen = null;
-    if (matches.length === 1) chosen = matches[0];
-    else if (exact.length === 1) chosen = exact[0];
-
-    if (chosen) {
-      const card = buildConfirmCard(chosen, parsed, text.trim());
+    if (candidates.length === 1) {
+      // Exactly one product tied to this client -> auto-complete, show card
+      const { client, prod } = candidates[0];
+      const card = buildConfirmCard(client, prod, parsed.quantity, text.trim());
       await sendMessage(chatId, card.text, { reply_markup: card.reply_markup });
     } else {
-      const top = matches.slice(0, 3);
-      const buttons = top.map(c => [{
-        text: getClientFullName(c).substring(0, 60),
-        callback_data: `oc:p:${PKG_CODE[parsed.packageType]}:${SUGAR_CODE[parsed.sugarType]}:${parsed.quantity}:${c.id}`
-      }]);
+      // Multiple products -> let admin choose which one belongs to this order
+      const buttons = candidates.slice(0, 6).map(({ client, prod }) => {
+        const pkg = prod.packageType ? ` (${prod.packageType})` : '';
+        const label = `${getClientFullName(client)} — ${prod.productName || '?'}${pkg}`;
+        return [{ text: label.substring(0, 60), callback_data: `oc:p:${parsed.quantity}:${client.id}` }];
+      });
       await sendMessage(
         chatId,
-        `📝 ${text.trim()}\n\n🤔 Bir nechta mijoz topildi. Qaysi biri?`,
+        `📝 ${text.trim()}\n\n🤔 Bir nechta mahsulot topildi. Qaysi birini tanlaysiz?`,
         { reply_markup: { inline_keyboard: buttons } }
       );
     }
@@ -1065,8 +1133,9 @@ async function handleOrderPick(chatId, userId, parsed, candidateText) {
     await sendMessage(chatId, "❌ Mijoz topilmadi. Qayta urinib ko'ring.");
     return;
   }
+  const prod = await resolveClientProduct(client);
   const rawInput = extractRawInput(candidateText);
-  const card = buildConfirmCard(client, parsed, rawInput);
+  const card = buildConfirmCard(client, prod, parsed.quantity, rawInput);
   await sendMessage(chatId, card.text, { reply_markup: card.reply_markup });
 }
 
@@ -1094,13 +1163,15 @@ async function handleOrderConfirm(chatId, userId, parsed, cardMessageId, cardTex
       return;
     }
 
+    // Auto-complete the product/package from the client's fixed product
+    const prod = await resolveClientProduct(client);
     const order = {
       clientId: client.id,
       clientName: getClientFullName(client),
-      packageType: parsed.packageType,
-      sugarType: parsed.sugarType,
-      productId: null, // no clean color->product mapping exists; derive name from sugar (see schema note)
-      productName: SUGAR_PRODUCT_NAME[parsed.sugarType],
+      packageType: prod.packageType,
+      sugarType: prod.sugarType,
+      productId: prod.productId,
+      productName: prod.productName,
       quantity: parsed.quantity,
       rawInput,
       telegramUserId: userId,
@@ -1128,11 +1199,12 @@ async function handleOrderConfirm(chatId, userId, parsed, cardMessageId, cardTex
 
     console.log(`[create-order] order created id=${orderId} client=${order.clientName} by=${order.adminName} msgId=${messageId}`);
 
+    const summaryPkg = order.packageType ? ` (${order.packageType})` : '';
     const summary =
       `✅ <b>Buyurtma yuborildi</b>\n\n` +
-      `🏢 ${order.clientName}\n` +
-      `📦 ${order.productName} (${PACKAGE_GROUP[order.packageType]})\n` +
-      `🔢 ${order.quantity} quti`;
+      `<b>${order.clientName}</b>\n` +
+      `${order.productName || '—'}${summaryPkg}\n` +
+      `📦 <b>${order.quantity}</b> ta`;
     await editOrderCard(
       chatId,
       cardMessageId,
