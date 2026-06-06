@@ -1,0 +1,1 @@
+- [Firestore access model](firestore-access-model.md) — REST-only, no Admin SDK, open rules, stateless serverless, chatId auth field

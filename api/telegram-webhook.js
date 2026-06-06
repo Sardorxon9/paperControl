@@ -509,6 +509,16 @@ async function handleStart(chatId, userId) {
     persistent: true
   };
 
+  // Show the create-order button to admins only
+  try {
+    const admin = await getAdminUser(userId);
+    if (admin) {
+      keyboard.keyboard.unshift([{ text: '➕ Yangi buyurtma' }]);
+    }
+  } catch (e) {
+    console.error('[create-order] start admin check failed:', e);
+  }
+
   await sendMessage(
     chatId,
     '👋 Добро пожаловать!\n\nВыберите действие:',
@@ -722,6 +732,418 @@ async function handleProductSelection(chatId, userId, selectedIndex) {
   delete userSessions[userId];
 }
 
+// ============================================================================
+// CREATE ORDER FEATURE (Part 1) — isolated flow: capture -> confirm -> write + post
+// Stateless: serverless can't rely on userSessions, so order state is carried in
+// inline-button callback_data and the exact rawInput is recovered from the card text.
+// ============================================================================
+
+const ORDERS_GROUP_CHAT_ID = process.env.ORDERS_GROUP_CHAT_ID;
+
+// Display + canonical label maps
+const PACKAGE_LABELS = { stick: 'Stick', sachet: 'Sachet' };               // confirmation card
+const PACKAGE_GROUP = { stick: 'stick', sachet: 'sachet' };                // group message (parens)
+const SUGAR_LABELS = { white: 'Oq', brown: 'Jigarrang' };                  // confirmation card
+const SUGAR_PRODUCT_NAME = { white: 'Oq shakar', brown: 'Jigarrang shakar' }; // productName + group
+// Compact codes for callback_data (Telegram 64-byte limit)
+const PKG_CODE = { stick: 'st', sachet: 'sa' };
+const PKG_FROM_CODE = { st: 'stick', sa: 'sachet' };
+const SUGAR_CODE = { white: 'w', brown: 'b' };
+const SUGAR_FROM_CODE = { w: 'white', b: 'brown' };
+
+const ORDER_EXAMPLE = '<code>Restoran / 14 та / стик / ок</code>';
+
+// Fetch all users (small collection) — used for admin authorization
+async function getAllUsers() {
+  let all = [];
+  let pageToken = null;
+  do {
+    const url = pageToken
+      ? `${FIRESTORE_API}/users?key=${FIREBASE_API_KEY}&pageSize=300&pageToken=${pageToken}`
+      : `${FIRESTORE_API}/users?key=${FIREBASE_API_KEY}&pageSize=300`;
+    const response = await fetch(url);
+    const data = await response.json();
+    if (data.documents) {
+      data.documents.forEach(doc => {
+        const u = firestoreDocToObject(doc);
+        u.id = doc.name.split('/').pop();
+        all.push(u);
+      });
+    }
+    pageToken = data.nextPageToken || null;
+  } while (pageToken);
+  return all;
+}
+
+// Authorization gate: return the admin user doc for this Telegram user id, or null.
+// Real field is `chatId` (string) per the users schema; some docs also have `chatID`.
+// Compare both against from.id (the Telegram USER id).
+async function getAdminUser(telegramUserId) {
+  const users = await getAllUsers();
+  const idStr = String(telegramUserId);
+  return users.find(u =>
+    u.role === 'admin' && (String(u.chatId) === idStr || String(u.chatID) === idStr)
+  ) || null;
+}
+
+// --- Robust parsing (position-independent) ---
+function classifyPackage(seg) {
+  const s = seg.toLowerCase().trim();
+  if (/^(стик|stik|stick)/.test(s)) return 'stick';
+  if (/^(саше|сашет|sashe|sachet)/.test(s)) return 'sachet';
+  return null;
+}
+
+function classifySugar(seg) {
+  const s = seg.toLowerCase().trim();
+  // brown first (longer tokens, avoids any overlap with white tokens)
+  if (/^(корич|кор\.|korich|jigar|brown)/.test(s)) return 'brown';
+  if (['ок', 'оқ', 'oq', 'ok', 'белый', 'бел', 'white'].includes(s)) return 'white';
+  return null;
+}
+
+function classifyQuantity(seg) {
+  // Strip known unit words, then require a pure-number remainder so restaurant
+  // names that merely contain a number (e.g. "Cafe 24") are NOT treated as qty.
+  const cleaned = seg
+    .toLowerCase()
+    .replace(/(коробок|коробк|штук|шт|dona|дона|quti|box|та|ta)/gi, '')
+    .replace(/[\s.]/g, '');
+  if (/^\d+$/.test(cleaned)) {
+    const n = parseInt(cleaned, 10);
+    if (n > 0) return n;
+  }
+  return null;
+}
+
+function parseOrderInput(text) {
+  const segments = text.split('/').map(s => s.trim()).filter(Boolean);
+  let packageType = null, sugarType = null, quantity = null;
+  const restParts = [];
+
+  for (const seg of segments) {
+    if (packageType === null) { const p = classifyPackage(seg); if (p) { packageType = p; continue; } }
+    if (sugarType === null) { const s = classifySugar(seg); if (s) { sugarType = s; continue; } }
+    if (quantity === null) { const q = classifyQuantity(seg); if (q !== null) { quantity = q; continue; } }
+    restParts.push(seg);
+  }
+
+  const restaurant = restParts.join(' ').trim();
+  const missing = [];
+  if (!restaurant) missing.push('mijoz nomi');
+  if (quantity === null) missing.push('miqdor (masalan: 14 та)');
+  if (!packageType) missing.push('tur (стик yoki сашет)');
+  if (!sugarType) missing.push('shakar rangi (ок yoki корич)');
+
+  return { restaurant, quantity, packageType, sugarType, missing };
+}
+
+function getClientFullName(client) {
+  return client.name || client.displayName || client.restaurant || client.orgName || "Noma'lum";
+}
+
+// Treat any text with 2+ slashes as a create-order attempt (the format has 3).
+function isCreateOrderText(text) {
+  return typeof text === 'string' && (text.match(/\//g) || []).length >= 2;
+}
+
+// Exact-match check for restaurant confidence — reuses transliterateCyrillic only
+// (NOT a new matcher; fuzzySearchClients still does the actual matching).
+function isExactClientMatch(client, query) {
+  const q = transliterateCyrillic(query.toLowerCase().trim());
+  return [client.name, client.orgName, client.restaurant, client.displayName]
+    .some(f => f && transliterateCyrillic(f.toLowerCase().trim()) === q);
+}
+
+// The exact admin input is embedded as a "📝 ..." line in the card/candidate
+// message so it survives a button press (Telegram echoes message.text in callbacks).
+function extractRawInput(messageText) {
+  if (!messageText) return '';
+  const line = messageText.split('\n').find(l => l.startsWith('📝'));
+  return line ? line.replace(/^📝\s*/, '').trim() : '';
+}
+
+function buildConfirmCard(client, parsed, rawInput) {
+  const text =
+    `<b>Buyurtma:</b>\n` +
+    `🏢 Mijoz: ${getClientFullName(client)}\n` +
+    `📦 Tur: ${PACKAGE_LABELS[parsed.packageType]}\n` +
+    `🍬 Shakar: ${SUGAR_LABELS[parsed.sugarType]}\n` +
+    `🔢 Miqdor: ${parsed.quantity} quti\n` +
+    `📝 ${rawInput}`;
+  const cb = `oc:k:${PKG_CODE[parsed.packageType]}:${SUGAR_CODE[parsed.sugarType]}:${parsed.quantity}:${client.id}`;
+  const reply_markup = {
+    inline_keyboard: [[
+      { text: '✅ Tasdiqlash', callback_data: cb },
+      { text: "✏️ O'zgartirish", callback_data: 'oc:e' }
+    ]]
+  };
+  return { text, reply_markup };
+}
+
+function parseOrderCallback(data) {
+  // oc:e | oc:k:<pkg>:<sugar>:<qty>:<clientId...> | oc:p:<pkg>:<sugar>:<qty>:<clientId...>
+  const parts = data.split(':');
+  const action = parts[1];
+  if (action === 'e') return { action };
+  return {
+    action,
+    packageType: PKG_FROM_CODE[parts[2]],
+    sugarType: SUGAR_FROM_CODE[parts[3]],
+    quantity: parseInt(parts[4], 10),
+    clientId: parts.slice(5).join(':') // clientId last so stray ':' can't corrupt other fields
+  };
+}
+
+// Edit the inline card in place (omitting reply_markup removes the buttons)
+async function editOrderCard(chatId, messageId, text) {
+  try {
+    await fetch(`${TELEGRAM_API_URL}/editMessageText`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, message_id: messageId, text, parse_mode: 'HTML' })
+    });
+  } catch (e) {
+    console.error('[create-order] editMessageText failed:', e);
+  }
+}
+
+// Write one order document via the Firestore REST API (same auth path the rest of
+// this file uses for reads; deployed rules permit it. No Admin SDK / service account
+// is configured in this project).
+async function createOrderDoc(order) {
+  const body = {
+    fields: {
+      clientId: { stringValue: order.clientId },
+      clientName: { stringValue: order.clientName },
+      packageType: { stringValue: order.packageType },
+      sugarType: { stringValue: order.sugarType },
+      productId: order.productId ? { stringValue: order.productId } : { nullValue: null },
+      productName: { stringValue: order.productName },
+      quantity: { integerValue: String(order.quantity) },
+      unit: { stringValue: 'box' },
+      status: { stringValue: 'new' },
+      rawInput: { stringValue: order.rawInput || '' },
+      createdBy: {
+        mapValue: {
+          fields: {
+            telegramUserId: { integerValue: String(order.telegramUserId) },
+            name: { stringValue: order.adminName }
+          }
+        }
+      },
+      createdAt: { timestampValue: new Date().toISOString() },
+      channelMessageId: order.channelMessageId != null
+        ? { integerValue: String(order.channelMessageId) }
+        : { nullValue: null }
+    }
+  };
+
+  const res = await fetch(`${FIRESTORE_API}/orders?key=${FIREBASE_API_KEY}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error('Firestore orders write failed: ' + JSON.stringify(data));
+  }
+  return data.name ? data.name.split('/').pop() : null;
+}
+
+// Post the formatted Uzbek message to the orders group; returns Telegram message_id
+async function postOrderToGroup(order) {
+  if (!ORDERS_GROUP_CHAT_ID) {
+    throw new Error('ORDERS_GROUP_CHAT_ID env var is not set');
+  }
+  const dateStr = new Date().toLocaleString('ru-RU', {
+    timeZone: 'Asia/Tashkent',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+  const text =
+    `🆕 Yangi buyurtma\n\n` +
+    `🏢 ${order.clientName}\n` +
+    `📦 ${order.productName} (${PACKAGE_GROUP[order.packageType]})\n` +
+    `🔢 ${order.quantity} quti\n` +
+    `🗓 ${dateStr}\n` +
+    `👤 ${order.adminName}`;
+
+  const result = await sendMessage(ORDERS_GROUP_CHAT_ID, text);
+  if (!result || !result.ok) {
+    throw new Error('Telegram group post failed: ' + JSON.stringify(result));
+  }
+  return result.result.message_id;
+}
+
+// Entry: admin tapped the "➕ Yangi buyurtma" button
+async function handleCreateOrderPrompt(chatId, userId) {
+  const admin = await getAdminUser(userId);
+  if (!admin) {
+    await sendMessage(chatId, "Sizda buyurtma yaratish huquqi yo'q.");
+    return;
+  }
+  await sendMessage(
+    chatId,
+    `➕ <b>Yangi buyurtma</b>\n\nBuyurtmani bitta qatorda yuboring:\n${ORDER_EXAMPLE}\n\n` +
+    `• <b>Tur:</b> стик yoki сашет\n• <b>Shakar:</b> ок (oq) yoki корич (jigarrang)`
+  );
+}
+
+// Entry: admin typed the order line — gate -> parse -> resolve -> confirmation card
+async function handleCreateOrderEntry(chatId, userId, text) {
+  // 1) AUTH GATE (before any parsing)
+  let admin;
+  try {
+    admin = await getAdminUser(userId);
+  } catch (e) {
+    console.error(`[create-order] auth lookup failed from.id=${userId}:`, e);
+    await sendMessage(chatId, "❌ Xatolik yuz berdi, qayta urinib ko'ring.");
+    return;
+  }
+  if (!admin) {
+    await sendMessage(chatId, "Sizda buyurtma yaratish huquqi yo'q.");
+    return;
+  }
+
+  try {
+    // 2) PARSE
+    const parsed = parseOrderInput(text);
+    if (parsed.missing.length) {
+      await sendMessage(
+        chatId,
+        `❌ Buyurtmani o'qiy olmadim. Quyidagilar yetishmayapti:\n• ${parsed.missing.join('\n• ')}\n\n` +
+        `Namuna: ${ORDER_EXAMPLE}`
+      );
+      return;
+    }
+
+    // 3) RESOLVE restaurant via existing fuzzy matcher
+    const clients = await getAllClients();
+    const matches = fuzzySearchClients(clients, parsed.restaurant);
+    if (matches.length === 0) {
+      await sendMessage(chatId, `❌ "<b>${parsed.restaurant}</b>" restorani topilmadi. Nomini tekshirib qayta yuboring.`);
+      return;
+    }
+
+    // 4) CONFIDENCE: single match or one exact match -> card; otherwise let admin choose
+    const exact = matches.filter(c => isExactClientMatch(c, parsed.restaurant));
+    let chosen = null;
+    if (matches.length === 1) chosen = matches[0];
+    else if (exact.length === 1) chosen = exact[0];
+
+    if (chosen) {
+      const card = buildConfirmCard(chosen, parsed, text.trim());
+      await sendMessage(chatId, card.text, { reply_markup: card.reply_markup });
+    } else {
+      const top = matches.slice(0, 3);
+      const buttons = top.map(c => [{
+        text: getClientFullName(c).substring(0, 60),
+        callback_data: `oc:p:${PKG_CODE[parsed.packageType]}:${SUGAR_CODE[parsed.sugarType]}:${parsed.quantity}:${c.id}`
+      }]);
+      await sendMessage(
+        chatId,
+        `📝 ${text.trim()}\n\n🤔 Bir nechta mijoz topildi. Qaysi biri?`,
+        { reply_markup: { inline_keyboard: buttons } }
+      );
+    }
+  } catch (e) {
+    console.error(`[create-order] entry failed from.id=${userId} rawInput="${text}":`, e);
+    await sendMessage(chatId, "❌ Xatolik yuz berdi, qayta urinib ko'ring.");
+  }
+}
+
+// Admin picked a restaurant from the ambiguity list -> show the confirmation card
+async function handleOrderPick(chatId, userId, parsed, candidateText) {
+  const admin = await getAdminUser(userId);
+  if (!admin) {
+    await sendMessage(chatId, "Sizda buyurtma yaratish huquqi yo'q.");
+    return;
+  }
+  const client = await getClientById(parsed.clientId);
+  if (!client) {
+    await sendMessage(chatId, "❌ Mijoz topilmadi. Qayta urinib ko'ring.");
+    return;
+  }
+  const rawInput = extractRawInput(candidateText);
+  const card = buildConfirmCard(client, parsed, rawInput);
+  await sendMessage(chatId, card.text, { reply_markup: card.reply_markup });
+}
+
+// Admin tapped ✅ Tasdiqlash -> write to Firestore + post to group
+async function handleOrderConfirm(chatId, userId, parsed, cardMessageId, cardText) {
+  // AUTH GATE
+  let admin;
+  try {
+    admin = await getAdminUser(userId);
+  } catch (e) {
+    console.error(`[create-order] auth lookup failed from.id=${userId}:`, e);
+    await sendMessage(chatId, "❌ Xatolik yuz berdi, qayta urinib ko'ring.");
+    return;
+  }
+  if (!admin) {
+    await sendMessage(chatId, "Sizda buyurtma yaratish huquqi yo'q.");
+    return;
+  }
+
+  const rawInput = extractRawInput(cardText);
+  try {
+    const client = await getClientById(parsed.clientId);
+    if (!client) {
+      await sendMessage(chatId, "❌ Mijoz topilmadi. Qayta urinib ko'ring.");
+      return;
+    }
+
+    const order = {
+      clientId: client.id,
+      clientName: getClientFullName(client),
+      packageType: parsed.packageType,
+      sugarType: parsed.sugarType,
+      productId: null, // no clean color->product mapping exists; derive name from sugar (see schema note)
+      productName: SUGAR_PRODUCT_NAME[parsed.sugarType],
+      quantity: parsed.quantity,
+      rawInput,
+      telegramUserId: userId,
+      adminName: admin.name || 'Admin',
+      channelMessageId: null
+    };
+
+    // Post to group first to capture message_id, then write the order once.
+    let messageId = null;
+    try {
+      messageId = await postOrderToGroup(order);
+      order.channelMessageId = messageId;
+    } catch (postErr) {
+      console.error(`[create-order] group post failed from.id=${userId} rawInput="${rawInput}":`, postErr);
+    }
+
+    let orderId;
+    try {
+      orderId = await createOrderDoc(order);
+    } catch (writeErr) {
+      console.error(`[create-order] firestore write failed from.id=${userId} rawInput="${rawInput}":`, writeErr);
+      await editOrderCard(chatId, cardMessageId, "❌ Buyurtmani saqlashda xatolik. Qayta urinib ko'ring.");
+      return;
+    }
+
+    console.log(`[create-order] order created id=${orderId} client=${order.clientName} by=${order.adminName} msgId=${messageId}`);
+
+    const summary =
+      `✅ <b>Buyurtma yuborildi</b>\n\n` +
+      `🏢 ${order.clientName}\n` +
+      `📦 ${order.productName} (${PACKAGE_GROUP[order.packageType]})\n` +
+      `🔢 ${order.quantity} quti`;
+    await editOrderCard(
+      chatId,
+      cardMessageId,
+      messageId ? summary : summary + `\n\n⚠️ Guruhga yuborilmadi (ORDERS_GROUP_CHAT_ID ni tekshiring).`
+    );
+  } catch (e) {
+    console.error(`[create-order] confirm failed from.id=${userId} rawInput="${rawInput}":`, e);
+    await sendMessage(chatId, "❌ Xatolik yuz berdi, qayta urinib ko'ring.");
+  }
+}
+
 // Main webhook handler
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -756,7 +1178,20 @@ export default async function handler(req, res) {
         body: JSON.stringify({ callback_query_id: callbackQuery.id })
       });
 
-      if (data.startsWith('stdpt_')) {
+      if (data.startsWith('oc:')) {
+        // Create-order callbacks: confirm / pick / edit
+        const parsed = parseOrderCallback(data);
+        const cardMessageId = callbackQuery.message.message_id;
+        const cardText = callbackQuery.message.text || '';
+        if (parsed.action === 'e') {
+          await editOrderCard(chatId, cardMessageId, '✏️ Bekor qilindi.');
+          await sendMessage(chatId, `Yangi buyurtmani qayta yuboring:\n${ORDER_EXAMPLE}`);
+        } else if (parsed.action === 'p') {
+          await handleOrderPick(chatId, userId, parsed, cardText);
+        } else if (parsed.action === 'k') {
+          await handleOrderConfirm(chatId, userId, parsed, cardMessageId, cardText);
+        }
+      } else if (data.startsWith('stdpt_')) {
         // User selected a productType — show its own paper info directly
         const ptId = data.replace('stdpt_', '');
         const allPT = await getAllProductTypes();
@@ -782,6 +1217,8 @@ export default async function handler(req, res) {
       const chatId = message.chat.id;
       const userId = message.from.id;
       const text = message.text || '';
+      // Orders are created in private DMs only — never from the group the bot posts to.
+      const isPrivate = (message.chat.type || 'private') === 'private';
 
       // Check user session state
       const session = userSessions[userId];
@@ -794,7 +1231,12 @@ export default async function handler(req, res) {
         await handleCheckPaperStandard(chatId);
       } else if (text === '📋 Лист комментов') {
         await handleListComments(chatId, userId);
-      } else if (text && text.trim().length > 0) {
+      } else if (isPrivate && text === '➕ Yangi buyurtma') {
+        await handleCreateOrderPrompt(chatId, userId);
+      } else if (isPrivate && isCreateOrderText(text)) {
+        // Looks like an order line ("Restoran / 14 та / стик / ок") — admin-gated inside
+        await handleCreateOrderEntry(chatId, userId, text);
+      } else if (isPrivate && text && text.trim().length > 0) {
         // Default: restaurant search
         await handleRestaurantInput(chatId, userId, text);
       }
