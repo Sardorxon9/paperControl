@@ -31,6 +31,7 @@ import {
 } from 'chart.js';
 import { Doughnut, Bar, Line } from 'react-chartjs-2';
 import ClientUsageHistoryModal from '../components/modals/ClientUsageHistoryModal';
+import InvoiceInsightsSection from '../components/analytics/InvoiceInsightsSection';
 import Shield from '@mui/icons-material/Shield';
 import Work from '@mui/icons-material/Work';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -880,6 +881,9 @@ const centerTextPlugin = {
           </ToggleButtonGroup>
         </Box>
       </Box>
+
+      {/* New: invoice trend, client tiers, paper leaders, silent clients */}
+      <InvoiceInsightsSection />
 
       {loading ? (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">

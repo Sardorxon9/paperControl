@@ -40,7 +40,10 @@
       "mcp__firebase__firebase_list_projects",
       "mcp__firebase__firebase_update_environment",
       "mcp__firebase__firebase_read_resources",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npx *)",
+      "PowerShell(npx -y firebase-tools@latest --version)",
+      "PowerShell(npx -y firebase-tools@latest login:list)"
     ]
   }
 }

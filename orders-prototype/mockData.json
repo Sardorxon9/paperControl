@@ -1,0 +1,453 @@
+{
+  "_meta": {
+    "description": "Mock data for the Orders screen prototype. Built from real Firestore records (paper-control-6bce2): real restaurant names, shelf numbers, paper KG, grammage, package types. Quantities use the workshop convention: 1 ta = 1000 dona (pieces).",
+    "convention": {
+      "quantityUnit": "ta",
+      "piecesPerTa": 1000,
+      "example": "quantity: 14 means 14 ta = 14 000 dona"
+    },
+    "statuses": ["new", "ready", "delivered"],
+    "statusLabels": { "new": "Янги", "ready": "Тайёр", "delivered": "Етказилди" },
+    "designTypes": {
+      "unique": "Custom printed roll for this client. Show paper KG indicator + low-paper warning.",
+      "standard": "СТАНДАРТ design (no custom printed roll). Show СТАНДАРТ badge instead of paper KG."
+    },
+    "today": "2026-06-08",
+    "note": "Operator mostly works between 'Кеча' (yesterday, 2026-06-07) and 'Бугун' (today, 2026-06-08). These two days are the densest. Earlier days exist for lookup."
+  },
+
+  "packageTypes": {
+    "stick": "Стик",
+    "sachet": "Сашет"
+  },
+
+  "operators": [
+    { "id": 685385466, "name": "Yoqubxon" },
+    { "id": 46914931, "name": "Baxtiyor" }
+  ],
+
+  "clients": [
+    {
+      "id": "UPXwr6mnEinElb5p47Id",
+      "restaurant": "ABI DONER",
+      "orgName": "CENTRAL DONER",
+      "designType": "unique",
+      "shellNum": "1-A",
+      "gramm": 4,
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "paperRemaining": 13.2,
+      "lowPaperThreshold": 4
+    },
+    {
+      "id": "bBp2797N91JDSaTpRR6n",
+      "restaurant": "LES AILES",
+      "orgName": "FOOD STOCK-SERVICE",
+      "designType": "unique",
+      "shellNum": "2-A",
+      "gramm": 5,
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "paperRemaining": 37.5,
+      "lowPaperThreshold": 10
+    },
+    {
+      "id": "01bQHweQjYm1lN2MQ4cp",
+      "restaurant": "FRANKFORT OQ SHAKAR",
+      "orgName": "COMFORT INN",
+      "designType": "unique",
+      "shellNum": "3-B",
+      "gramm": 5,
+      "packageType": "sachet",
+      "material": "Оқ шакар",
+      "paperRemaining": 4.84,
+      "lowPaperThreshold": 3
+    },
+    {
+      "id": "zira01",
+      "restaurant": "ZIRA",
+      "orgName": "ZIRA CHEF",
+      "designType": "unique",
+      "shellNum": "1-C",
+      "gramm": 5,
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "paperRemaining": 9.6,
+      "lowPaperThreshold": 1
+    },
+    {
+      "id": "bravo01",
+      "restaurant": "BRAVO",
+      "orgName": "OK BRAVO MADAD",
+      "designType": "unique",
+      "shellNum": "2-C",
+      "gramm": 5,
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "paperRemaining": 3.9,
+      "lowPaperThreshold": 3
+    },
+    {
+      "id": "burchmulla01",
+      "restaurant": "BURCHMULLA SLIVKA",
+      "orgName": "",
+      "designType": "unique",
+      "shellNum": "3-C",
+      "gramm": 3,
+      "packageType": "sachet",
+      "material": "Сливка",
+      "paperRemaining": 7.53,
+      "lowPaperThreshold": 1
+    },
+    {
+      "id": "tatneft01",
+      "restaurant": "TATNEFT",
+      "orgName": "TATNEFT UNG",
+      "designType": "unique",
+      "shellNum": "1-C",
+      "gramm": 5,
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "paperRemaining": 32.4,
+      "lowPaperThreshold": 10
+    },
+    {
+      "id": "central01",
+      "restaurant": "CENTRAL PALACE",
+      "orgName": "",
+      "designType": "unique",
+      "shellNum": "3-C",
+      "gramm": 5,
+      "packageType": "sachet",
+      "material": "Оқ шакар",
+      "paperRemaining": 4.59,
+      "lowPaperThreshold": 1
+    },
+    {
+      "id": "evos01",
+      "restaurant": "EVOS",
+      "orgName": "EVOS FAST FOOD",
+      "designType": "standard",
+      "shellNum": "—",
+      "gramm": 5,
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "paperRemaining": null,
+      "lowPaperThreshold": null
+    },
+    {
+      "id": "maxway01",
+      "restaurant": "MAXWAY",
+      "orgName": "MAXWAY GROUP",
+      "designType": "standard",
+      "shellNum": "—",
+      "gramm": 5,
+      "packageType": "sachet",
+      "material": "Оқ шакар",
+      "paperRemaining": null,
+      "lowPaperThreshold": null
+    }
+  ],
+
+  "orders": [
+    {
+      "id": "ord_0801",
+      "clientId": "UPXwr6mnEinElb5p47Id",
+      "restaurant": "ABI DONER",
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "gramm": 4,
+      "designType": "unique",
+      "shellNum": "1-A",
+      "paperRemaining": 13.2,
+      "lowPaperThreshold": 4,
+      "quantity": 15,
+      "status": "new",
+      "createdAt": "2026-06-08T08:14:00.000Z",
+      "createdBy": { "name": "Yoqubxon", "telegramUserId": 685385466 },
+      "rawInput": "abi doner / 15 ta",
+      "statusHistory": [
+        { "status": "new", "at": "2026-06-08T08:14:00.000Z", "by": "Yoqubxon" }
+      ]
+    },
+    {
+      "id": "ord_0802",
+      "clientId": "bBp2797N91JDSaTpRR6n",
+      "restaurant": "LES AILES",
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "gramm": 5,
+      "designType": "unique",
+      "shellNum": "2-A",
+      "paperRemaining": 37.5,
+      "lowPaperThreshold": 10,
+      "quantity": 14,
+      "status": "ready",
+      "createdAt": "2026-06-08T08:40:00.000Z",
+      "createdBy": { "name": "Yoqubxon", "telegramUserId": 685385466 },
+      "rawInput": "лес айлес / 14 та / стик / ок",
+      "statusHistory": [
+        { "status": "new", "at": "2026-06-08T08:40:00.000Z", "by": "Yoqubxon" },
+        { "status": "ready", "at": "2026-06-08T09:55:00.000Z", "by": "Baxtiyor" }
+      ]
+    },
+    {
+      "id": "ord_0803",
+      "clientId": "bravo01",
+      "restaurant": "BRAVO",
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "gramm": 5,
+      "designType": "unique",
+      "shellNum": "2-C",
+      "paperRemaining": 3.9,
+      "lowPaperThreshold": 3,
+      "quantity": 6,
+      "status": "new",
+      "createdAt": "2026-06-08T09:05:00.000Z",
+      "createdBy": { "name": "Baxtiyor", "telegramUserId": 46914931 },
+      "rawInput": "браво / 6 та",
+      "statusHistory": [
+        { "status": "new", "at": "2026-06-08T09:05:00.000Z", "by": "Baxtiyor" }
+      ]
+    },
+    {
+      "id": "ord_0804",
+      "clientId": "evos01",
+      "restaurant": "EVOS",
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "gramm": 5,
+      "designType": "standard",
+      "shellNum": "—",
+      "paperRemaining": null,
+      "lowPaperThreshold": null,
+      "quantity": 25,
+      "status": "new",
+      "createdAt": "2026-06-08T09:30:00.000Z",
+      "createdBy": { "name": "Yoqubxon", "telegramUserId": 685385466 },
+      "rawInput": "evos / 25 та / стандарт",
+      "statusHistory": [
+        { "status": "new", "at": "2026-06-08T09:30:00.000Z", "by": "Yoqubxon" }
+      ]
+    },
+    {
+      "id": "ord_0805",
+      "clientId": "tatneft01",
+      "restaurant": "TATNEFT",
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "gramm": 5,
+      "designType": "unique",
+      "shellNum": "1-C",
+      "paperRemaining": 32.4,
+      "lowPaperThreshold": 10,
+      "quantity": 10,
+      "status": "ready",
+      "createdAt": "2026-06-08T10:10:00.000Z",
+      "createdBy": { "name": "Baxtiyor", "telegramUserId": 46914931 },
+      "rawInput": "татнефт / 10 та",
+      "statusHistory": [
+        { "status": "new", "at": "2026-06-08T10:10:00.000Z", "by": "Baxtiyor" },
+        { "status": "ready", "at": "2026-06-08T11:20:00.000Z", "by": "Baxtiyor" }
+      ]
+    },
+    {
+      "id": "ord_0806",
+      "clientId": "central01",
+      "restaurant": "CENTRAL PALACE",
+      "packageType": "sachet",
+      "material": "Оқ шакар",
+      "gramm": 5,
+      "designType": "unique",
+      "shellNum": "3-C",
+      "paperRemaining": 4.59,
+      "lowPaperThreshold": 1,
+      "quantity": 8,
+      "status": "new",
+      "createdAt": "2026-06-08T10:45:00.000Z",
+      "createdBy": { "name": "Yoqubxon", "telegramUserId": 685385466 },
+      "rawInput": "central palace / 8 та / сашет",
+      "statusHistory": [
+        { "status": "new", "at": "2026-06-08T10:45:00.000Z", "by": "Yoqubxon" }
+      ]
+    },
+
+    {
+      "id": "ord_0701",
+      "clientId": "UPXwr6mnEinElb5p47Id",
+      "restaurant": "ABI DONER",
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "gramm": 4,
+      "designType": "unique",
+      "shellNum": "1-A",
+      "paperRemaining": 13.2,
+      "lowPaperThreshold": 4,
+      "quantity": 14,
+      "status": "delivered",
+      "createdAt": "2026-06-07T08:20:00.000Z",
+      "createdBy": { "name": "Baxtiyor", "telegramUserId": 46914931 },
+      "rawInput": "аби донер / 14та",
+      "statusHistory": [
+        { "status": "new", "at": "2026-06-07T08:20:00.000Z", "by": "Baxtiyor" },
+        { "status": "ready", "at": "2026-06-07T10:05:00.000Z", "by": "Baxtiyor" },
+        { "status": "delivered", "at": "2026-06-07T15:30:00.000Z", "by": "Yoqubxon" }
+      ]
+    },
+    {
+      "id": "ord_0702",
+      "clientId": "zira01",
+      "restaurant": "ZIRA",
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "gramm": 5,
+      "designType": "unique",
+      "shellNum": "1-C",
+      "paperRemaining": 9.6,
+      "lowPaperThreshold": 1,
+      "quantity": 12,
+      "status": "delivered",
+      "createdAt": "2026-06-07T09:00:00.000Z",
+      "createdBy": { "name": "Yoqubxon", "telegramUserId": 685385466 },
+      "rawInput": "зира / 12 та",
+      "statusHistory": [
+        { "status": "new", "at": "2026-06-07T09:00:00.000Z", "by": "Yoqubxon" },
+        { "status": "ready", "at": "2026-06-07T11:10:00.000Z", "by": "Baxtiyor" },
+        { "status": "delivered", "at": "2026-06-07T16:00:00.000Z", "by": "Yoqubxon" }
+      ]
+    },
+    {
+      "id": "ord_0703",
+      "clientId": "01bQHweQjYm1lN2MQ4cp",
+      "restaurant": "FRANKFORT OQ SHAKAR",
+      "packageType": "sachet",
+      "material": "Оқ шакар",
+      "gramm": 5,
+      "designType": "unique",
+      "shellNum": "3-B",
+      "paperRemaining": 4.84,
+      "lowPaperThreshold": 3,
+      "quantity": 9,
+      "status": "delivered",
+      "createdAt": "2026-06-07T09:35:00.000Z",
+      "createdBy": { "name": "Baxtiyor", "telegramUserId": 46914931 },
+      "rawInput": "франкфорт / 9 та / сашет",
+      "statusHistory": [
+        { "status": "new", "at": "2026-06-07T09:35:00.000Z", "by": "Baxtiyor" },
+        { "status": "ready", "at": "2026-06-07T12:00:00.000Z", "by": "Baxtiyor" },
+        { "status": "delivered", "at": "2026-06-07T17:15:00.000Z", "by": "Yoqubxon" }
+      ]
+    },
+    {
+      "id": "ord_0704",
+      "clientId": "maxway01",
+      "restaurant": "MAXWAY",
+      "packageType": "sachet",
+      "material": "Оқ шакар",
+      "gramm": 5,
+      "designType": "standard",
+      "shellNum": "—",
+      "paperRemaining": null,
+      "lowPaperThreshold": null,
+      "quantity": 30,
+      "status": "delivered",
+      "createdAt": "2026-06-07T10:15:00.000Z",
+      "createdBy": { "name": "Yoqubxon", "telegramUserId": 685385466 },
+      "rawInput": "maxway / 30 та / стандарт",
+      "statusHistory": [
+        { "status": "new", "at": "2026-06-07T10:15:00.000Z", "by": "Yoqubxon" },
+        { "status": "ready", "at": "2026-06-07T13:40:00.000Z", "by": "Baxtiyor" },
+        { "status": "delivered", "at": "2026-06-07T18:00:00.000Z", "by": "Baxtiyor" }
+      ]
+    },
+    {
+      "id": "ord_0705",
+      "clientId": "burchmulla01",
+      "restaurant": "BURCHMULLA SLIVKA",
+      "packageType": "sachet",
+      "material": "Сливка",
+      "gramm": 3,
+      "designType": "unique",
+      "shellNum": "3-C",
+      "paperRemaining": 7.53,
+      "lowPaperThreshold": 1,
+      "quantity": 7,
+      "status": "ready",
+      "createdAt": "2026-06-07T11:00:00.000Z",
+      "createdBy": { "name": "Baxtiyor", "telegramUserId": 46914931 },
+      "rawInput": "бурчмулла сливка / 7 та",
+      "statusHistory": [
+        { "status": "new", "at": "2026-06-07T11:00:00.000Z", "by": "Baxtiyor" },
+        { "status": "ready", "at": "2026-06-07T14:25:00.000Z", "by": "Baxtiyor" }
+      ]
+    },
+
+    {
+      "id": "ord_0601",
+      "clientId": "bBp2797N91JDSaTpRR6n",
+      "restaurant": "LES AILES",
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "gramm": 5,
+      "designType": "unique",
+      "shellNum": "2-A",
+      "paperRemaining": 37.5,
+      "lowPaperThreshold": 10,
+      "quantity": 14,
+      "status": "delivered",
+      "createdAt": "2026-06-06T11:02:00.000Z",
+      "createdBy": { "name": "Yoqubxon", "telegramUserId": 685385466 },
+      "rawInput": "Лес айлес / 14та / стик / ок",
+      "statusHistory": [
+        { "status": "new", "at": "2026-06-06T11:02:00.000Z", "by": "Yoqubxon" },
+        { "status": "ready", "at": "2026-06-06T13:30:00.000Z", "by": "Baxtiyor" },
+        { "status": "delivered", "at": "2026-06-06T17:00:00.000Z", "by": "Yoqubxon" }
+      ]
+    },
+    {
+      "id": "ord_0602",
+      "clientId": "tatneft01",
+      "restaurant": "TATNEFT",
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "gramm": 5,
+      "designType": "unique",
+      "shellNum": "1-C",
+      "paperRemaining": 32.4,
+      "lowPaperThreshold": 10,
+      "quantity": 8,
+      "status": "delivered",
+      "createdAt": "2026-06-06T12:30:00.000Z",
+      "createdBy": { "name": "Baxtiyor", "telegramUserId": 46914931 },
+      "rawInput": "татнефт / 8 та",
+      "statusHistory": [
+        { "status": "new", "at": "2026-06-06T12:30:00.000Z", "by": "Baxtiyor" },
+        { "status": "ready", "at": "2026-06-06T14:50:00.000Z", "by": "Baxtiyor" },
+        { "status": "delivered", "at": "2026-06-06T18:10:00.000Z", "by": "Yoqubxon" }
+      ]
+    },
+    {
+      "id": "ord_0501",
+      "clientId": "evos01",
+      "restaurant": "EVOS",
+      "packageType": "stick",
+      "material": "Оқ шакар",
+      "gramm": 5,
+      "designType": "standard",
+      "shellNum": "—",
+      "paperRemaining": null,
+      "lowPaperThreshold": null,
+      "quantity": 20,
+      "status": "delivered",
+      "createdAt": "2026-06-05T10:00:00.000Z",
+      "createdBy": { "name": "Yoqubxon", "telegramUserId": 685385466 },
+      "rawInput": "evos / 20 та / стандарт",
+      "statusHistory": [
+        { "status": "new", "at": "2026-06-05T10:00:00.000Z", "by": "Yoqubxon" },
+        { "status": "ready", "at": "2026-06-05T12:30:00.000Z", "by": "Baxtiyor" },
+        { "status": "delivered", "at": "2026-06-05T16:45:00.000Z", "by": "Baxtiyor" }
+      ]
+    }
+  ]
+}
