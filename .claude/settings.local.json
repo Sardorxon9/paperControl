@@ -41,9 +41,12 @@
       "mcp__firebase__firebase_update_environment",
       "mcp__firebase__firebase_read_resources",
       "Bash(node:*)",
-      "Bash(npx *)",
-      "PowerShell(npx -y firebase-tools@latest --version)",
-      "PowerShell(npx -y firebase-tools@latest login:list)"
+      "Bash(curl -s \"https://api.telegram.org/bot8246058998:AAGMv8uqKtjnzZAb2pLps2V3OKllgw_8yo4/getWebhookInfo\")",
+      "Bash(python3 -m json.tool)",
+      "Bash(vercel ls:*)",
+      "Bash(npx vercel:*)",
+      "Bash(curl -s \"https://commercial-tool.vercel.app/api/health\")",
+      "Bash(curl:*)"
     ]
   }
 }
