@@ -37,9 +37,9 @@ import Work from '@mui/icons-material/Work';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import {
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper as MuiPaper, Tooltip as MuiTooltip, ToggleButtonGroup, ToggleButton
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper as MuiPaper, Tooltip as MuiTooltip, ToggleButtonGroup, ToggleButton, Popover, Divider
 } from "@mui/material";
-import { ArrowDownward, ArrowUpward, ViewModule, ViewList } from "@mui/icons-material";
+import { ViewModule, ViewList, CalendarMonth, Close as CloseIcon } from "@mui/icons-material";
 import { subDays, subMonths, format, startOfDay, endOfDay, startOfWeek, startOfMonth, endOfWeek } from "date-fns";
 import { ru } from 'date-fns/locale';
 import { DatePicker } from '@mui/x-date-pickers';
@@ -61,9 +61,148 @@ ChartJS.register(
   Filler
 );
 
+// Compact date-range control shown in the top-right corner of the log / invoice
+// widgets. Lets the user pick a single day or a date range; applies only to its
+// own widget. `value` shape: { mode: 'all'|'single'|'range', single, start, end }.
+function PeriodFilter({ value, onChange }) {
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
+
+  const label = (() => {
+    if (!value || value.mode === 'all') return 'Период';
+    if (value.mode === 'single') {
+      return value.single ? format(value.single, 'dd.MM.yyyy') : 'Период';
+    }
+    const s = value.start ? format(value.start, 'dd.MM.yyyy') : '…';
+    const e = value.end ? format(value.end, 'dd.MM.yyyy') : '…';
+    return `${s} – ${e}`;
+  })();
+
+  const active = value && value.mode !== 'all';
+
+  return (
+    <>
+      <Button
+        size="small"
+        variant={active ? 'contained' : 'outlined'}
+        startIcon={<CalendarMonth sx={{ fontSize: 18 }} />}
+        endIcon={active ? (
+          <Box
+            component="span"
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange({ mode: 'all', single: null, start: null, end: null });
+            }}
+            sx={{ display: 'inline-flex', alignItems: 'center' }}
+          >
+            <CloseIcon sx={{ fontSize: 16 }} />
+          </Box>
+        ) : null}
+        onClick={(e) => setAnchorEl(e.currentTarget)}
+        sx={{
+          textTransform: 'none',
+          fontWeight: 600,
+          bgcolor: active ? '#0F9D8C' : 'transparent',
+          color: active ? '#fff' : '#0F9D8C',
+          borderColor: '#0F9D8C',
+          '&:hover': {
+            bgcolor: active ? '#0c7a6e' : 'rgba(15, 157, 140, 0.04)',
+            borderColor: '#0c7a6e'
+          }
+        }}
+      >
+        {label}
+      </Button>
+
+      <Popover
+        open={open}
+        anchorEl={anchorEl}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{ paper: { sx: { p: 2, borderRadius: 2, minWidth: 280 } } }}
+      >
+        <ToggleButtonGroup
+          value={value?.mode === 'range' ? 'range' : 'single'}
+          exclusive
+          size="small"
+          fullWidth
+          onChange={(_, m) => {
+            if (!m) return;
+            onChange({ ...value, mode: m });
+          }}
+          sx={{
+            mb: 1.5,
+            '& .MuiToggleButton-root': {
+              textTransform: 'none',
+              fontWeight: 600,
+              color: '#666',
+              borderColor: '#0F9D8C',
+              '&.Mui-selected': {
+                bgcolor: '#0F9D8C',
+                color: '#fff',
+                '&:hover': { bgcolor: '#0c7a6e' }
+              }
+            }
+          }}
+        >
+          <ToggleButton value="single">Один день</ToggleButton>
+          <ToggleButton value="range">Период</ToggleButton>
+        </ToggleButtonGroup>
+
+        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
+          {value?.mode === 'range' ? (
+            <Stack spacing={1.5}>
+              <DatePicker
+                label="С"
+                value={value.start}
+                onChange={(d) => onChange({ ...value, mode: 'range', start: d })}
+                slotProps={{ textField: { size: 'small', fullWidth: true } }}
+              />
+              <DatePicker
+                label="До"
+                value={value.end}
+                onChange={(d) => onChange({ ...value, mode: 'range', end: d })}
+                slotProps={{ textField: { size: 'small', fullWidth: true } }}
+              />
+            </Stack>
+          ) : (
+            <DatePicker
+              label="Дата"
+              value={value?.single || null}
+              onChange={(d) => onChange({ ...value, mode: 'single', single: d })}
+              slotProps={{ textField: { size: 'small', fullWidth: true } }}
+            />
+          )}
+        </LocalizationProvider>
+
+        <Divider sx={{ my: 1.5 }} />
+        <Stack direction="row" justifyContent="space-between">
+          <Button
+            size="small"
+            onClick={() => onChange({ mode: 'all', single: null, start: null, end: null })}
+            sx={{ textTransform: 'none', color: '#666' }}
+          >
+            Сбросить
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            onClick={() => setAnchorEl(null)}
+            sx={{ textTransform: 'none', bgcolor: '#0F9D8C', '&:hover': { bgcolor: '#0c7a6e' } }}
+          >
+            Готово
+          </Button>
+        </Stack>
+      </Popover>
+    </>
+  );
+}
+
 export default function Analytics({ user, userRole, onLogout }) {
   const navigate = useNavigate();
   const [recentLogs, setRecentLogs] = useState([]);
+  const [recentInvoices, setRecentInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [productStats, setProductStats] = useState({});
   const [topClients, setTopClients] = useState([]);
@@ -86,12 +225,15 @@ export default function Analytics({ user, userRole, onLogout }) {
   const [dailyUsageData, setDailyUsageData] = useState([]);
   const [dateRangeStart, setDateRangeStart] = useState(subMonths(new Date(), 3));
   const [dateRangeEnd, setDateRangeEnd] = useState(new Date());
-  const [logsPage, setLogsPage] = useState(0);
-  const [logsPerPage] = useState(20);
   const [chartScale, setChartScale] = useState('daily'); // daily, weekly, monthly
   const [paperUsageView, setPaperUsageView] = useState('cards'); // 'cards' or 'table'
   const [yearFilter, setYearFilter] = useState('2026'); // 'all', '2026', '2025'
   const [totalPaperBought, setTotalPaperBought] = useState(0);
+
+  // Per-widget date filters for the two bottom tables (logs & invoice history).
+  // mode: 'all' (no filter) | 'single' (one day) | 'range' (start..end)
+  const [logsPeriod, setLogsPeriod] = useState({ mode: 'all', single: null, start: null, end: null });
+  const [invoicesPeriod, setInvoicesPeriod] = useState({ mode: 'all', single: null, start: null, end: null });
 
   // Helper function to format numbers with spaces
   const formatNumber = (num) => {
@@ -103,6 +245,42 @@ export default function Analytics({ user, userRole, onLogout }) {
     if (yearFilter === 'all') return true;
     const year = date.getFullYear();
     return year.toString() === yearFilter;
+  };
+
+  // Check whether a date falls inside a per-widget Period filter.
+  const matchesPeriod = (date, period) => {
+    if (!period || period.mode === 'all') return true;
+    if (period.mode === 'single') {
+      if (!period.single) return true;
+      return date >= startOfDay(period.single) && date <= endOfDay(period.single);
+    }
+    // range
+    const lo = period.start ? startOfDay(period.start) : null;
+    const hi = period.end ? endOfDay(period.end) : null;
+    if (lo && date < lo) return false;
+    if (hi && date > hi) return false;
+    return true;
+  };
+
+  // Pieces -> boxes. Box size depends on product weight: 4гр => 1250 шт/коробка, иначе 1000.
+  const boxSizeForGramm = (gramm) => (Number(gramm) === 4 ? 1250 : 1000);
+  const formatBoxes = (quantity, gramm) => {
+    const size = boxSizeForGramm(gramm);
+    const boxes = (quantity || 0) / size;
+    // Show up to 1 decimal, drop trailing .0
+    const rounded = Math.round(boxes * 10) / 10;
+    const boxStr = Number.isInteger(rounded) ? rounded.toString() : rounded.toFixed(1);
+    return `${boxStr} ${declOfBox(rounded)}`;
+  };
+  // Russian plural for "коробка"
+  const declOfBox = (n) => {
+    const abs = Math.abs(n);
+    if (!Number.isInteger(abs)) return 'коробки';
+    const mod10 = abs % 10;
+    const mod100 = abs % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'коробка';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'коробки';
+    return 'коробок';
   };
 
   // Handle opening client usage history modal
@@ -287,6 +465,7 @@ export default function Analytics({ user, userRole, onLogout }) {
       const clientTotals = {};
       const paymentTotals = { cash: 0, transfer: 0 };
       const senderCompanyTotals = {};
+      const recentInvoicesList = [];
 
       invoicesSnapshot.docs.forEach((doc) => {
         const invoice = doc.data();
@@ -314,7 +493,47 @@ export default function Analytics({ user, userRole, onLogout }) {
 
         // Sender company totals
         senderCompanyTotals[senderCompany] = (senderCompanyTotals[senderCompany] || 0) + totalAmount;
+
+        // --- Build display record for the "История накладных" widget ---
+        // Resolve product name / gramm / quantity following the same rules as InvoiceHistory.
+        let productName = "—";
+        let gramm = invoice.gramm || "";
+        let quantity = invoice.quantity || 0;
+        let mixed = false;
+
+        const products = Array.isArray(invoice.products) ? invoice.products : null;
+        if (products && products.length > 1) {
+          mixed = true;
+          productName = `${products.length} продуктов`;
+          quantity = products.reduce((s, p) => s + (p.quantity || 0), 0);
+        } else if (products && products.length === 1) {
+          const p = products[0];
+          quantity = p.quantity || 0;
+          gramm = p.gramm || gramm;
+          if (invoice.type === "standard" && p.catalogueItemID && catalogueMap[p.catalogueItemID]) {
+            productName = catalogueMap[p.catalogueItemID].productName || "—";
+          } else {
+            productName = productMap[p.productID_2] || "—";
+          }
+        } else {
+          productName = productMap[invoice.productID_2] || "—";
+        }
+
+        recentInvoicesList.push({
+          id: doc.id,
+          date: invoiceDate,
+          restaurantName: invoice.customRestaurantName || invoice.clientRestaurant || "—",
+          orgName: invoice.orgName || invoice.clientOrgName || "",
+          productName,
+          gramm,
+          quantity,
+          mixed,
+          total: totalAmount,
+        });
       });
+
+      // Latest invoices first
+      recentInvoicesList.sort((a, b) => b.date - a.date);
 
       const totalPayments = paymentTotals.cash + paymentTotals.transfer;
 
@@ -368,6 +587,7 @@ export default function Analytics({ user, userRole, onLogout }) {
       setPackageStats(stats);
       setProductStats(productStats);
       setRecentLogs(logsList);
+      setRecentInvoices(recentInvoicesList);
       setTopClients(topClientsData);
       setPaymentStats({
         cash: paymentTotals.cash,
@@ -588,6 +808,10 @@ export default function Analytics({ user, userRole, onLogout }) {
 
   // Aggregate by selected scale
   const aggregatedUsageData = aggregateDataByScale(filteredDailyUsage, chartScale);
+
+  // Per-widget filtered lists for the two bottom tables.
+  const filteredLogs = recentLogs.filter((log) => matchesPeriod(log.date, logsPeriod));
+  const filteredInvoices = recentInvoices.filter((inv) => matchesPeriod(inv.date, invoicesPeriod));
 
   // Daily Usage Line Chart Data
   const dailyUsageChartData = {
@@ -1539,120 +1763,181 @@ const centerTextPlugin = {
             </TableContainer>
           </Card>
 
-          {/* 5th Container - Recent Logs (Full Width) */}
+          {/* 5th Container - Logs + Invoice history side by side */}
           <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Недавние лог-записи
-            </Typography>
-            <TableContainer component={MuiPaper} sx={{ mt: 2, borderRadius: 2 }}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell><strong>Дата</strong></TableCell>
-                    <TableCell><strong>Ресторан</strong></TableCell>
-                    <TableCell><strong>Действие</strong></TableCell>
-                    <TableCell><strong>Кол-во (кг)</strong></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {recentLogs.length > 0 ? (
-                    recentLogs
-                      .slice(logsPage * logsPerPage, logsPage * logsPerPage + logsPerPage)
-                      .map((log, index) => (
-                        <TableRow key={index} hover>
-                          <TableCell>{log.date.toLocaleString('ru-RU')}</TableCell>
-                          <TableCell>
-                            {log.isProductType && log.productCode ? (
-                              <Box>
-                                <Typography variant="body2" fontWeight="600">
-                                  {log.restaurantName} ({log.productCode})
-                                </Typography>
-                                {log.comment && log.comment !== 'n/a' && (
-                                  <Typography variant="caption" color="text.secondary" display="block">
-                                    {log.comment}
-                                  </Typography>
-                                )}
-                              </Box>
-                            ) : (
-                              <Typography variant="body2" noWrap sx={{ maxWidth: 250 }}>
-                                {log.restaurantName}
-                                {log.isProductType && (
-                                  <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
-                                    (Стандарт)
-                                  </Typography>
-                                )}
-                              </Typography>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {log.actionType === "paperIn" ? (
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <ArrowDownward sx={{ color: "green", fontSize: 20 }} />
-                                <Typography variant="body2" color="green">Приход</Typography>
-                              </Box>
-                            ) : (
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <ArrowUpward sx={{ color: "red", fontSize: 20 }} />
-                                <Typography variant="body2" color="red">Расход</Typography>
-                              </Box>
-                            )}
-                          </TableCell>
-                          <TableCell>{typeof log.amount === 'number' ? log.amount.toFixed(2) : log.amount} кг</TableCell>
-                        </TableRow>
-                      ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={4} align="center">
-                        <Typography variant="body2" color="text.secondary" py={3}>
-                          Нет записей за последние 30 дней
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <Grid container spacing={4}>
+              {/* ---------- LEFT: Recent log entries ---------- */}
+              <Grid item xs={12} lg={6}>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  sx={{ mb: 1.5, gap: 1, flexWrap: 'wrap' }}
+                >
+                  <Typography variant="h6" fontWeight="bold">
+                    Недавние лог-записи
+                  </Typography>
+                  <PeriodFilter value={logsPeriod} onChange={setLogsPeriod} />
+                </Stack>
 
-            {/* Pagination Controls */}
-            {recentLogs.length > logsPerPage && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 2, gap: 2 }}>
-                <Button
+                <TableContainer
+                  component={MuiPaper}
                   variant="outlined"
-                  size="small"
-                  disabled={logsPage === 0}
-                  onClick={() => setLogsPage(logsPage - 1)}
-                  sx={{
-                    color: '#0F9D8C',
-                    borderColor: '#0F9D8C',
-                    '&:hover': {
-                      borderColor: '#0c7a6e',
-                      backgroundColor: 'rgba(15, 157, 140, 0.04)'
-                    }
-                  }}
+                  sx={{ borderRadius: 2, maxHeight: 450, overflow: 'auto' }}
                 >
-                  Назад
-                </Button>
-                <Typography variant="body2" color="text.secondary">
-                  Страница {logsPage + 1} из {Math.ceil(recentLogs.length / logsPerPage)}
+                  <Table stickyHeader size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5', whiteSpace: 'nowrap' }}>Дата</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>Ресторан</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5', whiteSpace: 'nowrap' }}>Кол-во</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {filteredLogs.length > 0 ? (
+                        filteredLogs.map((log, index) => {
+                          const amt = typeof log.amount === 'number' ? log.amount : Number(log.amount) || 0;
+                          const isIn = log.actionType === 'paperIn';
+                          const sign = isIn ? '+' : '-';
+                          return (
+                            <TableRow key={index} hover>
+                              <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
+                                {format(log.date, 'dd.MM.yyyy HH:mm')}
+                              </TableCell>
+                              <TableCell>
+                                {log.isProductType && log.productCode ? (
+                                  <Box>
+                                    <Typography variant="body2" fontWeight="600" noWrap sx={{ maxWidth: 220 }}>
+                                      {log.restaurantName} ({log.productCode})
+                                    </Typography>
+                                    {log.comment && log.comment !== 'n/a' && (
+                                      <Typography variant="caption" color="text.secondary" display="block" noWrap sx={{ maxWidth: 220 }}>
+                                        {log.comment}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                ) : (
+                                  <Typography variant="body2" noWrap sx={{ maxWidth: 220 }}>
+                                    {log.restaurantName}
+                                    {log.isProductType && (
+                                      <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                                        (Стандарт)
+                                      </Typography>
+                                    )}
+                                  </Typography>
+                                )}
+                              </TableCell>
+                              <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                                <Typography
+                                  variant="body2"
+                                  fontWeight="700"
+                                  sx={{ color: isIn ? '#1a8917' : '#d32f2f' }}
+                                >
+                                  {sign} {amt.toFixed(2)} KG
+                                </Typography>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={3} align="center">
+                            <Typography variant="body2" color="text.secondary" py={3}>
+                              {recentLogs.length === 0 ? 'Нет записей за последние 30 дней' : 'Нет записей за выбранный период'}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  Показано записей: {filteredLogs.length}
                 </Typography>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  disabled={logsPage >= Math.ceil(recentLogs.length / logsPerPage) - 1}
-                  onClick={() => setLogsPage(logsPage + 1)}
-                  sx={{
-                    color: '#0F9D8C',
-                    borderColor: '#0F9D8C',
-                    '&:hover': {
-                      borderColor: '#0c7a6e',
-                      backgroundColor: 'rgba(15, 157, 140, 0.04)'
-                    }
-                  }}
+              </Grid>
+
+              {/* ---------- RIGHT: Invoice history ---------- */}
+              <Grid item xs={12} lg={6}>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  sx={{ mb: 1.5, gap: 1, flexWrap: 'wrap' }}
                 >
-                  Вперёд
-                </Button>
-              </Box>
-            )}
+                  <Typography variant="h6" fontWeight="bold">
+                    История накладных
+                  </Typography>
+                  <PeriodFilter value={invoicesPeriod} onChange={setInvoicesPeriod} />
+                </Stack>
+
+                <TableContainer
+                  component={MuiPaper}
+                  variant="outlined"
+                  sx={{ borderRadius: 2, maxHeight: 560, overflow: 'auto' }}
+                >
+                  <Table stickyHeader size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5', whiteSpace: 'nowrap' }}>Дата и время</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>Клиент</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5' }}>Продукт</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold', bgcolor: '#f5f5f5', whiteSpace: 'nowrap' }}>Итого</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {filteredInvoices.length > 0 ? (
+                        filteredInvoices.map((inv) => (
+                          <TableRow key={inv.id} hover>
+                            <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
+                              {format(inv.date, 'dd.MM.yyyy HH:mm')}
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight="600" noWrap sx={{ maxWidth: 180 }}>
+                                {inv.restaurantName}
+                              </Typography>
+                              {inv.orgName && (
+                                <Typography variant="caption" color="text.secondary" display="block" noWrap sx={{ maxWidth: 180 }}>
+                                  {inv.orgName}
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
+                                {inv.productName}
+                                {inv.gramm ? (
+                                  <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                                    {inv.gramm} гр
+                                  </Typography>
+                                ) : null}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                              <Typography variant="body2" fontWeight="700">
+                                {formatNumber(inv.total)} UZS
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" display="block">
+                                {inv.mixed ? 'Смешанная' : formatBoxes(inv.quantity, inv.gramm)}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} align="center">
+                            <Typography variant="body2" color="text.secondary" py={3}>
+                              {recentInvoices.length === 0 ? 'Нет накладных' : 'Нет накладных за выбранный период'}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  Показано накладных: {filteredInvoices.length}
+                </Typography>
+              </Grid>
+            </Grid>
           </Card>
         </Stack>
       )}
