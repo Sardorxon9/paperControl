@@ -1,6 +1,6 @@
 // InvoiceInsightsSection.js
-// Self-contained analytics section: invoice revenue trend, client tiers,
-// top paper-performance clients, and silent-client detection.
+// Self-contained analytics section: invoice revenue trend,
+// top paper-performance clients, and inactive-client detection.
 // Drops into Analytics.js as a single component. Does its own data fetch so it
 // does not depend on the parent page's existing state.
 import { useEffect, useMemo, useState } from "react";
@@ -11,13 +11,13 @@ import {
   Switch, FormControlLabel, CircularProgress, Chip, Divider, Tooltip
 } from "@mui/material";
 import {
-  ArrowUpward, ArrowDownward, ArrowOutward, EmojiEvents,
+  ArrowUpward, ArrowDownward,
   Inventory2, NotificationsOff
 } from "@mui/icons-material";
 import { Line } from "react-chartjs-2";
 import {
   startOfDay, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval,
-  format, subDays, isAfter
+  format, subDays, isAfter, formatDistanceToNow
 } from "date-fns";
 import { ru } from "date-fns/locale";
 
@@ -158,32 +158,13 @@ export default function InvoiceInsightsSection() {
     return { cur, prev, pct, periodLabel };
   }, [invoices, period]);
 
-  // ---------- TIERS by invoice revenue ----------
-  const tiers = useMemo(() => {
-    const byClient = {};
-    invoices.forEach((i) => {
-      const k = i.clientId && i.clientId !== "manual-entry"
-        ? i.clientId
-        : "name:" + (i.customRestaurantName || i.orgName || "—");
-      byClient[k] = (byClient[k] || 0) + (Number(i.totalInvoiceAmount) || 0);
-    });
-    const ranked = Object.values(byClient).sort((a, b) => b - a);
-    const n = ranked.length || 1;
-    const cut1 = Math.ceil(n * 0.2);
-    const cut2 = Math.ceil(n * 0.5);
-    const sum = (arr) => arr.reduce((s, x) => s + x, 0);
-    return [
-      { tier: "Tier 1", sub: "Топ 20%", count: cut1, total: sum(ranked.slice(0, cut1)), color: TEAL },
-      { tier: "Tier 2", sub: "20–50%", count: cut2 - cut1, total: sum(ranked.slice(cut1, cut2)), color: AMBER },
-      { tier: "Tier 3", sub: "Остальные", count: n - cut2, total: sum(ranked.slice(cut2)), color: "#9aa3b2" },
-    ];
-  }, [invoices]);
-
   // ---------- TOP paper-performance clients ----------
   const topPaper = useMemo(() => {
     const rows = clients.map((c) => {
       const p = paperByClient[c.id] || { bought: 0, spent: 0 };
-      return { name: c.restaurant || c.name || "—", bought: p.bought, spent: p.spent };
+      const product = c.productName || c.productID_2 || "";
+      const pkg = c.packageType || c.packageID || "";
+      return { name: c.restaurant || c.name || "—", product, pkg, bought: p.bought, spent: p.spent };
     }).filter((r) => r.spent > 0 || r.bought > 0);
     rows.sort((a, b) => b.spent - a.spent);
     return rows.slice(0, 7);
@@ -265,11 +246,13 @@ export default function InvoiceInsightsSection() {
           {/* Headline */}
           <Box>
             <Typography variant="overline" sx={{ color: "text.secondary", letterSpacing: 1 }}>
-              Сумма счетов · {headline.periodLabel}
+              Сумма созданных накладных · {headline.periodLabel}
             </Typography>
-            <Typography sx={{ fontSize: { xs: 34, md: 44 }, fontWeight: 800, lineHeight: 1.05, color: NAVY }}>
-              {fmtUZS(headline.cur)} <Typography component="span" sx={{ fontSize: 20, fontWeight: 600, color: "text.secondary" }}>сум</Typography>
-            </Typography>
+            <Tooltip title={`Создано накладных на сумму: ${fmtUZS(headline.cur)} сум`}>
+              <Typography sx={{ fontSize: { xs: 34, md: 44 }, fontWeight: 800, lineHeight: 1.05, color: NAVY, display: "inline-block", cursor: "default" }}>
+                {fmtUZS(headline.cur)} <Typography component="span" sx={{ fontSize: 20, fontWeight: 600, color: "text.secondary" }}>сум</Typography>
+              </Typography>
+            </Tooltip>
             {headline.pct != null && (
               <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 0.5 }}>
                 {pctUp ? <ArrowUpward sx={{ fontSize: 18, color: TEAL }} /> : <ArrowDownward sx={{ fontSize: 18, color: RED }} />}
@@ -304,31 +287,8 @@ export default function InvoiceInsightsSection() {
         </Box>
       </Card>
 
-      {/* ============ TWO WIDGETS ROW: TIERS + PAPER PERFORMANCE ============ */}
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" }, gap: 3, mt: 3 }}>
-        {/* Tiers by invoice revenue */}
-        <Card sx={cardSx}>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-            <EmojiEvents sx={{ color: AMBER }} />
-            <Typography sx={{ fontWeight: 700, fontSize: 18, color: NAVY }}>Клиенты по сумме счетов</Typography>
-          </Stack>
-          <Stack spacing={1.5}>
-            {tiers.map((t) => (
-              <Box key={t.tier} sx={{ p: 2, borderRadius: 3, bgcolor: "#f7f9fb", borderLeft: `5px solid ${t.color}` }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Box>
-                    <Typography sx={{ fontWeight: 800, color: t.color, fontSize: 16 }}>{t.tier}</Typography>
-                    <Typography variant="caption" color="text.secondary">{t.sub} · {t.count} клиентов</Typography>
-                  </Box>
-                  <Typography sx={{ fontWeight: 800, fontSize: 20, color: NAVY }}>
-                    {fmtUZS(t.total)} <Typography component="span" variant="caption" color="text.secondary">сум</Typography>
-                  </Typography>
-                </Stack>
-              </Box>
-            ))}
-          </Stack>
-        </Card>
-
+      {/* ============ PAPER PERFORMANCE ============ */}
+      <Box sx={{ mt: 3 }}>
         {/* Top paper performance */}
         <Card sx={cardSx}>
           <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
@@ -338,14 +298,14 @@ export default function InvoiceInsightsSection() {
           <Stack spacing={1.75}>
             {topPaper.map((r, i) => (
               <Box key={r.name + i}>
-                <Stack direction="row" justifyContent="space-between" alignItems="baseline" sx={{ mb: 0.5 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="baseline" sx={{ mb: 0.25 }}>
                   <Typography sx={{ fontWeight: 700, color: NAVY, fontSize: 15 }}>
                     {i + 1}. {r.name}
                   </Typography>
                   <Stack direction="row" spacing={1.5} alignItems="center">
                     <Tooltip title="Бумаги потрачено">
                       <Stack direction="row" alignItems="center" spacing={0.3}>
-                        <ArrowOutward sx={{ fontSize: 15, color: RED, transform: "rotate(45deg)" }} />
+                        <ArrowUpward sx={{ fontSize: 15, color: RED }} />
                         <Typography sx={{ fontWeight: 800, fontSize: 15, color: NAVY }}>{fmtKg(r.spent)} кг</Typography>
                       </Stack>
                     </Tooltip>
@@ -357,6 +317,11 @@ export default function InvoiceInsightsSection() {
                     </Tooltip>
                   </Stack>
                 </Stack>
+                {(r.product || r.pkg) && (
+                  <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mb: 0.5 }}>
+                    {[r.product, r.pkg].filter(Boolean).join(" · ")}
+                  </Typography>
+                )}
                 <Box sx={{ height: 10, borderRadius: 5, bgcolor: "#eef1f5", overflow: "hidden" }}>
                   <Box sx={{ height: "100%", width: `${(r.spent / maxSpent) * 100}%`, bgcolor: TEAL, borderRadius: 5, transition: "width .4s" }} />
                 </Box>
@@ -365,7 +330,7 @@ export default function InvoiceInsightsSection() {
           </Stack>
           <Divider sx={{ my: 1.5 }} />
           <Stack direction="row" spacing={2}>
-            <Chip size="small" icon={<ArrowOutward sx={{ transform: "rotate(45deg)" }} />} label="Потрачено" sx={{ bgcolor: "#fdecec", color: RED, fontWeight: 600 }} />
+            <Chip size="small" icon={<ArrowUpward />} label="Потрачено" sx={{ bgcolor: "#fdecec", color: RED, fontWeight: 600 }} />
             <Chip size="small" icon={<ArrowDownward />} label="Куплено" sx={{ bgcolor: "#e8f6f3", color: TEAL, fontWeight: 600 }} />
           </Stack>
         </Card>
@@ -377,9 +342,9 @@ export default function InvoiceInsightsSection() {
           <Stack direction="row" alignItems="center" spacing={1}>
             <NotificationsOff sx={{ color: AMBER }} />
             <Box>
-              <Typography sx={{ fontWeight: 700, fontSize: 18, color: NAVY }}>Молчащие клиенты</Typography>
+              <Typography sx={{ fontWeight: 700, fontSize: 18, color: NAVY }}>Не активные клиенты</Typography>
               <Typography variant="caption" color="text.secondary">
-                Нет ни счетов, ни движения бумаги за период · <b>{silent.length}</b> клиентов
+                Клиенты без созданных накладных, без обновлений бумаг за долгий период · <b>{silent.length}</b> клиентов
               </Typography>
             </Box>
           </Stack>
@@ -404,7 +369,9 @@ export default function InvoiceInsightsSection() {
                 <Box sx={{ minWidth: 0 }}>
                   <Typography noWrap sx={{ fontWeight: 700, color: NAVY, fontSize: 14 }}>{c.name}</Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {c.lastAny ? `Последняя активность: ${format(c.lastAny, "d MMM yyyy", { locale: ru })}` : "Активности нет"}
+                    {c.lastAny
+                      ? `Последняя активность ${formatDistanceToNow(c.lastAny, { locale: ru, addSuffix: true })}, ${format(c.lastAny, "d MMM yyyy", { locale: ru })}`
+                      : "Активности нет"}
                   </Typography>
                 </Box>
                 {c.shellNum ? <Chip size="small" label={c.shellNum} sx={{ bgcolor: "#fff", border: "1px solid #e7d4ad", fontWeight: 600 }} /> : null}
