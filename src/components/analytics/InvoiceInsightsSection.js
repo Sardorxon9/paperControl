@@ -8,7 +8,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import {
   Box, Card, Stack, Typography, ToggleButton, ToggleButtonGroup,
-  Switch, FormControlLabel, CircularProgress, Chip, Divider, Tooltip
+  Switch, FormControlLabel, CircularProgress, Chip, Tooltip
 } from "@mui/material";
 import {
   ArrowUpward, ArrowDownward,
@@ -50,6 +50,8 @@ export default function InvoiceInsightsSection() {
   const [invoices, setInvoices] = useState([]);
   const [clients, setClients] = useState([]);
   const [paperByClient, setPaperByClient] = useState({}); // id -> {in,out,last}
+  const [productNames, setProductNames] = useState({}); // products doc id -> productName
+  const [packageNames, setPackageNames] = useState({}); // packageTypes doc id -> type
 
   const [period, setPeriod] = useState("1m");
   const [splitByOrg, setSplitByOrg] = useState(false);
@@ -59,12 +61,20 @@ export default function InvoiceInsightsSection() {
     (async () => {
       setLoading(true);
       try {
-        const [invSnap, cliSnap] = await Promise.all([
+        const [invSnap, cliSnap, prodSnap, pkgSnap] = await Promise.all([
           getDocs(collection(db, "all-invoices")),
           getDocs(collection(db, "clients")),
+          getDocs(collection(db, "products")),
+          getDocs(collection(db, "packageTypes")),
         ]);
         const inv = invSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
         const cli = cliSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+        // Lookup maps: doc id -> readable name.
+        const prodMap = {};
+        prodSnap.docs.forEach((d) => { prodMap[d.id] = d.data().productName || ""; });
+        const pkgMap = {};
+        pkgSnap.docs.forEach((d) => { pkgMap[d.id] = d.data().type || ""; });
 
         // Paper logs per client (bought / spent / last activity).
         const paper = {};
@@ -87,6 +97,8 @@ export default function InvoiceInsightsSection() {
         setInvoices(inv);
         setClients(cli);
         setPaperByClient(paper);
+        setProductNames(prodMap);
+        setPackageNames(pkgMap);
       } catch (e) {
         console.error("InvoiceInsights fetch error", e);
       } finally {
@@ -162,13 +174,14 @@ export default function InvoiceInsightsSection() {
   const topPaper = useMemo(() => {
     const rows = clients.map((c) => {
       const p = paperByClient[c.id] || { bought: 0, spent: 0 };
-      const product = c.productName || c.productID_2 || "";
-      const pkg = c.packageType || c.packageID || "";
+      // Standard design stores readable names; unique/legacy stores doc IDs we resolve via maps.
+      const product = c.productName || productNames[c.productID_2] || "";
+      const pkg = c.packageType || packageNames[c.packageID] || "";
       return { name: c.restaurant || c.name || "—", product, pkg, bought: p.bought, spent: p.spent };
     }).filter((r) => r.spent > 0 || r.bought > 0);
     rows.sort((a, b) => b.spent - a.spent);
     return rows.slice(0, 7);
-  }, [clients, paperByClient]);
+  }, [clients, paperByClient, productNames, packageNames]);
   const maxSpent = Math.max(1, ...topPaper.map((r) => r.spent));
 
   // ---------- SILENT clients ----------
@@ -295,43 +308,52 @@ export default function InvoiceInsightsSection() {
             <Inventory2 sx={{ color: TEAL }} />
             <Typography sx={{ fontWeight: 700, fontSize: 18, color: NAVY }}>Лидеры по бумаге</Typography>
           </Stack>
+
+          {/* Column headers for the two paper metrics */}
+          <Stack
+            direction="row"
+            justifyContent="flex-end"
+            spacing={3}
+            sx={{ mb: 1, pr: 0.5 }}
+          >
+            <Stack direction="row" alignItems="center" spacing={0.4} sx={{ width: 150, justifyContent: "flex-end" }}>
+              <ArrowUpward sx={{ fontSize: 14, color: RED }} />
+              <Typography sx={{ fontSize: 12, fontWeight: 700, color: RED }}>Всего израсходовано</Typography>
+            </Stack>
+            <Stack direction="row" alignItems="center" spacing={0.4} sx={{ width: 150, justifyContent: "flex-end" }}>
+              <ArrowDownward sx={{ fontSize: 14, color: TEAL }} />
+              <Typography sx={{ fontSize: 12, fontWeight: 700, color: TEAL }}>Всего куплено бумаги</Typography>
+            </Stack>
+          </Stack>
+
           <Stack spacing={1.75}>
             {topPaper.map((r, i) => (
               <Box key={r.name + i}>
-                <Stack direction="row" justifyContent="space-between" alignItems="baseline" sx={{ mb: 0.25 }}>
-                  <Typography sx={{ fontWeight: 700, color: NAVY, fontSize: 15 }}>
-                    {i + 1}. {r.name}
-                  </Typography>
-                  <Stack direction="row" spacing={1.5} alignItems="center">
-                    <Tooltip title="Бумаги потрачено">
-                      <Stack direction="row" alignItems="center" spacing={0.3}>
-                        <ArrowUpward sx={{ fontSize: 15, color: RED }} />
-                        <Typography sx={{ fontWeight: 800, fontSize: 15, color: NAVY }}>{fmtKg(r.spent)} кг</Typography>
-                      </Stack>
-                    </Tooltip>
-                    <Tooltip title="Бумаги куплено">
-                      <Stack direction="row" alignItems="center" spacing={0.3}>
-                        <ArrowDownward sx={{ fontSize: 15, color: TEAL }} />
-                        <Typography sx={{ fontWeight: 600, fontSize: 14, color: "text.secondary" }}>{fmtKg(r.bought)} кг</Typography>
-                      </Stack>
-                    </Tooltip>
+                <Stack direction="row" justifyContent="space-between" alignItems="baseline" spacing={1} sx={{ mb: 0.25 }}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography noWrap sx={{ fontWeight: 700, color: NAVY, fontSize: 15 }}>
+                      {i + 1}. {r.name}
+                    </Typography>
+                    {(r.product || r.pkg) && (
+                      <Typography variant="caption" sx={{ color: "text.secondary", display: "block" }}>
+                        {[r.product, r.pkg].filter(Boolean).join(" · ")}
+                      </Typography>
+                    )}
+                  </Box>
+                  <Stack direction="row" spacing={3} alignItems="center" sx={{ flexShrink: 0 }}>
+                    <Typography sx={{ width: 150, textAlign: "right", fontWeight: 800, fontSize: 15, color: NAVY }}>
+                      {fmtKg(r.spent)} кг
+                    </Typography>
+                    <Typography sx={{ width: 150, textAlign: "right", fontWeight: 600, fontSize: 14, color: "text.secondary" }}>
+                      {fmtKg(r.bought)} кг
+                    </Typography>
                   </Stack>
                 </Stack>
-                {(r.product || r.pkg) && (
-                  <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mb: 0.5 }}>
-                    {[r.product, r.pkg].filter(Boolean).join(" · ")}
-                  </Typography>
-                )}
-                <Box sx={{ height: 10, borderRadius: 5, bgcolor: "#eef1f5", overflow: "hidden" }}>
+                <Box sx={{ height: 10, borderRadius: 5, bgcolor: "#eef1f5", overflow: "hidden", mt: 0.5 }}>
                   <Box sx={{ height: "100%", width: `${(r.spent / maxSpent) * 100}%`, bgcolor: TEAL, borderRadius: 5, transition: "width .4s" }} />
                 </Box>
               </Box>
             ))}
-          </Stack>
-          <Divider sx={{ my: 1.5 }} />
-          <Stack direction="row" spacing={2}>
-            <Chip size="small" icon={<ArrowUpward />} label="Потрачено" sx={{ bgcolor: "#fdecec", color: RED, fontWeight: 600 }} />
-            <Chip size="small" icon={<ArrowDownward />} label="Куплено" sx={{ bgcolor: "#e8f6f3", color: TEAL, fontWeight: 600 }} />
           </Stack>
         </Card>
       </Box>
