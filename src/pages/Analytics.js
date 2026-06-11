@@ -1765,9 +1765,17 @@ const centerTextPlugin = {
 
           {/* 5th Container - Logs + Invoice history side by side */}
           <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
-            <Grid container spacing={4}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: 4,
+                width: '100%',
+                alignItems: 'stretch'
+              }}
+            >
               {/* ---------- LEFT: Recent log entries ---------- */}
-              <Grid item xs={12} lg={6}>
+              <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                 <Stack
                   direction="row"
                   justifyContent="space-between"
@@ -1854,10 +1862,10 @@ const centerTextPlugin = {
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
                   Показано записей: {filteredLogs.length}
                 </Typography>
-              </Grid>
+              </Box>
 
               {/* ---------- RIGHT: Invoice history ---------- */}
-              <Grid item xs={12} lg={6}>
+              <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                 <Stack
                   direction="row"
                   justifyContent="space-between"
@@ -1936,8 +1944,8 @@ const centerTextPlugin = {
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
                   Показано накладных: {filteredInvoices.length}
                 </Typography>
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           </Card>
         </Stack>
       )}
