@@ -10,7 +10,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Button,
   Box,
   CircularProgress,
   IconButton,
@@ -21,7 +20,12 @@ import {
   CardContent,
   Chip,
   Tabs,
-  Tab
+  Tab,
+  Snackbar,
+  Alert,
+  Tooltip,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import {
   ArrowBack,
@@ -30,7 +34,8 @@ import {
   KeyboardArrowDown,
   ExpandMore,
   ExpandLess,
-  History
+  History,
+  Send
 } from '@mui/icons-material';
 import { db } from "../services/firebase";
 import {
@@ -40,8 +45,17 @@ import {
   orderBy
 } from 'firebase/firestore';
 
-const InvoiceHistory = () => {
+const TelegramIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+  </svg>
+);
+
+const InvoiceHistory = ({ currentUser }) => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
   const [invoices, setInvoices] = useState([]);
   const [filteredInvoices, setFilteredInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +69,10 @@ const InvoiceHistory = () => {
   const [productsMap, setProductsMap] = useState({});
   const [packagesMap, setPackagesMap] = useState({});
   const [catalogueMap, setCatalogueMap] = useState({});
-  const [activeTab, setActiveTab] = useState('all'); // Default to 'all' tab to show all invoices
+  const [activeTab, setActiveTab] = useState('all');
+
+  const [sendingInvoiceId, setSendingInvoiceId] = useState(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
     fetchReferenceData();
@@ -74,21 +91,18 @@ const InvoiceHistory = () => {
 
   const fetchReferenceData = async () => {
     try {
-      // загрузка всех продуктов
       const productsSnap = await getDocs(collection(db, "products"));
       const prodMap = {};
       productsSnap.forEach(doc => {
         prodMap[doc.id] = doc.data().productName || '';
       });
 
-      // загрузка всех упаковок
       const packagesSnap = await getDocs(collection(db, "packageTypes"));
       const pkgMap = {};
       packagesSnap.forEach(doc => {
         pkgMap[doc.id] = doc.data().type || '';
       });
 
-      // загрузка всех элементов каталога
       const catalogueSnap = await getDocs(collection(db, "catalogue"));
       const catMap = {};
       catalogueSnap.forEach(doc => {
@@ -120,7 +134,6 @@ const InvoiceHistory = () => {
     try {
       setLoading(true);
 
-      // Fetch all invoices from the new "all-invoices" collection
       const allInvoicesSnapshot = await getDocs(
         query(
           collection(db, "all-invoices"),
@@ -131,7 +144,6 @@ const InvoiceHistory = () => {
       const allInvoices = allInvoicesSnapshot.docs.map(invoiceDoc => {
         const invoiceData = invoiceDoc.data();
 
-        // Get product/package from reference map
         const productName = invoiceData.productID_2
           ? productsMap[invoiceData.productID_2] || ''
           : '';
@@ -175,15 +187,28 @@ const InvoiceHistory = () => {
     });
   };
 
+  const formatDateShort = (timestamp) => {
+    if (!timestamp) return '';
+    let date;
+    if (timestamp.seconds) {
+      date = new Date(timestamp.seconds * 1000);
+    } else {
+      date = new Date(timestamp);
+    }
+    return date.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit'
+    });
+  };
+
   const handleSearchAndFilter = () => {
     let filtered = invoices;
 
-    // Filter by paymentType based on active tab (unless 'all' is selected)
     if (activeTab !== 'all') {
       filtered = filtered.filter(invoice => invoice.paymentType === activeTab);
     }
 
-    // Apply search query
     if (searchQuery.trim()) {
       const searchLower = searchQuery.toLowerCase();
       filtered = filtered.filter(invoice => (
@@ -199,7 +224,6 @@ const InvoiceHistory = () => {
       ));
     }
 
-    // Apply sorting
     filtered = [...filtered].sort((a, b) => {
       let aValue = a[sortConfig.key];
       let bValue = b[sortConfig.key];
@@ -209,12 +233,8 @@ const InvoiceHistory = () => {
         bValue = bValue?.seconds ? bValue.seconds : new Date(bValue).getTime() / 1000;
       }
 
-      if (aValue < bValue) {
-        return sortConfig.direction === 'asc' ? -1 : 1;
-      }
-      if (aValue > bValue) {
-        return sortConfig.direction === 'asc' ? 1 : -1;
-      }
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
 
@@ -237,6 +257,35 @@ const InvoiceHistory = () => {
       newExpanded.add(invoiceId);
     }
     setExpandedRows(newExpanded);
+  };
+
+  const handleSendToTelegram = async (invoiceId) => {
+    if (sendingInvoiceId) return;
+    if (!currentUser?.chatId) {
+      setSnackbar({ open: true, message: 'Telegram не привязан к вашему аккаунту', severity: 'warning' });
+      return;
+    }
+
+    setSendingInvoiceId(invoiceId);
+    try {
+      const response = await fetch('/api/send-invoice-telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId, userUid: currentUser.uID })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSnackbar({ open: true, message: 'Накладная отправлена в Telegram!', severity: 'success' });
+      } else {
+        setSnackbar({ open: true, message: result.error || 'Ошибка отправки', severity: 'error' });
+      }
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Ошибка сети. Попробуйте снова', severity: 'error' });
+    } finally {
+      setSendingInvoiceId(null);
+    }
   };
 
   const renderSortIcon = (columnKey) => {
@@ -278,7 +327,6 @@ const InvoiceHistory = () => {
     if (invoice.products && Array.isArray(invoice.products) && invoice.products.length === 1) {
       const product = invoice.products[0];
 
-      // Check if this is a standard type invoice with catalogueItemID
       if (invoice.type === 'standard' && product.catalogueItemID) {
         const catalogueItem = catalogueMap[product.catalogueItemID];
         if (catalogueItem) {
@@ -289,7 +337,6 @@ const InvoiceHistory = () => {
           gramm = product.gramm;
         }
       } else {
-        // Custom invoice - use old structure
         productName = productsMap[product.productID_2] || 'Неизвестный продукт';
         packageType = packagesMap[product.packageID] || 'Неизвестная упаковка';
         gramm = product.gramm;
@@ -300,7 +347,6 @@ const InvoiceHistory = () => {
       gramm = invoice.gramm;
     }
 
-    // For standard invoices, show: name (productCode) and comment below
     if (invoice.type === 'standard' && productCode) {
       return (
         <Box>
@@ -316,7 +362,6 @@ const InvoiceHistory = () => {
       );
     }
 
-    // For custom invoices, show old format
     return (
       <Box>
         <Typography variant="body2" fontWeight="600">
@@ -379,7 +424,6 @@ const InvoiceHistory = () => {
           let productCode = '';
           let comment = '';
 
-          // Check if this is a standard type invoice with catalogueItemID
           if (invoiceType === 'standard' && product.catalogueItemID) {
             const catalogueItem = catalogueMap[product.catalogueItemID];
             if (catalogueItem) {
@@ -389,7 +433,6 @@ const InvoiceHistory = () => {
               comment = catalogueItem.comment || '';
             }
           } else {
-            // Custom invoice - use old structure
             productName = productsMap[product.productID_2] || 'Неизвестный продукт';
             packageType = packagesMap[product.packageID] || 'Неизвестная упаковка';
           }
@@ -438,113 +481,141 @@ const InvoiceHistory = () => {
     );
   };
 
-  if (loading) {
+  const getProductSummary = (invoice) => {
+    if (invoice.products && Array.isArray(invoice.products) && invoice.products.length > 1) {
+      return `${invoice.products.length} товаров`;
+    }
+    if (invoice.products && Array.isArray(invoice.products) && invoice.products.length === 1) {
+      const product = invoice.products[0];
+      if (invoice.type === 'standard' && product.catalogueItemID) {
+        const catItem = catalogueMap[product.catalogueItemID];
+        if (catItem) return catItem.productName;
+      } else {
+        return productsMap[product.productID_2] || 'Продукт';
+      }
+    }
+    return invoice.clientProductName || 'Продукт';
+  };
+
+  // ─── MOBILE CARD LAYOUT ───────────────────────────────────────────────
+  const renderMobileLayout = () => {
     return (
-      <Container maxWidth="xl" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-        <CircularProgress />
-      </Container>
-    );
-  }
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        {filteredInvoices.map((invoice) => (
+          <Card
+            key={invoice.id}
+            sx={{
+              borderRadius: 2,
+              border: '1px solid #e0e0e0',
+              boxShadow: 'none',
+              '&:active': { backgroundColor: '#f5f5f5' }
+            }}
+          >
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              {/* Top row: Date + Company chip */}
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                <Chip
+                  label={invoice.senderCompany || 'White Ray'}
+                  size="small"
+                  sx={{
+                    height: 22,
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    backgroundColor: invoice.senderCompany === 'Pure Pack' ? '#f3e5f5' : '#e0f2f1',
+                    color: invoice.senderCompany === 'Pure Pack' ? '#7b1fa2' : '#00695c',
+                  }}
+                />
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                  {formatDateShort(invoice.dateCreated)}
+                </Typography>
+              </Box>
 
-  return (
-    <Container maxWidth="xl" sx={{ mt: 4 }}>
-      {/* Header */}
-      <Box display="flex" alignItems="center" gap={2} mb={3}>
-        <IconButton onClick={() => navigate('/invoices')} color="primary">
-          <ArrowBack />
-        </IconButton>
-        <History color="primary" sx={{ fontSize: 32 }} />
-        <Typography variant="h4" color="primary">
-          История созданных накладных
-        </Typography>
-      </Box>
+              {/* Client name */}
+              <Typography variant="body1" fontWeight={700} sx={{ mb: 0.25, lineHeight: 1.3 }}>
+                {invoice.customRestaurantName || invoice.clientRestaurant}
+              </Typography>
+              {(invoice.clientOrgName || invoice.orgName) && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  {invoice.clientOrgName || invoice.orgName}
+                </Typography>
+              )}
 
-      {/* Info Card */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>
-                Журнал всех созданных накладных
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Всего накладных: {invoices.length}
-              </Typography>
-            </Box>
-            <Chip
-              label={`Показано: ${filteredInvoices.length}`}
-              color="primary"
-              variant="outlined"
-            />
+              {/* Product summary + Amount row */}
+              <Box display="flex" justifyContent="space-between" alignItems="flex-end" mb={1.5}>
+                <Typography variant="body2" color="text.secondary">
+                  {getProductSummary(invoice)}
+                </Typography>
+                <Typography variant="h6" fontWeight={700} color="#04907F" sx={{ lineHeight: 1 }}>
+                  {invoice.totalInvoiceAmount?.toLocaleString('ru-RU')} <Typography component="span" variant="caption" color="#04907F">сум</Typography>
+                </Typography>
+              </Box>
+
+              {/* Expanded products for multi-product invoices */}
+              {invoice.products && invoice.products.length > 1 && (
+                <>
+                  <Box
+                    onClick={() => toggleRowExpansion(invoice.id)}
+                    sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer', mb: expandedRows.has(invoice.id) ? 1 : 0 }}
+                  >
+                    <Typography variant="caption" color="primary" fontWeight={600}>
+                      {expandedRows.has(invoice.id) ? 'Скрыть' : 'Подробнее'}
+                    </Typography>
+                    {expandedRows.has(invoice.id) ? <ExpandLess sx={{ fontSize: 16 }} color="primary" /> : <ExpandMore sx={{ fontSize: 16 }} color="primary" />}
+                  </Box>
+                  <Collapse in={expandedRows.has(invoice.id)}>
+                    {renderExpandedProducts(invoice.products, invoice.type)}
+                  </Collapse>
+                </>
+              )}
+
+              {/* Telegram send button */}
+              <Box
+                onClick={() => handleSendToTelegram(invoice.id)}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                  mt: 1,
+                  py: 1,
+                  borderRadius: 1.5,
+                  border: '1.5px solid #0088cc',
+                  color: '#0088cc',
+                  cursor: 'pointer',
+                  opacity: (!currentUser?.chatId || sendingInvoiceId === invoice.id) ? 0.5 : 1,
+                  pointerEvents: (!currentUser?.chatId || sendingInvoiceId) ? 'none' : 'auto',
+                  '&:active': { backgroundColor: '#e3f2fd' }
+                }}
+              >
+                {sendingInvoiceId === invoice.id ? (
+                  <CircularProgress size={18} sx={{ color: '#0088cc' }} />
+                ) : (
+                  <>
+                    <TelegramIcon />
+                    <Typography variant="body2" fontWeight={600}>
+                      Отправить в Telegram
+                    </Typography>
+                  </>
+                )}
+              </Box>
+            </CardContent>
+          </Card>
+        ))}
+
+        {filteredInvoices.length === 0 && !loading && (
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <Typography variant="h6" color="text.secondary">
+              {searchQuery ? 'Накладные не найдены' : 'Накладные отсутствуют'}
+            </Typography>
           </Box>
-        </CardContent>
-      </Card>
-
-      {/* Tabs */}
-      <Box mb={3}>
-        <Tabs
-          value={activeTab}
-          onChange={(event, newValue) => setActiveTab(newValue)}
-          centered
-          sx={{
-            bgcolor: 'background.paper',
-            borderRadius: 1,
-            '& .MuiTab-root': {
-              textTransform: 'none',
-              fontWeight: 600,
-              fontSize: '1rem',
-            },
-            '& .MuiTabs-indicator': {
-              backgroundColor: '#078570',
-            },
-          }}
-        >
-          <Tab
-            label="Все"
-            value="all"
-            sx={{
-              color: activeTab === 'all' ? '#1976d2 !important' : 'text.primary',
-              bgcolor: activeTab === 'all' ? '#e3f2fd' : 'transparent',
-            }}
-          />
-          <Tab
-            label="Наличные"
-            value="cash"
-            sx={{
-              color: activeTab === 'cash' ? '#2e7d32 !important' : 'text.primary',
-              bgcolor: activeTab === 'cash' ? '#e8f5e9' : 'transparent',
-            }}
-          />
-          <Tab
-            label="Перечисление"
-            value="transfer"
-            sx={{
-              color: activeTab === 'transfer' ? '#078570 !important' : 'text.primary',
-              bgcolor: activeTab === 'transfer' ? '#e3f2fd' : 'transparent',
-            }}
-          />
-        </Tabs>
+        )}
       </Box>
+    );
+  };
 
-      {/* Search */}
-      <Box mb={3}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="Поиск по номеру накладной, клиенту, продукту, пользователю..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search />
-              </InputAdornment>
-            )
-          }}
-        />
-      </Box>
-
-      {/* Table */}
+  // ─── DESKTOP TABLE LAYOUT ─────────────────────────────────────────────
+  const renderDesktopLayout = () => {
+    return (
       <Paper elevation={3}>
         <TableContainer>
           <Table>
@@ -556,7 +627,7 @@ const InvoiceHistory = () => {
                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
                   № Накладной
                 </TableCell>
-                <TableCell 
+                <TableCell
                   sx={{ color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
                   onClick={() => handleSort('dateCreated')}
                 >
@@ -568,7 +639,7 @@ const InvoiceHistory = () => {
                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
                   Клиент
                 </TableCell>
-                <TableCell 
+                <TableCell
                   sx={{ color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
                   onClick={() => handleSort('products')}
                 >
@@ -588,6 +659,9 @@ const InvoiceHistory = () => {
                 </TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>
                   Создал
+                </TableCell>
+                <TableCell sx={{ color: '#fff', fontWeight: 'bold', width: '60px', textAlign: 'center' }}>
+                  TG
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -660,10 +734,32 @@ const InvoiceHistory = () => {
                         {invoice.userName || users[invoice.userID]?.name || 'Неизвестный пользователь'}
                       </Typography>
                     </TableCell>
+                    <TableCell sx={{ textAlign: 'center' }}>
+                      <Tooltip title={!currentUser?.chatId ? 'Telegram не привязан' : 'Отправить в Telegram'}>
+                        <span>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleSendToTelegram(invoice.id)}
+                            disabled={!currentUser?.chatId || sendingInvoiceId === invoice.id}
+                            sx={{
+                              color: '#0088cc',
+                              '&:hover': { backgroundColor: '#e3f2fd' },
+                              '&.Mui-disabled': { color: '#bdbdbd' }
+                            }}
+                          >
+                            {sendingInvoiceId === invoice.id ? (
+                              <CircularProgress size={20} sx={{ color: '#0088cc' }} />
+                            ) : (
+                              <Send sx={{ fontSize: 20 }} />
+                            )}
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </TableCell>
                   </TableRow>
                   {expandedRows.has(invoice.id) && invoice.products && invoice.products.length > 1 && (
                     <TableRow>
-                      <TableCell colSpan={9} sx={{ py: 0 }}>
+                      <TableCell colSpan={10} sx={{ py: 0 }}>
                         <Collapse in={expandedRows.has(invoice.id)}>
                           {renderExpandedProducts(invoice.products, invoice.type)}
                         </Collapse>
@@ -689,6 +785,154 @@ const InvoiceHistory = () => {
           </Box>
         )}
       </Paper>
+    );
+  };
+
+  if (loading) {
+    return (
+      <Container maxWidth="xl" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Container>
+    );
+  }
+
+  return (
+    <Container maxWidth={isMobile ? 'sm' : 'xl'} sx={{ mt: isMobile ? 2 : 4, px: isMobile ? 1.5 : 3 }}>
+      {/* Header */}
+      <Box display="flex" alignItems="center" gap={isMobile ? 1 : 2} mb={isMobile ? 2 : 3}>
+        <IconButton onClick={() => navigate('/invoices')} color="primary" size={isMobile ? 'small' : 'medium'}>
+          <ArrowBack />
+        </IconButton>
+        <History color="primary" sx={{ fontSize: isMobile ? 24 : 32 }} />
+        <Typography variant={isMobile ? 'h6' : 'h4'} color="primary">
+          {isMobile ? 'История накладных' : 'История созданных накладных'}
+        </Typography>
+      </Box>
+
+      {/* Info Card */}
+      {!isMobile && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>
+                  Журнал всех созданных накладных
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Всего накладных: {invoices.length}
+                </Typography>
+              </Box>
+              <Chip
+                label={`Показано: ${filteredInvoices.length}`}
+                color="primary"
+                variant="outlined"
+              />
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tabs */}
+      <Box mb={isMobile ? 1.5 : 3}>
+        <Tabs
+          value={activeTab}
+          onChange={(event, newValue) => setActiveTab(newValue)}
+          centered={!isMobile}
+          variant={isMobile ? 'fullWidth' : 'standard'}
+          sx={{
+            bgcolor: 'background.paper',
+            borderRadius: 1,
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: isMobile ? '0.85rem' : '1rem',
+              minHeight: isMobile ? 40 : 48,
+            },
+            '& .MuiTabs-indicator': {
+              backgroundColor: '#078570',
+            },
+          }}
+        >
+          <Tab
+            label="Все"
+            value="all"
+            sx={{
+              color: activeTab === 'all' ? '#1976d2 !important' : 'text.primary',
+              bgcolor: activeTab === 'all' ? '#e3f2fd' : 'transparent',
+            }}
+          />
+          <Tab
+            label="Наличные"
+            value="cash"
+            sx={{
+              color: activeTab === 'cash' ? '#2e7d32 !important' : 'text.primary',
+              bgcolor: activeTab === 'cash' ? '#e8f5e9' : 'transparent',
+            }}
+          />
+          <Tab
+            label="Перечисление"
+            value="transfer"
+            sx={{
+              color: activeTab === 'transfer' ? '#078570 !important' : 'text.primary',
+              bgcolor: activeTab === 'transfer' ? '#e3f2fd' : 'transparent',
+            }}
+          />
+        </Tabs>
+      </Box>
+
+      {/* Search */}
+      <Box mb={isMobile ? 1.5 : 3}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          size={isMobile ? 'small' : 'medium'}
+          placeholder={isMobile ? 'Поиск...' : 'Поиск по номеру накладной, клиенту, продукту, пользователю...'}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search />
+              </InputAdornment>
+            )
+          }}
+        />
+      </Box>
+
+      {/* Mobile count chip */}
+      {isMobile && (
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.5}>
+          <Typography variant="caption" color="text.secondary">
+            Всего: {invoices.length}
+          </Typography>
+          <Chip
+            label={`Показано: ${filteredInvoices.length}`}
+            size="small"
+            color="primary"
+            variant="outlined"
+          />
+        </Box>
+      )}
+
+      {/* Main content - switch between mobile and desktop */}
+      {isMobile ? renderMobileLayout() : renderDesktopLayout()}
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

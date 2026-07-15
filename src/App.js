@@ -139,7 +139,7 @@ function App() {
       } />
 
       <Route path="/invoices/history" element={
-        <InvoiceHistory />
+        <InvoiceHistory currentUser={user} />
       } />
 
       <Route path="/catalogue" element={
