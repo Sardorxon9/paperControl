@@ -1231,199 +1231,176 @@ return (
                   </Box>
                 ) : (
                   /* OLD: Dropdown selection for unique design */
-                  <Grid container spacing={3}>
-                  {/* Package Type */}
-                  <Grid item xs={12} sm={4}>
-                    <TextField
-                      select
-                      fullWidth
-                      label="Тип упаковки"
-                      value={productInputs.packageType}
-                      onChange={(e) => handleProductInputChange('packageType', e.target.value)}
-                      required
-                      size="small"
-                      SelectProps={{
-                        renderValue: (selected) => {
-                          if (!selected) {
-                            return <span style={{ opacity: 0.6, fontStyle: "italic" }}>Выбрать</span>;
-                          }
-                          
-                          const selectedPackage = packageTypes.find((p) => p.id === selected);
-                          
-                          if (!selectedPackage) {
-                            const fallbackPackage = packageTypes.find((p) => 
-                              p.name === selected || p.type === selected || p.id === selected
-                            );
-                            
-                            if (fallbackPackage) {
-                              return fallbackPackage.name || fallbackPackage.type || fallbackPackage.id;
+                  <Grid container spacing={2} alignItems="flex-end">
+                    {/* Package Type */}
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        select
+                        fullWidth
+                        label="Тип упаковки"
+                        value={productInputs.packageType}
+                        onChange={(e) => handleProductInputChange('packageType', e.target.value)}
+                        required
+                        size="small"
+                        SelectProps={{
+                          renderValue: (selected) => {
+                            if (!selected) {
+                              return <span style={{ opacity: 0.6, fontStyle: "italic" }}>Выбрать</span>;
                             }
-                            
-                            return selected;
-                          }
-                          
-                          return selectedPackage.name || selectedPackage.type || selectedPackage.id;
-                        },
-                        MenuProps: {
-                          PaperProps: {
-                            sx: {
-                              maxHeight: 250,
-                              minWidth: 200,
-                              '& .MuiMenuItem-root': {
-                                fontSize: '0.9rem',
-                                minHeight: '36px',
-                                padding: '8px 16px',
+                            const selectedPackage = packageTypes.find((p) => p.id === selected);
+                            if (!selectedPackage) {
+                              const fallbackPackage = packageTypes.find((p) =>
+                                p.name === selected || p.type === selected || p.id === selected
+                              );
+                              if (fallbackPackage) {
+                                return fallbackPackage.name || fallbackPackage.type || fallbackPackage.id;
+                              }
+                              return selected;
+                            }
+                            return selectedPackage.name || selectedPackage.type || selectedPackage.id;
+                          },
+                          MenuProps: {
+                            PaperProps: {
+                              sx: {
+                                maxHeight: 250,
+                                minWidth: 200,
+                                '& .MuiMenuItem-root': {
+                                  fontSize: '0.9rem',
+                                  minHeight: '36px',
+                                  padding: '8px 16px',
+                                }
                               }
                             }
                           }
-                        }
-                      }}
-                    >
-                      {packageTypes.length > 0 ? (
-                        packageTypes.map((pkg) => (
-                          <MenuItem key={pkg.id} value={pkg.id}>
-                            {pkg.name || pkg.type || pkg.id}
+                        }}
+                      >
+                        {packageTypes.length > 0 ? (
+                          packageTypes.map((pkg) => (
+                            <MenuItem key={pkg.id} value={pkg.id}>
+                              {pkg.name || pkg.type || pkg.id}
+                            </MenuItem>
+                          ))
+                        ) : (
+                          <MenuItem disabled value="">
+                            Загрузка типов упаковки...
                           </MenuItem>
-                        ))
-                      ) : (
-                        <MenuItem disabled value="">
-                          Загрузка типов упаковки...
-                        </MenuItem>
-                      )}
-                    </TextField>
-                  </Grid>
+                        )}
+                      </TextField>
+                    </Grid>
 
-                  {/* Product */}
-                  <Grid item xs={12} sm={4}>
-                    <TextField
-                      select
-                      fullWidth
-                      label="Продукт"
-                      value={productInputs.product}
-                      onChange={(e) => handleProductInputChange('product', e.target.value)}
-                      required
-                      size="small"
-                      disabled={!productInputs.packageType}
-                      SelectProps={{
-                        renderValue: (selected) => {
-                          if (!selected) return <span style={{ opacity: 0.6, fontStyle: "italic" }}>Выбрать</span>;
-                          
-                          const source = formData.designType === "unique" ? possibleProducts : availableProducts;
-                          const item = source.find((p) => p.id === selected);
-                          
-                          if (!item) {
-                            const fallbackItem = source.find((p) => 
-                              p.productName === selected || p.name === selected || p.id === selected
-                            );
-                            
-                            if (fallbackItem) {
-                              return fallbackItem.productName || fallbackItem.name || fallbackItem.id;
+                    {/* Product */}
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        select
+                        fullWidth
+                        label="Продукт"
+                        value={productInputs.product}
+                        onChange={(e) => handleProductInputChange('product', e.target.value)}
+                        required
+                        size="small"
+                        disabled={!productInputs.packageType}
+                        SelectProps={{
+                          renderValue: (selected) => {
+                            if (!selected) return <span style={{ opacity: 0.6, fontStyle: "italic" }}>Выбрать</span>;
+                            const source = formData.designType === "unique" ? possibleProducts : availableProducts;
+                            const item = source.find((p) => p.id === selected);
+                            if (!item) {
+                              const fallbackItem = source.find((p) =>
+                                p.productName === selected || p.name === selected || p.id === selected
+                              );
+                              if (fallbackItem) {
+                                return fallbackItem.productName || fallbackItem.name || fallbackItem.id;
+                              }
+                              return selected;
                             }
-                            
-                            return selected;
+                            return item.productName || item.name || item.id;
+                          },
+                          MenuProps: {
+                            PaperProps: {
+                              sx: {
+                                maxHeight: 250,
+                                minWidth: 200
+                              }
+                            }
                           }
-                          
-                          return item.productName || item.name || item.id;
-                        },
-                        MenuProps: {
-                          PaperProps: { 
-                            sx: { 
-                              maxHeight: 250,
-                              minWidth: 200 
-                            } 
-                          }
-                        }
-                      }}
-                    >
-                      {(formData.designType === "unique" ? possibleProducts : availableProducts).length > 0 ? (
-                        (formData.designType === "unique" ? possibleProducts : availableProducts).map((product) => (
-                          <MenuItem key={product.id} value={product.id}>
-                            {product.productName || product.name || product.id}
+                        }}
+                      >
+                        {(formData.designType === "unique" ? possibleProducts : availableProducts).length > 0 ? (
+                          (formData.designType === "unique" ? possibleProducts : availableProducts).map((product) => (
+                            <MenuItem key={product.id} value={product.id}>
+                              {product.productName || product.name || product.id}
+                            </MenuItem>
+                          ))
+                        ) : (
+                          <MenuItem disabled value="">
+                            {productInputs.packageType ? "Загрузка продуктов..." : "Сначала выберите тип упаковки"}
                           </MenuItem>
-                        ))
-                      ) : (
-                        <MenuItem disabled value="">
-                          {productInputs.packageType ? "Загрузка продуктов..." : "Сначала выберите тип упаковки"}
-                        </MenuItem>
-                      )}
-                    </TextField>
+                        )}
+                      </TextField>
+                    </Grid>
+
+                    {/* Gram */}
+                    <Grid item xs={12} sm={4}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {manualGramMode ? (
+                          <TextField
+                            fullWidth
+                            label="Граммаж"
+                            value={productInputs.gram}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === "" || /^\d{0,2}(\.\d{0,1})?$/.test(val)) {
+                                handleProductInputChange('gram', val);
+                              }
+                            }}
+                            required
+                            size="small"
+                            disabled={!productInputs.product}
+                            placeholder="напр. 2.5"
+                            inputProps={{ inputMode: 'decimal' }}
+                          />
+                        ) : (
+                          <TextField
+                            select
+                            fullWidth
+                            label="Граммаж"
+                            value={productInputs.gram}
+                            onChange={(e) => handleProductInputChange('gram', e.target.value)}
+                            required
+                            size="small"
+                            disabled={!productInputs.product}
+                            SelectProps={{
+                              renderValue: (selected) =>
+                                selected
+                                  ? `${selected} г`
+                                  : <span style={{ opacity: 0.6, fontStyle: "italic" }}>Выбрать</span>,
+                              MenuProps: {
+                                PaperProps: {
+                                  sx: { maxHeight: 200, minWidth: 120 }
+                                }
+                              }
+                            }}
+                          >
+                            {staticGramOptions.map((gram) => (
+                              <MenuItem key={gram} value={gram}>
+                                {gram} г
+                              </MenuItem>
+                            ))}
+                          </TextField>
+                        )}
+                        <Switch
+                          size="small"
+                          checked={manualGramMode}
+                          onChange={(e) => {
+                            setManualGramMode(e.target.checked);
+                            setProductInputs(prev => ({ ...prev, gram: "" }));
+                          }}
+                          disabled={!productInputs.product}
+                          title="Ввести вручную"
+                        />
+                      </Box>
+                    </Grid>
                   </Grid>
-
-          
-                  {/* Gram */}
-<Grid item xs={12} sm={4}>
-  <Box>
-    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-      <FormControlLabel
-        control={
-          <Switch
-            size="small"
-            checked={manualGramMode}
-            onChange={(e) => {
-              setManualGramMode(e.target.checked);
-              setProductInputs(prev => ({ ...prev, gram: "" }));
-            }}
-            disabled={!productInputs.product}
-          />
-        }
-        label={<Typography variant="caption">Ввести вручную</Typography>}
-        sx={{ m: 0 }}
-      />
-    </Box>
-    {manualGramMode ? (
-      <TextField
-        fullWidth
-        label="Граммаж"
-        value={productInputs.gram}
-        onChange={(e) => {
-          const val = e.target.value;
-          if (val === "" || /^\d{0,2}(\.\d{0,1})?$/.test(val)) {
-            handleProductInputChange('gram', val);
-          }
-        }}
-        required
-        size="small"
-        disabled={!productInputs.product}
-        placeholder="напр. 2.5"
-        inputProps={{ inputMode: 'decimal' }}
-      />
-    ) : (
-      <TextField
-        select
-        fullWidth
-        label="Граммаж"
-        value={productInputs.gram}
-        onChange={(e) => handleProductInputChange('gram', e.target.value)}
-        required
-        size="small"
-        disabled={!productInputs.product}
-        SelectProps={{
-          renderValue: (selected) =>
-            selected
-              ? `${selected} г`
-              : <span style={{ opacity: 0.6, fontStyle: "italic" }}>Выбрать</span>,
-          MenuProps: {
-            PaperProps: {
-              sx: {
-                maxHeight: 200,
-                minWidth: 120
-              }
-            }
-          }
-        }}
-      >
-        {staticGramOptions.map((gram) => (
-          <MenuItem key={gram} value={gram}>
-            {gram} г
-          </MenuItem>
-        ))}
-      </TextField>
-    )}
-  </Box>
-</Grid>
-
-                  {/* Name (only for Standard Design with multiple options) - REMOVED, now using StandardDesignPicker */}
-                </Grid>
                 )}
               </Paper>
             </Grid>

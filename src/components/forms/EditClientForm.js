@@ -845,7 +845,7 @@ const handleSubmit = async (e) => {
           <LocalOfferIcon /> Продукт
         </Typography>
         
-        <Grid container spacing={2}>
+        <Grid container spacing={2} alignItems="flex-end">
           {/* Package Type */}
           <Grid item xs={12} sm={4}>
             <TextField
@@ -901,65 +901,58 @@ const handleSubmit = async (e) => {
           </Grid>
 
           {/* Gram */}
-       <Grid item xs={12} sm={4}>
-  <Box>
-    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-      <FormControlLabel
-        control={
-          <Switch
-            size="small"
-            checked={manualGramMode}
-            onChange={(e) => {
-              setManualGramMode(e.target.checked);
-              setProductInputs(prev => ({ ...prev, gram: "" }));
-            }}
-            disabled={!productInputs.product}
-          />
-        }
-        label={<Typography variant="caption">Ввести вручную</Typography>}
-        sx={{ m: 0 }}
-      />
-    </Box>
-    {manualGramMode ? (
-      <TextField
-        fullWidth
-        label="Граммаж"
-        value={productInputs.gram}
-        onChange={(e) => {
-          const val = e.target.value;
-          if (val === "" || /^\d{0,2}(\.\d{0,1})?$/.test(val)) {
-            handleProductInputChange('gram', val);
-          }
-        }}
-        required
-        size="small"
-        disabled={!productInputs.product}
-        placeholder="напр. 2.5"
-        inputProps={{ inputMode: 'decimal' }}
-      />
-    ) : (
-      <TextField
-        select
-        fullWidth
-        label="Граммаж"
-        value={productInputs.gram}
-        onChange={(e) => handleProductInputChange('gram', e.target.value)}
-        required
-        size="small"
-        disabled={!productInputs.product}
-        SelectProps={{
-          renderValue: (selected) => selected ? `${selected} г` : <span>Выбрать</span>
-        }}
-      >
-        {(formData.designType === "standart" ? availableGrams : [1, 2, 3, 4, 5, 6]).map((gram) => (
-          <MenuItem key={gram} value={gram.toString()}>
-            {gram} г
-          </MenuItem>
-        ))}
-      </TextField>
-    )}
-  </Box>
-</Grid>
+          <Grid item xs={12} sm={4}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {manualGramMode ? (
+                <TextField
+                  fullWidth
+                  label="Граммаж"
+                  value={productInputs.gram}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "" || /^\d{0,2}(\.\d{0,1})?$/.test(val)) {
+                      handleProductInputChange('gram', val);
+                    }
+                  }}
+                  required
+                  size="small"
+                  disabled={!productInputs.product}
+                  placeholder="напр. 2.5"
+                  inputProps={{ inputMode: 'decimal' }}
+                />
+              ) : (
+                <TextField
+                  select
+                  fullWidth
+                  label="Граммаж"
+                  value={productInputs.gram}
+                  onChange={(e) => handleProductInputChange('gram', e.target.value)}
+                  required
+                  size="small"
+                  disabled={!productInputs.product}
+                  SelectProps={{
+                    renderValue: (selected) => selected ? `${selected} г` : <span>Выбрать</span>
+                  }}
+                >
+                  {(formData.designType === "standart" ? availableGrams : [1, 2, 3, 4, 5, 6]).map((gram) => (
+                    <MenuItem key={gram} value={gram.toString()}>
+                      {gram} г
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+              <Switch
+                size="small"
+                checked={manualGramMode}
+                onChange={(e) => {
+                  setManualGramMode(e.target.checked);
+                  setProductInputs(prev => ({ ...prev, gram: "" }));
+                }}
+                disabled={!productInputs.product}
+                title="Ввести вручную"
+              />
+            </Box>
+          </Grid>
 
           {/* Name (only for Standard Design with multiple options) */}
           {formData.designType === "standart" && availableNames.length > 0 && (
