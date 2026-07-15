@@ -19,7 +19,8 @@ import {
   FormControlLabel,
   Radio,
   Card,
-  CardContent
+  CardContent,
+  Switch
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -59,6 +60,8 @@ export default function AddClientForm({ onClientAdded, onClose, currentUser }) {
     gram: "",
     name: "" // Only for standard design when multiple matches exist
   });
+
+  const [manualGramMode, setManualGramMode] = useState(false);
 
   // New state for standard design picker
   const [selectedStandardDesign, setSelectedStandardDesign] = useState({
@@ -626,7 +629,7 @@ const handleSubmit = async (event) => {
         // Save the old product selection format
         packageID: productInputs.packageType,
         productID_2: productInputs.product,
-        gram: parseInt(productInputs.gram),
+        gram: parseFloat(productInputs.gram),
         ...(productInputs.name && { name: productInputs.name })
       };
     }
@@ -1349,37 +1352,74 @@ return (
           
                   {/* Gram */}
 <Grid item xs={12} sm={4}>
-  <TextField
-    select
-    fullWidth
-    label="Граммаж"
-    value={productInputs.gram}
-    onChange={(e) => handleProductInputChange('gram', e.target.value)}
-    required
-    size="small"
-    disabled={!productInputs.product}
-    SelectProps={{
-      renderValue: (selected) =>
-        selected
-          ? `${selected} г`
-          : <span style={{ opacity: 0.6, fontStyle: "italic" }}>Выбрать</span>,
-      MenuProps: { 
-        PaperProps: { 
-          sx: { 
-            maxHeight: 200,
-            minWidth: 120 
-          } 
-        } 
-      }
-    }}
-  >
-    {/* Always show static gram options for both design types */}
-    {staticGramOptions.map((gram) => (
-      <MenuItem key={gram} value={gram}>
-        {gram} г
-      </MenuItem>
-    ))}
-  </TextField>
+  <Box>
+    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+      <FormControlLabel
+        control={
+          <Switch
+            size="small"
+            checked={manualGramMode}
+            onChange={(e) => {
+              setManualGramMode(e.target.checked);
+              setProductInputs(prev => ({ ...prev, gram: "" }));
+            }}
+            disabled={!productInputs.product}
+          />
+        }
+        label={<Typography variant="caption">Ввести вручную</Typography>}
+        sx={{ m: 0 }}
+      />
+    </Box>
+    {manualGramMode ? (
+      <TextField
+        fullWidth
+        label="Граммаж"
+        value={productInputs.gram}
+        onChange={(e) => {
+          const val = e.target.value;
+          if (val === "" || /^\d{0,2}(\.\d{0,1})?$/.test(val)) {
+            handleProductInputChange('gram', val);
+          }
+        }}
+        required
+        size="small"
+        disabled={!productInputs.product}
+        placeholder="напр. 2.5"
+        inputProps={{ inputMode: 'decimal' }}
+      />
+    ) : (
+      <TextField
+        select
+        fullWidth
+        label="Граммаж"
+        value={productInputs.gram}
+        onChange={(e) => handleProductInputChange('gram', e.target.value)}
+        required
+        size="small"
+        disabled={!productInputs.product}
+        SelectProps={{
+          renderValue: (selected) =>
+            selected
+              ? `${selected} г`
+              : <span style={{ opacity: 0.6, fontStyle: "italic" }}>Выбрать</span>,
+          MenuProps: {
+            PaperProps: {
+              sx: {
+                maxHeight: 200,
+                minWidth: 120
+              }
+            }
+          }
+        }}
+      >
+        {staticGramOptions.map((gram) => (
+          <MenuItem key={gram} value={gram}>
+            {gram} г
+          </MenuItem>
+        ))}
+      </TextField>
+    )}
+  </Box>
 </Grid>
 
                   {/* Name (only for Standard Design with multiple options) - REMOVED, now using StandardDesignPicker */}

@@ -20,7 +20,8 @@ import {
   Radio,
   InputAdornment,
   Card,
-  CardContent
+  CardContent,
+  Switch
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
@@ -207,6 +208,7 @@ const [productInputs, setProductInputs] = useState({
     gram: "",
     name: ""
   });
+  const [manualGramMode, setManualGramMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -323,12 +325,19 @@ const [productInputs, setProductInputs] = useState({
   });
 
   // Fix product inputs initialization
+  const gramValue = data.gramm || data.gram || "";
   setProductInputs({
     packageType: data.packageID || "",
     product: data.productID_2 || "",
-    gram: data.gramm || data.gram || "", // Check both field names
+    gram: gramValue,
     name: data.name || ""
   });
+
+  // Auto-enable manual mode if stored gram is not in standard options
+  const standardGrams = [1, 2, 3, 4, 5, 6];
+  if (gramValue && !standardGrams.includes(Number(gramValue))) {
+    setManualGramMode(true);
+  }
 
   // Initialize cascading dropdowns properly
   if (data.packageID) {
@@ -521,7 +530,7 @@ const handleSubmit = async (e) => {
       // Product fields with correct names
       packageID: productInputs.packageType,
       productID_2: productInputs.product,
-      gramm: parseInt(productInputs.gram), // Use 'gramm' to match your schema
+      gramm: parseFloat(productInputs.gram),
     };
 
     // Only add name field if it exists and is for standard designs
@@ -893,25 +902,63 @@ const handleSubmit = async (e) => {
 
           {/* Gram */}
        <Grid item xs={12} sm={4}>
-  <TextField
-    select
-    fullWidth
-    label="Граммаж"
-    value={productInputs.gram}
-    onChange={(e) => handleProductInputChange('gram', e.target.value)}
-    required
-    size="small"
-    disabled={!productInputs.product}
-    SelectProps={{
-      renderValue: (selected) => selected ? `${selected} г` : <span>Выбрать</span>
-    }}
-  >
-    {(formData.designType === "standart" ? availableGrams : [1, 2, 3, 4, 5, 6]).map((gram) => (
-      <MenuItem key={gram} value={gram.toString()}>
-        {gram} г
-      </MenuItem>
-    ))}
-  </TextField>
+  <Box>
+    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+      <FormControlLabel
+        control={
+          <Switch
+            size="small"
+            checked={manualGramMode}
+            onChange={(e) => {
+              setManualGramMode(e.target.checked);
+              setProductInputs(prev => ({ ...prev, gram: "" }));
+            }}
+            disabled={!productInputs.product}
+          />
+        }
+        label={<Typography variant="caption">Ввести вручную</Typography>}
+        sx={{ m: 0 }}
+      />
+    </Box>
+    {manualGramMode ? (
+      <TextField
+        fullWidth
+        label="Граммаж"
+        value={productInputs.gram}
+        onChange={(e) => {
+          const val = e.target.value;
+          if (val === "" || /^\d{0,2}(\.\d{0,1})?$/.test(val)) {
+            handleProductInputChange('gram', val);
+          }
+        }}
+        required
+        size="small"
+        disabled={!productInputs.product}
+        placeholder="напр. 2.5"
+        inputProps={{ inputMode: 'decimal' }}
+      />
+    ) : (
+      <TextField
+        select
+        fullWidth
+        label="Граммаж"
+        value={productInputs.gram}
+        onChange={(e) => handleProductInputChange('gram', e.target.value)}
+        required
+        size="small"
+        disabled={!productInputs.product}
+        SelectProps={{
+          renderValue: (selected) => selected ? `${selected} г` : <span>Выбрать</span>
+        }}
+      >
+        {(formData.designType === "standart" ? availableGrams : [1, 2, 3, 4, 5, 6]).map((gram) => (
+          <MenuItem key={gram} value={gram.toString()}>
+            {gram} г
+          </MenuItem>
+        ))}
+      </TextField>
+    )}
+  </Box>
 </Grid>
 
           {/* Name (only for Standard Design with multiple options) */}
