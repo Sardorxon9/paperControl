@@ -30,7 +30,12 @@ const WHITERAY = TEAL;      // White Ray line
 
 const fmtUZS = (n) => Math.round(n || 0).toLocaleString("ru-RU");
 const fmtKg = (n) => (Math.round((n || 0) * 10) / 10).toLocaleString("ru-RU");
-const toDate = (d) => (d?.toDate ? d.toDate() : d ? new Date(d) : null);
+// Returns null (not an Invalid Date) for missing/unparseable values — every call
+// site guards on null, and an Invalid Date reaching date-fns `format` throws.
+const toDate = (d) => {
+  const dt = d?.toDate ? d.toDate() : d ? new Date(d) : null;
+  return dt && !Number.isNaN(dt.getTime()) ? dt : null;
+};
 
 // Period presets for the line graph X axis.
 const PERIODS = {
@@ -45,7 +50,11 @@ const SILENT_PERIODS = {
   365: "1 год",
 };
 
-export default function InvoiceInsightsSection() {
+// `yearFilter` is the page-level period filter ('all' | '2026' | '2025'). When a
+// concrete year is selected the trend chart switches to that whole calendar year
+// (monthly buckets) instead of the rolling 1w/1m/1y presets.
+export default function InvoiceInsightsSection({ yearFilter = 'all' }) {
+  const yearScope = yearFilter !== 'all' ? Number(yearFilter) : null;
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState([]);
   const [clients, setClients] = useState([]);
@@ -110,17 +119,30 @@ export default function InvoiceInsightsSection() {
   // ---------- LINE GRAPH: invoice sum over time ----------
   const lineData = useMemo(() => {
     const cfg = PERIODS[period];
-    const end = startOfDay(new Date());
-    const start = subDays(end, cfg.days);
+    const today = startOfDay(new Date());
+
+    // A selected year overrides the rolling presets: Jan 1 → today (or Dec 31 for
+    // a past year), bucketed by month.
+    let start, end, bucket;
+    if (yearScope) {
+      bucket = "month";
+      start = new Date(yearScope, 0, 1);
+      end = yearScope === today.getFullYear() ? today : new Date(yearScope, 11, 31);
+    } else {
+      bucket = cfg.bucket;
+      end = today;
+      start = subDays(end, cfg.days);
+    }
+
     let buckets;
-    if (cfg.bucket === "day") buckets = eachDayOfInterval({ start, end });
-    else if (cfg.bucket === "week") buckets = eachWeekOfInterval({ start, end });
+    if (bucket === "day") buckets = eachDayOfInterval({ start, end });
+    else if (bucket === "week") buckets = eachWeekOfInterval({ start, end });
     else buckets = eachMonthOfInterval({ start, end });
 
     const keyFor = (dt) =>
-      cfg.bucket === "month" ? format(dt, "yyyy-MM") : format(dt, "yyyy-MM-dd");
+      bucket === "month" ? format(dt, "yyyy-MM") : format(dt, "yyyy-MM-dd");
     const labelFor = (dt) =>
-      cfg.bucket === "month"
+      bucket === "month"
         ? format(dt, "LLL yy", { locale: ru })
         : format(dt, "d MMM", { locale: ru });
 
@@ -146,29 +168,43 @@ export default function InvoiceInsightsSection() {
       pp: keys.map((k) => pp[k]),
       wr: keys.map((k) => wr[k]),
     };
-  }, [invoices, period]);
+  }, [invoices, period, yearScope]);
 
   // ---------- HEADLINE: this period vs previous ----------
   const headline = useMemo(() => {
     const cfg = PERIODS[period];
     const now = new Date();
-    const curStart = subDays(now, cfg.days);
-    const prevStart = subDays(now, cfg.days * 2);
-    let cur = 0, prev = 0;
-    invoices.forEach((i) => {
-      const dt = toDate(i.dateCreated);
-      if (!dt) return;
-      const amt = Number(i.totalInvoiceAmount) || 0;
-      if (dt >= curStart) cur += amt;
-      else if (dt >= prevStart && dt < curStart) prev += amt;
-    });
+    let cur = 0, prev = 0, periodLabel;
+
+    if (yearScope) {
+      // Selected year vs the same span of the previous year.
+      periodLabel = `за ${yearScope} год`;
+      invoices.forEach((i) => {
+        const dt = toDate(i.dateCreated);
+        if (!dt) return;
+        const amt = Number(i.totalInvoiceAmount) || 0;
+        if (dt.getFullYear() === yearScope) cur += amt;
+        else if (dt.getFullYear() === yearScope - 1) prev += amt;
+      });
+    } else {
+      const curStart = subDays(now, cfg.days);
+      const prevStart = subDays(now, cfg.days * 2);
+      invoices.forEach((i) => {
+        const dt = toDate(i.dateCreated);
+        if (!dt) return;
+        const amt = Number(i.totalInvoiceAmount) || 0;
+        if (dt >= curStart) cur += amt;
+        else if (dt >= prevStart && dt < curStart) prev += amt;
+      });
+      periodLabel =
+        period === "1y" ? "за последний год"
+          : period === "1w" ? "за последнюю неделю"
+            : "за последний месяц";
+    }
+
     const pct = prev > 0 ? ((cur - prev) / prev) * 100 : null;
-    const periodLabel =
-      period === "1y" ? "за последний год"
-        : period === "1w" ? "за последнюю неделю"
-          : "за последний месяц";
     return { cur, prev, pct, periodLabel };
-  }, [invoices, period]);
+  }, [invoices, period, yearScope]);
 
   // ---------- TOP paper-performance clients ----------
   const topPaper = useMemo(() => {
@@ -272,22 +308,33 @@ export default function InvoiceInsightsSection() {
                 <Typography sx={{ fontWeight: 700, color: pctUp ? TEAL : RED }}>
                   {pctUp ? "+" : ""}{headline.pct.toFixed(1)}%
                 </Typography>
-                <Typography sx={{ color: "text.secondary" }}>к прошлому периоду</Typography>
+                <Typography sx={{ color: "text.secondary" }}>
+                  {yearScope ? `к ${yearScope - 1} году` : "к прошлому периоду"}
+                </Typography>
               </Stack>
             )}
           </Box>
 
           {/* Controls */}
           <Stack spacing={1.5} alignItems={{ xs: "flex-start", md: "flex-end" }}>
-            <ToggleButtonGroup
-              value={period} exclusive size="small"
-              onChange={(_, v) => v && setPeriod(v)}
-              sx={tgSx}
-            >
-              {Object.entries(PERIODS).map(([k, v]) => (
-                <ToggleButton key={k} value={k}>{v.label}</ToggleButton>
-              ))}
-            </ToggleButtonGroup>
+            {yearScope ? (
+              // The page-level period filter takes over; local presets would conflict.
+              <Chip
+                label={`${yearScope} год · по месяцам`}
+                size="small"
+                sx={{ bgcolor: TEAL + "1A", color: TEAL, fontWeight: 700 }}
+              />
+            ) : (
+              <ToggleButtonGroup
+                value={period} exclusive size="small"
+                onChange={(_, v) => v && setPeriod(v)}
+                sx={tgSx}
+              >
+                {Object.entries(PERIODS).map(([k, v]) => (
+                  <ToggleButton key={k} value={k}>{v.label}</ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+            )}
             <FormControlLabel
               control={<Switch checked={splitByOrg} onChange={(e) => setSplitByOrg(e.target.checked)} sx={{ "& .Mui-checked": { color: TEAL }, "& .Mui-checked + .MuiSwitch-track": { bgcolor: TEAL + "!important" } }} />}
               label={<Typography sx={{ fontSize: 14, fontWeight: 600 }}>Разделить по организации</Typography>}

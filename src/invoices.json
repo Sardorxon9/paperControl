@@ -1,0 +1,2602 @@
+[
+  {
+    "Document ID": "03hnoKFLZedvlXJie1qN",
+    "clientId": "FqspdBQ1ZZmL3DvSvUXw",
+    "customRestaurantName": "B&B",
+    "dateCreated": "January 15, 2026 at 11:30:54 AM UTC+5",
+    "invoiceNumber": "2601154973",
+    "migratedAt": 0,
+    "orgName": "B&B",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 750000,
+        "quantity": 5000,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 150
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 750000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "06rl1iNQoUSx2DWow7OT",
+    "clientId": "manual-entry",
+    "customRestaurantName": "ARCHAZOR",
+    "dateCreated": "June 3, 2026 at 10:23:37 AM UTC+5",
+    "invoiceNumber": "2606037719",
+    "migratedAt": 0,
+    "orgName": "ARCHAZOR",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "quantity": 5000,
+        "productCode": "SH-SLIV-02",
+        "totalPrice": 1600000,
+        "gramm": 3,
+        "catalogueItemID": "0xSlmRJwLu0UQCqnEN9z",
+        "price": 320
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1600000,
+    "type": "standard",
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "09WlcaFM0dz4MTv8WQSY",
+    "clientId": "g3npfoQR9JfC0qPmPBYe",
+    "customRestaurantName": "CHICKEN EXPRESS",
+    "dateCreated": "June 6, 2026 at 4:04:04 PM UTC+5",
+    "invoiceNumber": "2606060342",
+    "migratedAt": 0,
+    "orgName": "CHICKEN EXPRESS",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 160,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "totalPrice": 3200000,
+        "quantity": 20000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3200000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "0OO9NRNGAl7V6yYMIhM9",
+    "clientId": "manual-entry",
+    "customRestaurantName": "u babushkina",
+    "dateCreated": "January 12, 2026 at 12:20:47 PM UTC+5",
+    "invoiceNumber": "2601120576",
+    "migratedAt": 0,
+    "orgName": "SAYOR FOOD SERVICE",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "quantity": 25000,
+        "productCode": "ST-OQ-02",
+        "totalPrice": 3500000,
+        "price": 140,
+        "catalogueItemID": "4asoAgi8Kg8f0NSfZL3j",
+        "gramm": 4
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 3500000,
+    "type": "standard",
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "0TfEcIRCyKvz7HbqNiZv",
+    "clientId": "knf19heiFM80cIbjVVtg",
+    "customRestaurantName": "CHAYKOF",
+    "dateCreated": "July 22, 2026 at 11:35:41 AM UTC+5",
+    "invoiceNumber": "2607227442",
+    "migratedAt": 0,
+    "orgName": "--",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 3400000,
+        "quantity": 20000,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": "",
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "price": 170
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 3400000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "0Uacn0NKjPQ1SQHOPtbb",
+    "clientId": "PvSE4MOgGYF44p6KFVLu",
+    "customRestaurantName": "PLOV CITY",
+    "dateCreated": "July 8, 2026 at 4:44:57 PM UTC+5",
+    "invoiceNumber": "2607087689",
+    "migratedAt": 0,
+    "orgName": "GRAND PAKET",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 40,
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "gramm": 2,
+        "productID_2": "hgqUpga8X4RjDOlmeLgL",
+        "totalPrice": 1700000,
+        "quantity": 42500
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1700000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "0VMeFAgbEvXirVEAeLOw",
+    "clientId": "E4gUdvuAWDTIy50DdDQs",
+    "customRestaurantName": "ANJIR STICK",
+    "dateCreated": "October 27, 2025 at 2:39:36 PM UTC+5",
+    "invoiceNumber": "2510277030",
+    "migratedAt": 0,
+    "orgName": "VIP SERVICES GROUP",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 750000,
+        "quantity": 5000,
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 750000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "0f0Je5pr8ZzGUcW4OYiA",
+    "clientId": "84CNIruAHtcfXA7Dkh9j",
+    "customRestaurantName": "BELLA",
+    "dateCreated": "April 6, 2026 at 1:09:42 PM UTC+5",
+    "invoiceNumber": "2604060618",
+    "migratedAt": 0,
+    "orgName": "VDV PLYUS",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 160,
+        "totalPrice": 3200000,
+        "quantity": 20000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3200000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "0souNwo1eHd5A3abpAwM",
+    "clientId": "4WCxOJ8zP3EzkPhjbiIv",
+    "customRestaurantName": "CHOCOLATE",
+    "dateCreated": "October 22, 2025 at 3:17:20 PM UTC+5",
+    "invoiceNumber": "2510225790",
+    "migratedAt": "2025-10-24T04:53:05.782Z",
+    "orgName": "Unknown Organization",
+    "originalInvoiceId": "hSPt7GXlnf1orqed4gBG",
+    "paymentType": "transfer",
+    "products": [
+      {
+        "quantity": 20000,
+        "totalPrice": 3000000,
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3000000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "0uLeczPS5sX7xuMZlIAG",
+    "clientId": "UPXwr6mnEinElb5p47Id",
+    "customRestaurantName": "ABI DONER",
+    "dateCreated": "November 24, 2025 at 9:24:55 AM UTC+5",
+    "invoiceNumber": "2511246184",
+    "migratedAt": 0,
+    "orgName": "CENTRAL DONER",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 2625000,
+        "quantity": 18750,
+        "price": 140,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 4,
+        "productID_2": "1BChysbKG71bF0B1eaFx"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 2625000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "12iRUgAHjzTUkooa8iqh",
+    "clientId": "UoLYvCTSPwmdR68kQZ5u",
+    "customRestaurantName": "CORNER HOTEL",
+    "dateCreated": "September 17, 2025 at 10:59:26 AM UTC+5",
+    "invoiceNumber": "2509179594",
+    "migratedAt": "2025-10-24T04:53:29.238Z",
+    "orgName": "CIRNER HOTEL SERVICE",
+    "originalInvoiceId": "YphxrkLsr2Xa2AU6rxzJ",
+    "paymentType": 0,
+    "products": [
+      {
+        "totalPrice": 2900000,
+        "quantity": 20000,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 145
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 2900000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "1GB0aToT8qxo3LzYRYk4",
+    "clientId": "01bQHweQjYm1lN2MQ4cp",
+    "customRestaurantName": "FRANKFORT OQ SHAKAR",
+    "dateCreated": "March 12, 2026 at 10:47:08 AM UTC+5",
+    "invoiceNumber": "2603120161",
+    "migratedAt": 0,
+    "orgName": "COMFORT INN",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "price": 159.98,
+        "totalPrice": 1207849,
+        "quantity": 7550
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1207849,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "1TX4ABc5NUE5Lyxs1w5O",
+    "clientId": "knf19heiFM80cIbjVVtg",
+    "customRestaurantName": "CHAYKOF",
+    "dateCreated": "May 6, 2026 at 11:15:42 AM UTC+5",
+    "invoiceNumber": "2605067617",
+    "migratedAt": 0,
+    "orgName": "--",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "price": 170,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": "",
+        "totalPrice": 3400000,
+        "quantity": 20000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3400000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "1pleVP7Fe6ER52iXKFui",
+    "clientId": "E4gUdvuAWDTIy50DdDQs",
+    "customRestaurantName": "ANJIR STICK",
+    "dateCreated": "March 19, 2026 at 9:30:17 AM UTC+5",
+    "invoiceNumber": "2603192689",
+    "migratedAt": 0,
+    "orgName": "VIP SERVICES GROUP",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 750000,
+        "quantity": 5000,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 150
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 750000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "1wRBBlyBk7DUvQwq2dUq",
+    "clientId": "Ijw047hgUdUltPeCMDEw",
+    "customRestaurantName": "AILE",
+    "dateCreated": "January 14, 2026 at 10:04:21 AM UTC+5",
+    "invoiceNumber": "2601147859",
+    "migratedAt": 0,
+    "orgName": "SIMPLE PACK",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 150,
+        "totalPrice": 3000000,
+        "quantity": 20000
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 3000000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "20JELUn1VaqUApJwUxFX",
+    "clientId": "manual-entry",
+    "customRestaurantName": "MORELLA",
+    "dateCreated": "June 4, 2026 at 1:51:47 PM UTC+5",
+    "invoiceNumber": "2606040928",
+    "migratedAt": 0,
+    "orgName": "MORELLA",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 148,
+        "gramm": 4,
+        "catalogueItemID": "4asoAgi8Kg8f0NSfZL3j",
+        "totalPrice": 5550000,
+        "quantity": 37500,
+        "productCode": "ST-OQ-02"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 5550000,
+    "type": "standard",
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "26Cm2VnnwDZ1OvPHdOBd",
+    "clientId": "XBA1GRO4phIbEBIUIneC",
+    "customRestaurantName": "FOTIH",
+    "dateCreated": "July 3, 2026 at 2:46:58 PM UTC+5",
+    "invoiceNumber": "2607031875",
+    "migratedAt": 0,
+    "orgName": "NAFIS ASL TAOMLAR",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 160,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 4,
+        "totalPrice": 1600000,
+        "quantity": 10000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1600000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "2JCk2iqrRCBjRhruWRxm",
+    "clientId": "4WCxOJ8zP3EzkPhjbiIv",
+    "customRestaurantName": "CHOCOLATE",
+    "dateCreated": "November 26, 2025 at 11:53:30 AM UTC+5",
+    "invoiceNumber": "2511261680",
+    "migratedAt": 0,
+    "orgName": "CHOCOLATE",
+    "originalInvoiceId": 0,
+    "paymentType": "cash",
+    "products": [
+      {
+        "totalPrice": 3000000,
+        "quantity": 20000,
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3000000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "2LY6HZHibvtdY2VJhO8K",
+    "clientId": "t2yBitRbnYbR6ZWa0Svj",
+    "customRestaurantName": "CHOPAR",
+    "dateCreated": "February 26, 2026 at 11:42:00 AM UTC+5",
+    "invoiceNumber": "2602260159",
+    "migratedAt": 0,
+    "orgName": "FOOD STOCK-SERVICE",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 3000000,
+        "quantity": 20000,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 150
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 3000000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "2Sv2l0rbMNq0PJdD4zi5",
+    "clientId": "knf19heiFM80cIbjVVtg",
+    "customRestaurantName": "CHAYKOF",
+    "dateCreated": "May 5, 2026 at 10:05:18 AM UTC+5",
+    "invoiceNumber": "2605057427",
+    "migratedAt": 0,
+    "orgName": "--",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 3400000,
+        "quantity": 20000,
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "price": 170,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": ""
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3400000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "2YwOpEVi7prN62XlHGKP",
+    "clientId": "manual-entry",
+    "customRestaurantName": "MORELLA",
+    "dateCreated": "April 22, 2026 at 11:43:46 AM UTC+5",
+    "invoiceNumber": "2604227801",
+    "migratedAt": 0,
+    "orgName": "MORELLA",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 937500,
+        "quantity": 6250,
+        "productCode": "ST-OQ-02",
+        "price": 150,
+        "gramm": 4,
+        "catalogueItemID": "4asoAgi8Kg8f0NSfZL3j"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 937500,
+    "type": "standard",
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "2obftWZ6bprpAl4fk7Sf",
+    "clientId": "Ouz1ZVYC4f9mfxld3E9P",
+    "customRestaurantName": "DOLCE FREDO (JIGARRANG RANG) ",
+    "dateCreated": "October 28, 2025 at 3:58:20 PM UTC+5",
+    "invoiceNumber": "2510282724",
+    "migratedAt": 0,
+    "orgName": "-",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 1500000,
+        "quantity": 10000,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 150,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1500000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "2vyTJMpoMRNHDO6Rw0Iz",
+    "clientId": "o6if0WESN1VBgW319AWd",
+    "customRestaurantName": "GOSHT",
+    "dateCreated": "May 5, 2026 at 9:48:54 AM UTC+5",
+    "invoiceNumber": "2605050193",
+    "migratedAt": 0,
+    "orgName": "TASTY POINT",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 1120000,
+        "quantity": 7000,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 4,
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "price": 160
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1120000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "2y1ekwWqquze4IHmi12D",
+    "clientId": "EjqxqoFlhK09nNpmD3Hn",
+    "customRestaurantName": "XON",
+    "dateCreated": "January 9, 2026 at 2:19:39 PM UTC+5",
+    "invoiceNumber": "2601097586",
+    "migratedAt": 0,
+    "orgName": "HMC U",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 1500000,
+        "quantity": 10000,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 150
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1500000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "2zHAAPUHIcrMWhmeDHVQ",
+    "clientId": "7X13tQsFvM4MzAX3pQlB",
+    "customRestaurantName": "MOVENPICK OQ SHAKAR",
+    "dateCreated": "April 9, 2026 at 11:26:34 AM UTC+5",
+    "invoiceNumber": "2604098090",
+    "migratedAt": 0,
+    "orgName": "REGISTON PLAZA",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 2080000,
+        "quantity": 13000,
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "price": 160,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 2080000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "3CDx4CO7ulEeialF6YHe",
+    "clientId": "dsHrMEq2UpucNV7P9Cpt",
+    "customRestaurantName": "BBQ BURGER",
+    "dateCreated": "December 15, 2025 at 1:08:29 PM UTC+5",
+    "invoiceNumber": "2512158842",
+    "migratedAt": 0,
+    "orgName": "BARBEQUE BURGER",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 1500000,
+        "quantity": 10000,
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1500000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "3DTXvfN2gAY5GgYReOg5",
+    "clientId": "csb8FJIJj2yD10jbSJz2",
+    "customRestaurantName": "MAKKON",
+    "dateCreated": "January 29, 2026 at 2:34:43 PM UTC+5",
+    "invoiceNumber": "2601298543",
+    "migratedAt": 0,
+    "orgName": "SIMPLE TRADE GROUP",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 5250000,
+        "quantity": 37500,
+        "gramm": 4,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "price": 140,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP"
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 5250000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "3E9RTMKYfplNPkZr2fnJ",
+    "clientId": "aXOWz26Gg1zxYkTql059",
+    "customRestaurantName": "BESHQOZON TUZ",
+    "dateCreated": "January 13, 2026 at 5:27:27 PM UTC+5",
+    "invoiceNumber": "2601136021",
+    "migratedAt": 0,
+    "orgName": "BLACKPILAF",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 1200000,
+        "quantity": 30000,
+        "productID_2": "hgqUpga8X4RjDOlmeLgL",
+        "gramm": 2,
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "price": 40
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1200000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "3JGyIcntv4ny5AoE7FJV",
+    "clientId": "manual-entry",
+    "customRestaurantName": "YATT SABIROVA ",
+    "dateCreated": "April 29, 2026 at 11:22:11 AM UTC+5",
+    "invoiceNumber": "2604298998",
+    "migratedAt": 0,
+    "orgName": "YATT SABIROVA",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 310,
+        "gramm": 3,
+        "catalogueItemID": "0xSlmRJwLu0UQCqnEN9z",
+        "productCode": "SH-SLIV-02",
+        "totalPrice": 3100000,
+        "quantity": 10000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3100000,
+    "type": "standard",
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "3OLJMWN36YyS4rbCVSM5",
+    "clientId": "cKkIBWwvahGbSyX3SBHQ",
+    "customRestaurantName": "BEK OSIYO FIOLETOVIY",
+    "dateCreated": "March 18, 2026 at 2:55:36 PM UTC+5",
+    "invoiceNumber": "2603185416",
+    "migratedAt": 0,
+    "orgName": "ULUG'BEK OSIYO SAVDO",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 160,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "totalPrice": 1600000,
+        "quantity": 10000
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1600000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "3RH5HfQYeU3FG6J1PJWg",
+    "clientId": "WW0VusHYwj8tRmpY2sPz",
+    "customRestaurantName": "LE GRANDE PLAZA (TATA)",
+    "dateCreated": "October 8, 2025 at 4:28:21 PM UTC+5",
+    "invoiceNumber": "2510081970",
+    "migratedAt": "2025-10-24T04:53:31.399Z",
+    "orgName": "SHEBA PROPERTIES",
+    "originalInvoiceId": "TkOoPoJwhEf2ohRdau3P",
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 1500000,
+        "quantity": 10000,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 150
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1500000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "3UPo4BRcB6GIZEjpweFC",
+    "clientId": "XPIpH1XVH1ySyOc4UKU1",
+    "customRestaurantName": "SIMMA HOTEL",
+    "dateCreated": "January 27, 2026 at 1:44:53 PM UTC+5",
+    "invoiceNumber": "2601276794",
+    "migratedAt": 0,
+    "orgName": "SIMMA HOTEL",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 3000000,
+        "quantity": 20000,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 150,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 3000000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "3XhVJ4CqhSZmzaPYDdqh",
+    "clientId": "EmjBeCWIZGS0jmyIbeIx",
+    "customRestaurantName": "VANILLA",
+    "dateCreated": "December 6, 2025 at 12:46:02 PM UTC+5",
+    "invoiceNumber": "2512067127",
+    "migratedAt": 0,
+    "orgName": "VANILLA",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 750000,
+        "quantity": 5000,
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 750000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "3swiYFibq8Pl1HDbgacA",
+    "clientId": "manual-entry",
+    "customRestaurantName": "OOO FINHELP SOLUTIONS",
+    "dateCreated": "January 12, 2026 at 12:27:01 PM UTC+5",
+    "invoiceNumber": "2601128368",
+    "migratedAt": 0,
+    "orgName": "OOO FINHELP SOLUTIONS",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 140,
+        "catalogueItemID": "4asoAgi8Kg8f0NSfZL3j",
+        "gramm": 4,
+        "quantity": 12500,
+        "productCode": "ST-OQ-02",
+        "totalPrice": 1750000
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1750000,
+    "type": "standard",
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "3uvmZQjEgILn0kXTKXmz",
+    "clientId": "aXOWz26Gg1zxYkTql059",
+    "customRestaurantName": "BESHQOZON TUZ",
+    "dateCreated": "December 13, 2025 at 10:34:24 AM UTC+5",
+    "invoiceNumber": "2512136744",
+    "migratedAt": 0,
+    "orgName": "BLACKPILAF",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "productID_2": "hgqUpga8X4RjDOlmeLgL",
+        "gramm": 2,
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "price": 35,
+        "totalPrice": 700000,
+        "quantity": 20000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 700000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "44xEyCxg75A4I8xP278t",
+    "clientId": "manual-entry",
+    "customRestaurantName": "MORELLA",
+    "dateCreated": "May 14, 2026 at 1:58:46 PM UTC+5",
+    "invoiceNumber": "2605149043",
+    "migratedAt": 0,
+    "orgName": "MORELLA",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "catalogueItemID": "4asoAgi8Kg8f0NSfZL3j",
+        "gramm": 4,
+        "price": 148,
+        "productCode": "ST-OQ-02",
+        "totalPrice": 3700000,
+        "quantity": 25000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3700000,
+    "type": "standard",
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "4Dzl3r1vtJrwBlIkXNjP",
+    "clientId": "UPXwr6mnEinElb5p47Id",
+    "customRestaurantName": "ABI DONER",
+    "dateCreated": "November 6, 2025 at 10:01:25 AM UTC+5",
+    "invoiceNumber": "2511063810",
+    "migratedAt": 0,
+    "orgName": "CENTRAL DONER",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 2625000,
+        "quantity": 18750,
+        "gramm": 4,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "price": 140,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 2625000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "4IJGQMwH9pCKZn8AQ20j",
+    "clientId": "4UL6stBFznaeJ3MC0Jxa",
+    "customRestaurantName": "SAAD",
+    "dateCreated": "December 5, 2025 at 3:09:08 PM UTC+5",
+    "invoiceNumber": "2512059446",
+    "migratedAt": 0,
+    "orgName": "CENTRAL DONER",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 4,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 140,
+        "totalPrice": 840000,
+        "quantity": 6000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 840000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "4LzmtwKNs6UutfES6E3b",
+    "clientId": "hyfDkmvmNyMMNAKOoruU",
+    "customRestaurantName": "CAY SIMIT ",
+    "dateCreated": "January 29, 2026 at 3:49:33 PM UTC+5",
+    "invoiceNumber": "2601299845",
+    "migratedAt": 0,
+    "orgName": "\"SD-LOUNGEBAR\" MCHJ",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 1750000,
+        "quantity": 12500,
+        "price": 140,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 4,
+        "productID_2": "1BChysbKG71bF0B1eaFx"
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1750000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "4RNDPT9mbOZEDG8CUVOW",
+    "clientId": "manual-entry",
+    "customRestaurantName": "Vkuslandiya",
+    "dateCreated": "February 26, 2026 at 3:25:50 PM UTC+5",
+    "invoiceNumber": "2602261097",
+    "migratedAt": 0,
+    "orgName": "Vkuslandiya",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 140,
+        "gramm": 4,
+        "catalogueItemID": "4asoAgi8Kg8f0NSfZL3j",
+        "quantity": 25000,
+        "productCode": "ST-OQ-02",
+        "totalPrice": 3500000
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 3500000,
+    "type": "standard",
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "4uzMqedHzDEzKUgldRrk",
+    "clientId": "fEYKJ038jvXm1nmSbi0d",
+    "customRestaurantName": "BURGER KING",
+    "dateCreated": "March 28, 2026 at 5:01:59 PM UTC+5",
+    "invoiceNumber": "2603289100",
+    "migratedAt": 0,
+    "orgName": "SIMPLE PACK",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 3200000,
+        "quantity": 20000,
+        "gramm": 4,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "price": 160,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3200000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "5RsH1h7jQ9e0YDXOiKFS",
+    "clientId": "EjqxqoFlhK09nNpmD3Hn",
+    "customRestaurantName": "XON",
+    "dateCreated": "July 15, 2026 at 12:34:04 PM UTC+5",
+    "invoiceNumber": "2607150066",
+    "migratedAt": 0,
+    "orgName": "HMC U",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 1600000,
+        "quantity": 10000,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 160,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1600000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "5ZYInJqrc7IskSUNzQJ6",
+    "clientId": "hyfDkmvmNyMMNAKOoruU",
+    "customRestaurantName": "CAY SIMIT ",
+    "dateCreated": "February 25, 2026 at 12:36:44 PM UTC+5",
+    "invoiceNumber": "2602250373",
+    "migratedAt": 0,
+    "orgName": "\"SD-LOUNGEBAR\" MCHJ",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 4,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 140,
+        "totalPrice": 2625000,
+        "quantity": 18750
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 2625000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "5hujAK5sCfShqLM8UAt0",
+    "clientId": "XPIpH1XVH1ySyOc4UKU1",
+    "customRestaurantName": "SIMMA HOTEL",
+    "dateCreated": "May 19, 2026 at 9:51:46 AM UTC+5",
+    "invoiceNumber": "2605190944",
+    "migratedAt": 0,
+    "orgName": "SIMMA HOTEL",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 160,
+        "totalPrice": 3200000,
+        "quantity": 20000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3200000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "5kGxDhtd7iaczbaPWyuu",
+    "clientId": "hyfDkmvmNyMMNAKOoruU",
+    "customRestaurantName": "CAY SIMIT",
+    "dateCreated": "November 13, 2025 at 2:22:00 PM UTC+5",
+    "invoiceNumber": "2511138380",
+    "migratedAt": 0,
+    "orgName": "\"SD-LOUNGEBAR\" MCHJ",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "gramm": 4,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "price": 140,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "totalPrice": 1750000,
+        "quantity": 12500
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1750000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "5yuqgQ5sS2gyaLpKq7TS",
+    "clientId": "hyfDkmvmNyMMNAKOoruU",
+    "customRestaurantName": "CAY SIMIT ",
+    "dateCreated": "November 24, 2025 at 9:18:16 AM UTC+5",
+    "invoiceNumber": "2511245019",
+    "migratedAt": 0,
+    "orgName": "\"XOSIYAT SMIT UCHTEPA\" MCHJ",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 1750000,
+        "quantity": 12500,
+        "gramm": 4,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "price": 140,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1750000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "6SxWY36Tt2nMyPG7eL5k",
+    "clientId": "uTJsETWkEAH1Go1vno4A",
+    "customRestaurantName": "CHEKSIZ(OQ-QORA DIZAYN)",
+    "dateCreated": "February 9, 2026 at 1:57:38 PM UTC+5",
+    "invoiceNumber": "2602099353",
+    "migratedAt": 0,
+    "orgName": "???",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 1500000,
+        "quantity": 10000,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 150,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1500000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "6aArt2O6JB7Kn1uOnm3B",
+    "clientId": "aXOWz26Gg1zxYkTql059",
+    "customRestaurantName": "BESHQOZON TUZ",
+    "dateCreated": "April 22, 2026 at 8:12:43 AM UTC+5",
+    "invoiceNumber": "2604226644",
+    "migratedAt": 0,
+    "orgName": "BLACKPILAF",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 3200000,
+        "quantity": 80000,
+        "productID_2": "hgqUpga8X4RjDOlmeLgL",
+        "gramm": 2,
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "price": 40
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3200000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "6k0v0lWFv0o28u30R60U",
+    "clientId": "7sz9kADF3YJLccW1xJ0c",
+    "customRestaurantName": "DONERGY",
+    "dateCreated": "October 14, 2025 at 10:25:35 AM UTC+5",
+    "invoiceNumber": "2510147491",
+    "migratedAt": "2025-10-24T04:53:08.696Z",
+    "orgName": "???",
+    "originalInvoiceId": "g3cW57PBIeLkAWYMnq9S",
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 750000,
+        "quantity": 5000,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 150
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 750000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "6paKX6TKfGDj2Yi0Wbhg",
+    "clientId": "92vavQAGOuOJh9aUgXLj",
+    "customRestaurantName": "BESH QOZON SHAKAR",
+    "dateCreated": "March 12, 2026 at 10:50:11 AM UTC+5",
+    "invoiceNumber": "2603125555",
+    "migratedAt": 0,
+    "orgName": "BLACKPILAFF",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 5250000,
+        "quantity": 37500,
+        "gramm": 4,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "price": 140,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP"
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 5250000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "75gbsWxBqfnien9FUBQi",
+    "clientId": "sxQZzkaoEa5rCjNcL0vT",
+    "customRestaurantName": "SKYBAR",
+    "dateCreated": "April 21, 2026 at 3:57:31 PM UTC+5",
+    "invoiceNumber": "2604210083",
+    "migratedAt": 0,
+    "orgName": "BESHYOGOCH QAHVA",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 3200000,
+        "quantity": 20000,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 160
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3200000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "79iwq1f9E5qCbH1Y0A6H",
+    "clientId": "FqspdBQ1ZZmL3DvSvUXw",
+    "customRestaurantName": "B&B",
+    "dateCreated": "April 2, 2026 at 11:36:07 AM UTC+5",
+    "invoiceNumber": "2604023273",
+    "migratedAt": 0,
+    "orgName": "B&B",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 800000,
+        "quantity": 5000,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 160,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 800000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "7PYA4WsWTcsUX2MGNdNO",
+    "clientId": "manual-entry",
+    "customRestaurantName": "MORELLA",
+    "dateCreated": "March 24, 2026 at 2:43:02 PM UTC+5",
+    "invoiceNumber": "2603248454",
+    "migratedAt": 0,
+    "orgName": "MORELLA",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "quantity": 25000,
+        "productCode": "ST-OQ-02",
+        "totalPrice": 3750000,
+        "gramm": 4,
+        "catalogueItemID": "4asoAgi8Kg8f0NSfZL3j",
+        "price": 150
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 3750000,
+    "type": "standard",
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "7RBu5WNFaaNcheAMR5V3",
+    "clientId": "RjaZdCKDYpOn0aTAEdpc",
+    "customRestaurantName": "LA CREMA (OQ RANG)",
+    "dateCreated": "May 5, 2026 at 9:45:32 AM UTC+5",
+    "invoiceNumber": "2605057477",
+    "migratedAt": 0,
+    "orgName": "LA CREMA (OQ RANG)",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 3200000,
+        "quantity": 20000,
+        "price": 160,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3200000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "7RGc5ZgGy100dHHmP1ld",
+    "clientId": "EbE4WjS9wtm9jOMkhPed",
+    "customRestaurantName": "LOTTE JIGARRANG",
+    "dateCreated": "December 9, 2025 at 10:39:38 AM UTC+5",
+    "invoiceNumber": "2512098715",
+    "migratedAt": 0,
+    "orgName": "TASHKENT PALACE NEW",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 4100000,
+        "quantity": 10000,
+        "price": 410,
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "gramm": 4,
+        "productID_2": "7Lt22MhrtdCNOf35gchx"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 4100000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "7TJprz9KMXd21zDE7XQ9",
+    "clientId": "hyfDkmvmNyMMNAKOoruU",
+    "customRestaurantName": "CAY SIMIT ",
+    "dateCreated": "January 17, 2026 at 11:09:29 AM UTC+5",
+    "invoiceNumber": "2601178281",
+    "migratedAt": 0,
+    "orgName": "\"SD-LOUNGEBAR\" MCHJ",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 140,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 4,
+        "totalPrice": 1750000,
+        "quantity": 12500
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1750000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "7Z9i9W7xDhgg86dgZq4g",
+    "clientId": "FqspdBQ1ZZmL3DvSvUXw",
+    "customRestaurantName": "B&B",
+    "dateCreated": "June 4, 2026 at 2:16:36 PM UTC+5",
+    "invoiceNumber": "2606044879",
+    "migratedAt": 0,
+    "orgName": "B&B",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 800000,
+        "quantity": 5000,
+        "price": 160,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 800000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "7fD4bmS5Sf9nb6eYirOO",
+    "clientId": "OrYajBOUE2XyqLNnmqaU",
+    "customRestaurantName": "STREET BURGER",
+    "dateCreated": "February 4, 2026 at 12:16:31 PM UTC+5",
+    "invoiceNumber": "2602047208",
+    "migratedAt": 0,
+    "orgName": "TOSHKENT AZIZA BARAKA business",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "totalPrice": 1500000,
+        "quantity": 10000
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1500000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "7kDsik6MfG8hgMGajQvw",
+    "clientId": "knf19heiFM80cIbjVVtg",
+    "customRestaurantName": "CHAYKOF",
+    "dateCreated": "April 6, 2026 at 9:56:06 AM UTC+5",
+    "invoiceNumber": "2604062572",
+    "migratedAt": 0,
+    "orgName": "--",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 3400000,
+        "quantity": 20000,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": "",
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "price": 170
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3400000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "7ra0yeQIpmKcTNYcoR1D",
+    "clientId": "I3oTijk3VTNFxJPjM60q",
+    "customRestaurantName": "BLACK STAR",
+    "dateCreated": "January 20, 2026 at 12:12:47 PM UTC+5",
+    "invoiceNumber": "2601208201",
+    "migratedAt": 0,
+    "orgName": "TASTY POINT",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 4,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 140,
+        "totalPrice": 700000,
+        "quantity": 5000
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 700000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "7wA5VEt83ma9iGnZdBgh",
+    "clientId": "XBA1GRO4phIbEBIUIneC",
+    "customRestaurantName": "FOTIH",
+    "dateCreated": "January 9, 2026 at 2:24:04 PM UTC+5",
+    "invoiceNumber": "2601090635",
+    "migratedAt": 0,
+    "orgName": "NAFIS ASL TAOMLAR",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 1710000,
+        "quantity": 11400,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 150,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 4
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1710000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "82vFivZVTwiOiw4TuOvv",
+    "clientId": "sxQZzkaoEa5rCjNcL0vT",
+    "customRestaurantName": "SKYBAR",
+    "dateCreated": "December 9, 2025 at 10:41:05 AM UTC+5",
+    "invoiceNumber": "2512099936",
+    "migratedAt": 0,
+    "orgName": "BESHYOGOCH QAHVA",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "totalPrice": 1350000,
+        "quantity": 9000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1350000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "8Cq80UJFx78wUVDJVPaS",
+    "clientId": "o6if0WESN1VBgW319AWd",
+    "customRestaurantName": "GOSHT",
+    "dateCreated": "October 29, 2025 at 11:24:27 AM UTC+5",
+    "invoiceNumber": "2510296114",
+    "migratedAt": 0,
+    "orgName": "TASTY POINT",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "quantity": 5000,
+        "totalPrice": 750000,
+        "price": 150,
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "gramm": 4,
+        "productID_2": "1BChysbKG71bF0B1eaFx"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 750000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "8E0yvP73rn9WEOyghu9i",
+    "clientId": "AL5xwbYp7YwgBz25zChe",
+    "customRestaurantName": "DANIEL HILL",
+    "dateCreated": "January 9, 2026 at 2:01:41 PM UTC+5",
+    "invoiceNumber": "2601096706",
+    "migratedAt": 0,
+    "orgName": "DANIEL HILL HOTEL",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 150,
+        "totalPrice": 1500000,
+        "quantity": 10000
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1500000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "8GVOUD1pKLfeA5BXfI5A",
+    "clientId": "NmXEN0TbAJeVTo4FoOw9",
+    "customRestaurantName": "MAZZALI",
+    "dateCreated": "June 4, 2026 at 2:15:25 PM UTC+5",
+    "invoiceNumber": "2606041230",
+    "migratedAt": 0,
+    "orgName": "MAZZALI SUPER FOOD",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 160,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 4,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "totalPrice": 3200000,
+        "quantity": 20000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3200000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "8mNTltwxbIbf3liU7fAt",
+    "clientId": "manual-entry",
+    "customRestaurantName": "LOGO PARK",
+    "dateCreated": "June 24, 2026 at 3:11:28 PM UTC+5",
+    "invoiceNumber": "2606245732",
+    "migratedAt": 0,
+    "orgName": "LOGO PARK",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 160,
+        "catalogueItemID": "M4Go9MXjZNuTmYYL1muI",
+        "gramm": 5,
+        "totalPrice": 1600000,
+        "quantity": 10000,
+        "productCode": "ST-OQ-01"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1600000,
+    "type": "standard",
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "8u0op5CeIdPwEMgHQ65R",
+    "clientId": "Mmk3cvh8KZhgNw3x2LzK",
+    "customRestaurantName": "IZGARA",
+    "dateCreated": "February 2, 2026 at 9:49:09 AM UTC+5",
+    "invoiceNumber": "2602026292",
+    "migratedAt": 0,
+    "orgName": "SIMPLE PACK",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "totalPrice": 3000000,
+        "quantity": 20000
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 3000000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "8uWgLhNdyYVyi0lV3arI",
+    "clientId": "o6if0WESN1VBgW319AWd",
+    "customRestaurantName": "GOSHT",
+    "dateCreated": "October 28, 2025 at 4:05:30 PM UTC+5",
+    "invoiceNumber": "2510288149",
+    "migratedAt": 0,
+    "orgName": "TASTY POINT",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "price": 150,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 4,
+        "quantity": 5000,
+        "totalPrice": 750000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 750000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "8zYMRBCv1rzgxDGpcufJ",
+    "clientId": "17GUtjyo1N0xifJ8hzjB",
+    "customRestaurantName": "TATNEFT",
+    "dateCreated": "February 12, 2026 at 5:05:49 PM UTC+5",
+    "invoiceNumber": "2602128458",
+    "migratedAt": 0,
+    "orgName": "TATNEFT UNG",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "totalPrice": 1500000,
+        "quantity": 10000
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1500000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "97YyStdv43hwe1JPZlxQ",
+    "clientId": "sxQZzkaoEa5rCjNcL0vT",
+    "customRestaurantName": "SKYBAR",
+    "dateCreated": "December 9, 2025 at 10:41:01 AM UTC+5",
+    "invoiceNumber": "2512091135",
+    "migratedAt": 0,
+    "orgName": "BESHYOGOCH QAHVA",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "totalPrice": 1350000,
+        "quantity": 9000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1350000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "9HcQWOWhd92N39IZH9Dy",
+    "clientId": "manual-entry",
+    "customRestaurantName": "ARCHAZOR",
+    "dateCreated": "January 9, 2026 at 2:18:49 PM UTC+5",
+    "invoiceNumber": "2601098650",
+    "migratedAt": 0,
+    "orgName": "ARCHAZOR MOUNTAIN",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "catalogueItemID": "FFDuw8Kn7akIonHpk5pm",
+        "gramm": 3,
+        "price": 300,
+        "productCode": "SH-SLIV-01",
+        "totalPrice": 1500000,
+        "quantity": 5000
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1500000,
+    "type": "standard",
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "9PB8nLyLx74QZVXOP4Bo",
+    "clientId": "manual-entry",
+    "customRestaurantName": "SADKO INTERNATIONAL",
+    "dateCreated": "April 28, 2026 at 11:13:36 AM UTC+5",
+    "invoiceNumber": "2604288903",
+    "migratedAt": 0,
+    "orgName": "SADKO INTERNATIONAL",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "gramm": 4,
+        "catalogueItemID": "oBtKMI5i41NgVuFTsxpR",
+        "price": 150,
+        "totalPrice": 750000,
+        "quantity": 5000,
+        "productCode": "SH-OQ-02"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 750000,
+    "type": "standard",
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "9XlBZ6v9c4V18DYwsOal",
+    "clientId": "manual-entry",
+    "customRestaurantName": "MORELLA",
+    "dateCreated": "June 4, 2026 at 1:51:42 PM UTC+5",
+    "invoiceNumber": "2606049089",
+    "migratedAt": 0,
+    "orgName": "MORELLA",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 148,
+        "catalogueItemID": "4asoAgi8Kg8f0NSfZL3j",
+        "gramm": 4,
+        "productCode": "ST-OQ-02",
+        "totalPrice": 5550000,
+        "quantity": 37500
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 5550000,
+    "type": "standard",
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "9Yb366y5aydliMZ0j1LW",
+    "clientId": "92vavQAGOuOJh9aUgXLj",
+    "customRestaurantName": "BESH QOZON SHAKAR",
+    "dateCreated": "May 15, 2026 at 2:13:08 PM UTC+5",
+    "invoiceNumber": "2605158187",
+    "migratedAt": 0,
+    "orgName": "BLACKPILAFF",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "gramm": 4,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "totalPrice": 6562500,
+        "quantity": 43750
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 6562500,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "9aT19hQxWRaJkc44Bnod",
+    "clientId": "L5Pcs1VWDIHA7Cl10LLX",
+    "customRestaurantName": "MIX BURGER",
+    "dateCreated": "October 25, 2025 at 1:50:57 PM UTC+5",
+    "invoiceNumber": "2510254753",
+    "migratedAt": 0,
+    "orgName": "MIX DESERT BUSINESS",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "totalPrice": 4200000,
+        "quantity": 28000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 4200000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "9buTM5mTwQiMUDGUQzdR",
+    "clientId": "manual-entry",
+    "customRestaurantName": "RASSVET KOFE",
+    "dateCreated": "April 25, 2026 at 10:32:57 AM UTC+5",
+    "invoiceNumber": "2604251235",
+    "migratedAt": 0,
+    "orgName": "RASSVET KOFE",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "productCode": "ST-OQ-02",
+        "totalPrice": 937500,
+        "quantity": 6250,
+        "price": 150,
+        "gramm": 4,
+        "catalogueItemID": "4asoAgi8Kg8f0NSfZL3j"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 937500,
+    "type": "standard",
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "9gTbGJyzbohhs8EcgWxJ",
+    "clientId": "manual-entry",
+    "customRestaurantName": "BIGLANJ",
+    "dateCreated": "April 6, 2026 at 9:58:03 AM UTC+5",
+    "invoiceNumber": "2604068932",
+    "migratedAt": 0,
+    "orgName": "BIGLANJ",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 937500,
+        "quantity": 6250,
+        "productCode": "ST-OQ-02",
+        "price": 150,
+        "catalogueItemID": "4asoAgi8Kg8f0NSfZL3j",
+        "gramm": 4
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 937500,
+    "type": "standard",
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "9qA7oKsddrmhLB0TClbA",
+    "clientId": "Zk3l9S6xtKmhdIlMTFcl",
+    "customRestaurantName": "AZIMUT WHITE",
+    "dateCreated": "May 18, 2026 at 11:03:57 AM UTC+5",
+    "invoiceNumber": "2605180193",
+    "migratedAt": 0,
+    "orgName": "OOO AZIMUT HOTELS COMPANY",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 170,
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "gramm": "",
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "totalPrice": 1700000,
+        "quantity": 10000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1700000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "9rjWWF2vkZYP3Qaolrhm",
+    "clientId": "Gu458qiLBww1prT79unE",
+    "customRestaurantName": "MOVENPICK JIGARRANG",
+    "dateCreated": "April 9, 2026 at 11:24:23 AM UTC+5",
+    "invoiceNumber": "2604091394",
+    "migratedAt": 0,
+    "orgName": "REGISTON PLAZA",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 420,
+        "productID_2": "7Lt22MhrtdCNOf35gchx",
+        "gramm": 4,
+        "totalPrice": 2772000,
+        "quantity": 6600
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 2772000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "9ysVaF18Wuf8bVM6S302",
+    "clientId": "dNGBbzI6HMC9lwPflJw6",
+    "customRestaurantName": "COURTYARD SLIVKA",
+    "dateCreated": "June 26, 2026 at 9:21:27 AM UTC+5",
+    "invoiceNumber": "2606263708",
+    "migratedAt": 0,
+    "orgName": "AVESTA HOSPITALITY",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "productID_2": "bCdEGE8AWBKfLwakKZ2B",
+        "gramm": 3,
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "price": 320,
+        "totalPrice": 1600000,
+        "quantity": 5000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1600000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "9zpdchCyHuJ181l3840p",
+    "clientId": "FqspdBQ1ZZmL3DvSvUXw",
+    "customRestaurantName": "B&B",
+    "dateCreated": "October 23, 2025 at 2:56:11 PM UTC+5",
+    "invoiceNumber": "2510236691",
+    "migratedAt": "2025-10-24T04:53:16.052Z",
+    "orgName": "-",
+    "originalInvoiceId": "r3zp8pGh4fNajnSOcyvh",
+    "paymentType": "cash",
+    "products": [
+      {
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "totalPrice": 750000,
+        "quantity": 5000
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 750000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "A5xN3cDGBhwkRhSFsY30",
+    "clientId": "E4gUdvuAWDTIy50DdDQs",
+    "customRestaurantName": "ANJIR STICK",
+    "dateCreated": "January 21, 2026 at 1:26:49 PM UTC+5",
+    "invoiceNumber": "2601219680",
+    "migratedAt": 0,
+    "orgName": "VIP SERVICES GROUP",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 150,
+        "totalPrice": 750000,
+        "quantity": 5000
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 750000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "ACeq4UQhItVftAL6ThJl",
+    "clientId": "manual-entry",
+    "customRestaurantName": "SVIS OTEL",
+    "dateCreated": "July 7, 2026 at 2:06:47 PM UTC+5",
+    "invoiceNumber": "2607073289",
+    "migratedAt": 0,
+    "orgName": "SVIS OTEL",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 330,
+        "gramm": 3,
+        "catalogueItemID": "0xSlmRJwLu0UQCqnEN9z",
+        "totalPrice": 1650000,
+        "quantity": 5000,
+        "productCode": "SH-SLIV-02"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1650000,
+    "type": "standard",
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "AF52VS52mIOK1UjfbL0i",
+    "clientId": "7sz9kADF3YJLccW1xJ0c",
+    "customRestaurantName": "DONERGY",
+    "dateCreated": "April 6, 2026 at 12:02:26 PM UTC+5",
+    "invoiceNumber": "2604062269",
+    "migratedAt": 0,
+    "orgName": "???",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 160,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "totalPrice": 1600000,
+        "quantity": 10000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1600000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "AKOdBmyOQz0MEZ1s5QMT",
+    "clientId": "95XwkKnf2bh8csnzfMbh",
+    "customRestaurantName": "ZIYORAT LUXURY HOTEL",
+    "dateCreated": "November 23, 2025 at 11:05:59 AM UTC+5",
+    "invoiceNumber": "2511230418",
+    "migratedAt": 0,
+    "orgName": "FERGHANA AVIA TRAVEL",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 3000000,
+        "quantity": 20000,
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 3000000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "AZAJbkJ1b3BOKOs0OFNe",
+    "clientId": "Ouz1ZVYC4f9mfxld3E9P",
+    "customRestaurantName": "DOLCE FREDO (JIGARRANG RANG)",
+    "dateCreated": "April 28, 2026 at 11:04:22 AM UTC+5",
+    "invoiceNumber": "2604283160",
+    "migratedAt": 0,
+    "orgName": "DOLCE FREDO (JIGARRANG RANG)",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 160,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "totalPrice": 1600000,
+        "quantity": 10000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1600000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "AZB0bcVVG2y4IBpfebqr",
+    "clientId": "FqspdBQ1ZZmL3DvSvUXw",
+    "customRestaurantName": "B&B",
+    "dateCreated": "March 5, 2026 at 9:26:00 AM UTC+5",
+    "invoiceNumber": "2603058719",
+    "migratedAt": 0,
+    "orgName": "B&B",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 750000,
+        "quantity": 5000,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 150
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 750000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "AksO9EikpsT888PEXpg6",
+    "clientId": "0ZMZvocdWh42hceAeE7I",
+    "customRestaurantName": "LOTTE OQ",
+    "dateCreated": "June 5, 2026 at 12:02:05 PM UTC+5",
+    "invoiceNumber": "2606050009",
+    "migratedAt": 0,
+    "orgName": "TASHKENT PALACE NEW",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "price": 170,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": "",
+        "totalPrice": 1700000,
+        "quantity": 10000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1700000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "AsXZKVr2gA45mYFpgyrh",
+    "clientId": "0ZMZvocdWh42hceAeE7I",
+    "customRestaurantName": "LOTTE OQ",
+    "dateCreated": "October 27, 2025 at 2:38:08 PM UTC+5",
+    "invoiceNumber": "2510274773",
+    "migratedAt": 0,
+    "orgName": "TASHKENT PALACE NEW",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "quantity": 10000,
+        "totalPrice": 1700000,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": "",
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "price": 170
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1700000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "AtimtzurBuc7ApjXQbjJ",
+    "clientId": "UPXwr6mnEinElb5p47Id",
+    "customRestaurantName": "ABI DONER",
+    "dateCreated": "June 1, 2026 at 10:16:39 AM UTC+5",
+    "invoiceNumber": "2606010646",
+    "migratedAt": 0,
+    "orgName": "CENTRAL DONER",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 2812500,
+        "quantity": 18750,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "price": 150,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 4
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 2812500,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "B032v0jV2UL8bQINpAXD",
+    "clientId": "oRaUmXW1wdgPwAfI4EWg",
+    "customRestaurantName": "SUZANE SASHET",
+    "dateCreated": "March 25, 2026 at 3:24:45 PM UTC+5",
+    "invoiceNumber": "2603255610",
+    "migratedAt": 0,
+    "orgName": "IPAK RENTING",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 165,
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "totalPrice": 1485000,
+        "quantity": 9000
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 1485000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "BByBxTTh47nI6ufseO26",
+    "clientId": "manual-entry",
+    "customRestaurantName": "morella",
+    "dateCreated": "January 10, 2026 at 5:24:29 PM UTC+5",
+    "invoiceNumber": "2601104449",
+    "migratedAt": 0,
+    "orgName": "morella",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 300,
+        "catalogueItemID": "FFDuw8Kn7akIonHpk5pm",
+        "gramm": 3,
+        "quantity": 8000,
+        "productCode": "SH-SLIV-01",
+        "totalPrice": 2400000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 2400000,
+    "type": "standard",
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "BJAK2g7HhvUwuJKJCbxj",
+    "clientId": "t2yBitRbnYbR6ZWa0Svj",
+    "customRestaurantName": "CHOPAR",
+    "dateCreated": "December 3, 2025 at 10:02:01 AM UTC+5",
+    "invoiceNumber": "2512032891",
+    "migratedAt": 0,
+    "orgName": "FOOD STOCK-SERVICE",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "totalPrice": 1500000,
+        "quantity": 10000,
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1500000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "BVPylNHHnrplVmbstaqO",
+    "clientId": "01bQHweQjYm1lN2MQ4cp",
+    "customRestaurantName": "FRANKFORT OQ SHAKAR",
+    "dateCreated": "June 16, 2026 at 1:44:35 PM UTC+5",
+    "invoiceNumber": "2606169742",
+    "migratedAt": 0,
+    "orgName": "COMFORT INN",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "gramm": 5,
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "price": 170,
+        "totalPrice": 1700000,
+        "quantity": 10000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1700000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "BdQDcsJbU52RNdH4TWEn",
+    "clientId": "v3ZNGeWUfiRQwe5p8Kv9",
+    "customRestaurantName": "ANJIR TUZ",
+    "dateCreated": "April 7, 2026 at 12:18:01 PM UTC+5",
+    "invoiceNumber": "2604074753",
+    "migratedAt": 0,
+    "orgName": "VIP SERVICES GROUP",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "gramm": 2,
+        "productID_2": "hgqUpga8X4RjDOlmeLgL",
+        "price": 40,
+        "packageID": "fhLBOV7ai4N7MZDPkSCL",
+        "totalPrice": 300000,
+        "quantity": 7500
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 300000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "BgjSR0eGbRGl3dTqAnJr",
+    "clientId": "manual-entry",
+    "customRestaurantName": "OOO NEW HAYOT",
+    "dateCreated": "June 6, 2026 at 10:41:02 AM UTC+5",
+    "invoiceNumber": "2606066317",
+    "migratedAt": 0,
+    "orgName": "OOO NEWHAYOT",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 140,
+        "gramm": 4,
+        "catalogueItemID": "4asoAgi8Kg8f0NSfZL3j",
+        "totalPrice": 875000,
+        "quantity": 6250,
+        "productCode": "ST-OQ-02"
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 875000,
+    "type": "standard",
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "BlsRDQVFy98Egn6mn0ak",
+    "clientId": "qXZZSRpnAzHwIKKzvjyu",
+    "customRestaurantName": "MERHABA",
+    "dateCreated": "October 31, 2025 at 11:00:32 AM UTC+5",
+    "invoiceNumber": "2510317367",
+    "migratedAt": 0,
+    "orgName": "MERHABA GASTRO",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "quantity": 40000,
+        "totalPrice": 6000000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 6000000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  },
+  {
+    "Document ID": "BsLUOClNSI8Pf5pafW92",
+    "clientId": "manual-entry",
+    "customRestaurantName": "B&B",
+    "dateCreated": "May 2, 2026 at 1:40:59 PM UTC+5",
+    "invoiceNumber": "2605025279",
+    "migratedAt": 0,
+    "orgName": "B&B",
+    "originalInvoiceId": 0,
+    "paymentType": "cash",
+    "products": [
+      {
+        "totalPrice": 800000,
+        "quantity": 5000,
+        "productCode": "ST-OQ-02",
+        "gramm": 4,
+        "catalogueItemID": "4asoAgi8Kg8f0NSfZL3j",
+        "price": 160
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 800000,
+    "type": "standard",
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "C09q9tKQDrMnIJhpIko7",
+    "clientId": "WW0VusHYwj8tRmpY2sPz",
+    "customRestaurantName": "LE GRANDE PLAZA (TATA)",
+    "dateCreated": "May 25, 2026 at 10:49:52 AM UTC+5",
+    "invoiceNumber": "2605255911",
+    "migratedAt": 0,
+    "orgName": "SHEBA PROPERTIES",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 160,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "totalPrice": 1600000,
+        "quantity": 10000
+      }
+    ],
+    "senderCompany": "Pure Pack",
+    "totalInvoiceAmount": 1600000,
+    "type": 0,
+    "userID": "JwzVxjm8aPNlpWa19ZTHDilqb2T2",
+    "userName": "Alisher"
+  },
+  {
+    "Document ID": "C1RiKdiRhIg5ugfOllrn",
+    "clientId": "bBp2797N91JDSaTpRR6n",
+    "customRestaurantName": "LES AILES",
+    "dateCreated": "February 5, 2026 at 1:00:21 PM UTC+5",
+    "invoiceNumber": "2602059509",
+    "migratedAt": 0,
+    "orgName": "FOOD STOCK-SERVICE",
+    "originalInvoiceId": 0,
+    "paymentType": "transfer",
+    "products": [
+      {
+        "price": 150,
+        "packageID": "sKHbhJ8Ik7QpVUCEgbpP",
+        "gramm": 5,
+        "productID_2": "1BChysbKG71bF0B1eaFx",
+        "totalPrice": 7500000,
+        "quantity": 50000
+      }
+    ],
+    "senderCompany": "White Ray",
+    "totalInvoiceAmount": 7500000,
+    "type": 0,
+    "userID": "ESiLqbw5E7c86vtx62ZbX4s7hTD2",
+    "userName": "Baxtiyor"
+  }
+]

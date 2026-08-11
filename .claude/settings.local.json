@@ -46,7 +46,9 @@
       "Bash(vercel ls:*)",
       "Bash(npx vercel:*)",
       "Bash(curl -s \"https://commercial-tool.vercel.app/api/health\")",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npx react-scripts *)",
+      "Bash(npx --no-install eslint src/pages/Analytics.js src/components/analytics/InvoiceInsightsSection.js)"
     ]
   }
 }

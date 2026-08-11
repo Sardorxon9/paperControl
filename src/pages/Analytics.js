@@ -1,5 +1,5 @@
 // Analytics.js
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import {
   collection,
@@ -229,6 +229,18 @@ export default function Analytics({ user, userRole, onLogout }) {
   const [paperUsageView, setPaperUsageView] = useState('cards'); // 'cards' or 'table'
   const [yearFilter, setYearFilter] = useState('2026'); // 'all', '2026', '2025'
   const [totalPaperBought, setTotalPaperBought] = useState(0);
+  const [materialStats, setMaterialStats] = useState([]);
+  const [materialYearFilter, setMaterialYearFilter] = useState('global');
+  const [paymentRawStats, setPaymentRawStats] = useState([]);
+  const [paymentChartYearFilter, setPaymentChartYearFilter] = useState('global');
+  // Raw per-organisation invoice entries (NOT year-filtered) — feeds the НДС gauge,
+  // which is always scoped to the current calendar year regardless of the global filter.
+  const [orgRawStats, setOrgRawStats] = useState([]);
+  const [vatCompany, setVatCompany] = useState(null);
+
+  // Guards against a slow earlier fetch overwriting the results of a newer one
+  // when the user switches the global period filter quickly.
+  const fetchSeqRef = useRef(0);
 
   // Per-widget date filters for the two bottom tables (logs & invoice history).
   // mode: 'all' (no filter) | 'single' (one day) | 'range' (start..end)
@@ -240,8 +252,15 @@ export default function Analytics({ user, userRole, onLogout }) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   };
 
+  const isValidDate = (d) => d instanceof Date && !Number.isNaN(d.getTime());
+
   // Helper function to check if date matches year filter
   const matchesYearFilter = (date) => {
+    // A record with a missing / unparseable date belongs to no period at all —
+    // including "Все время". Letting it through used to hand an Invalid Date to
+    // date-fns `format`, which throws and aborts the whole fetch, so the page
+    // looked empty for "Все время" while the year presets worked.
+    if (!isValidDate(date)) return false;
     if (yearFilter === 'all') return true;
     const year = date.getFullYear();
     return year.toString() === yearFilter;
@@ -296,6 +315,8 @@ export default function Analytics({ user, userRole, onLogout }) {
 
   // Fetch client data
   const fetchClientData = async () => {
+    const seq = ++fetchSeqRef.current;
+    setLoading(true);
     try {
       // --- Fetch Clients ---
       const clientSnapshot = await getDocs(collection(db, "clients"));
@@ -321,7 +342,7 @@ export default function Analytics({ user, userRole, onLogout }) {
           const logDate = log.date?.toDate ? log.date.toDate() : new Date(log.date);
 
           // Track earliest log date
-          if (!earliestDate || logDate < earliestDate) {
+          if (isValidDate(logDate) && (!earliestDate || logDate < earliestDate)) {
             earliestDate = logDate;
           }
 
@@ -384,7 +405,7 @@ export default function Analytics({ user, userRole, onLogout }) {
           const logDate = log.date?.toDate ? log.date.toDate() : new Date(log.date);
 
           // Track earliest log date
-          if (!earliestDate || logDate < earliestDate) {
+          if (isValidDate(logDate) && (!earliestDate || logDate < earliestDate)) {
             earliestDate = logDate;
           }
 
@@ -535,6 +556,56 @@ export default function Analytics({ user, userRole, onLogout }) {
       // Latest invoices first
       recentInvoicesList.sort((a, b) => b.date - a.date);
 
+      // --- Material Distribution Stats (from all-invoices) ---
+      // Store raw entries so we can filter independently of the global year filter
+      const normalizeMaterial = (name) => {
+        if (!name) return null;
+        const lower = name.toLowerCase();
+        if (lower.includes('коричнев')) return 'Коричневый сахар';
+        if (lower.includes('бел') || lower.includes('oq') || lower === 'сахар') return 'Белый сахар';
+        if (lower.includes('соль') || lower.includes('tuz') || lower.includes('salt')) return 'Соль';
+        if (lower.includes('сливк') || lower.includes('sliv') || lower.includes('cream')) return 'Сливки';
+        if (lower.includes('заменит') || lower.includes('sweetener') || lower.includes('substitute')) return 'Сахарозаменитель';
+        return null;
+      };
+
+      const materialRawEntries = [];
+      const paymentRawEntries = [];
+      const orgRawEntries = [];
+      invoicesSnapshot.docs.forEach((doc) => {
+        const invoice = doc.data();
+        const invoiceDate = invoice.dateCreated?.toDate ? invoice.dateCreated.toDate() : new Date(invoice.dateCreated);
+        // These raw buckets are filtered by year downstream and their min/max dates
+        // get formatted for display — an Invalid Date here would break that.
+        if (!isValidDate(invoiceDate)) return;
+        const totalAmount = invoice.totalInvoiceAmount || 0;
+        const paymentType = invoice.paymentType;
+
+        // Collect payment entry (independent of year filter)
+        if (paymentType === 'cash' || paymentType === 'transfer') {
+          paymentRawEntries.push({ type: paymentType, amount: totalAmount, date: invoiceDate });
+        }
+
+        // Collect organisation entry (independent of year filter) for the НДС gauge
+        orgRawEntries.push({
+          company: invoice.senderCompany || "Неизвестная организация",
+          amount: totalAmount,
+          date: invoiceDate
+        });
+
+        const products = Array.isArray(invoice.products) ? invoice.products : [];
+        products.forEach((p) => {
+          let material = null;
+          if (invoice.type === "standard" && p.catalogueItemID && catalogueMap[p.catalogueItemID]) {
+            material = normalizeMaterial(catalogueMap[p.catalogueItemID].usedMaterial);
+          } else if (p.productID_2 && productMap[p.productID_2]) {
+            material = normalizeMaterial(productMap[p.productID_2]);
+          }
+          if (!material) return;
+          materialRawEntries.push({ material, quantity: p.quantity || 0, date: invoiceDate });
+        });
+      });
+
       const totalPayments = paymentTotals.cash + paymentTotals.transfer;
 
       // Create array of clients with totals and sort
@@ -584,6 +655,9 @@ export default function Analytics({ user, userRole, onLogout }) {
         .sort((a, b) => a.date.localeCompare(b.date));
 
       // --- Set State ---
+      // Drop the result if a newer fetch has already been kicked off.
+      if (seq !== fetchSeqRef.current) return;
+
       setPackageStats(stats);
       setProductStats(productStats);
       setRecentLogs(logsList);
@@ -599,16 +673,34 @@ export default function Analytics({ user, userRole, onLogout }) {
       setEarliestLogDate(earliestDate);
       setDailyUsageData(dailyUsageArray);
       setTotalPaperBought(parseFloat(totalPaperBoughtAmount.toFixed(2)));
+      setMaterialStats(materialRawEntries);
+      setPaymentRawStats(paymentRawEntries);
+      setOrgRawStats(orgRawEntries);
     } catch (err) {
       console.error("Error fetching data:", err);
     } finally {
-      setLoading(false);
+      if (seq === fetchSeqRef.current) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchClientData();
   }, [yearFilter]);
+
+  // Keep the "Расход бумаги" chart range in sync with the global period filter,
+  // otherwise that chart stays stuck on its default last-3-months window and the
+  // top filter looks like it does nothing.
+  useEffect(() => {
+    const now = new Date();
+    if (yearFilter === 'all') {
+      setDateRangeStart(earliestLogDate || subMonths(now, 3));
+      setDateRangeEnd(now);
+    } else {
+      const y = Number(yearFilter);
+      setDateRangeStart(new Date(y, 0, 1));
+      setDateRangeEnd(y === now.getFullYear() ? now : new Date(y, 11, 31));
+    }
+  }, [yearFilter, earliestLogDate]);
 
   // Prepare data for the donut chart
   const chartData = {
@@ -733,6 +825,232 @@ export default function Analytics({ user, userRole, onLogout }) {
               : 0;
             return `${label}: ${formatNumber(value)} сум (${percentage}%)`;
           }
+        }
+      }
+    },
+    maintainAspectRatio: false
+  };
+
+  // Material Distribution Chart Data
+  const materialOrder = ['Белый сахар', 'Коричневый сахар', 'Соль', 'Сливки', 'Сахарозаменитель'];
+  const materialColors = [
+    '#14DB9C',
+    '#FF6B6B',
+    '#845EF7',
+    '#FFB940',
+    '#3BC9DB'
+  ];
+  const materialBorders = ['#00B496', '#E63946', '#7048C6', '#F59F00', '#1098AD'];
+
+  // Apply local filter: 'global' respects top-level yearFilter, '2025'/'2026'/'all' overrides
+  const effectiveMaterialYear = materialYearFilter === 'global' ? yearFilter : materialYearFilter;
+  const filteredMaterialData = materialStats.filter(entry => {
+    if (effectiveMaterialYear === 'all') return true;
+    return entry.date && entry.date.getFullYear().toString() === effectiveMaterialYear;
+  });
+
+  // Compute date range for display
+  const materialDates = filteredMaterialData.map(e => e.date).filter(Boolean).sort((a, b) => a - b);
+  const materialDateFrom = materialDates[0];
+  const materialDateTo = materialDates[materialDates.length - 1];
+
+  // Aggregate by material
+  const materialAggregated = {};
+  filteredMaterialData.forEach(entry => {
+    if (!materialAggregated[entry.material]) materialAggregated[entry.material] = 0;
+    materialAggregated[entry.material] += entry.quantity;
+  });
+
+  const materialEntries = materialOrder
+    .map(m => ({ name: m, qty: materialAggregated[m] || 0 }))
+    .filter(m => m.qty > 0);
+  const materialTotalQty = materialEntries.reduce((s, m) => s + m.qty, 0);
+
+  const materialChartData = {
+    labels: materialEntries.map(m => m.name),
+    datasets: [
+      {
+        data: materialEntries.map(m => m.qty),
+        backgroundColor: materialEntries.map(m => materialColors[materialOrder.indexOf(m.name)]),
+        borderColor: '#fff',
+        borderWidth: 3,
+        hoverOffset: 16,
+        hoverBorderColor: materialEntries.map(m => materialBorders[materialOrder.indexOf(m.name)]),
+        hoverBorderWidth: 3,
+      },
+    ],
+  };
+
+  const materialChartOptions = {
+    cutout: '58%',
+    devicePixelRatio: 3,
+    animation: { animateRotate: true, animateScale: true, duration: 800 },
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 18,
+          font: { size: 13, weight: '500', family: 'system-ui, -apple-system, sans-serif' },
+          usePointStyle: true,
+          pointStyle: 'circle',
+        }
+      },
+      tooltip: {
+        backgroundColor: '#1a1a2e',
+        titleFont: { size: 14, weight: '600' },
+        bodyFont: { size: 13 },
+        padding: 14,
+        cornerRadius: 10,
+        displayColors: true,
+        boxPadding: 6,
+        callbacks: {
+          label: function(context) {
+            const qty = context.raw || 0;
+            const pct = materialTotalQty > 0 ? ((qty / materialTotalQty) * 100).toFixed(1) : 0;
+            const boxes = formatNumber(Math.round(qty / 1000));
+            return ` ${boxes} крб · ${pct}%`;
+          },
+          afterLabel: function(context) {
+            const qty = context.raw || 0;
+            return ` ${formatNumber(qty)} шт`;
+          }
+        }
+      }
+    },
+    maintainAspectRatio: false
+  };
+
+  // --- Payment Split (Наличка vs Перечисление) ---
+  const effectivePaymentYear = paymentChartYearFilter === 'global' ? yearFilter : paymentChartYearFilter;
+  const filteredPaymentData = paymentRawStats.filter(entry => {
+    if (effectivePaymentYear === 'all') return true;
+    return entry.date && entry.date.getFullYear().toString() === effectivePaymentYear;
+  });
+  const paymentDates = filteredPaymentData.map(e => e.date).filter(Boolean).sort((a, b) => a - b);
+  const paymentDateFrom = paymentDates[0];
+  const paymentDateTo = paymentDates[paymentDates.length - 1];
+
+  const cashTotal = filteredPaymentData.filter(e => e.type === 'cash').reduce((s, e) => s + e.amount, 0);
+  const transferTotal = filteredPaymentData.filter(e => e.type === 'transfer').reduce((s, e) => s + e.amount, 0);
+  const cashCount = filteredPaymentData.filter(e => e.type === 'cash').length;
+  const transferCount = filteredPaymentData.filter(e => e.type === 'transfer').length;
+  const paymentGrandTotal = cashTotal + transferTotal;
+  const cashPct = paymentGrandTotal > 0 ? (cashTotal / paymentGrandTotal * 100) : 0;
+  const transferPct = paymentGrandTotal > 0 ? (transferTotal / paymentGrandTotal * 100) : 0;
+
+  // --- Накладные по организациям (Pure Pack vs White Ray) ---
+  // Follows the global period filter, same as the table underneath it.
+  const ORG_COLORS = { 'Pure Pack': '#7C5CFF', 'White Ray': '#0F9D8C' };
+  const ORG_BORDERS = { 'Pure Pack': '#5B3FD1', 'White Ray': '#0c7a6e' };
+  const ORG_FALLBACK = ['#E8A33D', '#3BC9DB', '#FF6B6B', '#4285F4'];
+  const orgColorFor = (name, i) => ORG_COLORS[name] || ORG_FALLBACK[i % ORG_FALLBACK.length];
+  const orgBorderFor = (name, i) => ORG_BORDERS[name] || ORG_FALLBACK[i % ORG_FALLBACK.length];
+
+  const senderCompanyTotal = senderCompanyStats.reduce((s, o) => s + o.total, 0);
+
+  const orgChartData = {
+    labels: senderCompanyStats.map((o) => o.company),
+    datasets: [
+      {
+        data: senderCompanyStats.map((o) => o.total),
+        backgroundColor: senderCompanyStats.map((o, i) => orgColorFor(o.company, i)),
+        borderColor: '#fff',
+        borderWidth: 3,
+        hoverOffset: 14,
+        hoverBorderColor: senderCompanyStats.map((o, i) => orgBorderFor(o.company, i)),
+        hoverBorderWidth: 3,
+      },
+    ],
+  };
+
+  const orgChartOptions = {
+    cutout: '58%',
+    devicePixelRatio: 3,
+    animation: { animateRotate: true, animateScale: true, duration: 800 },
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 18,
+          font: { size: 13, weight: '500', family: 'system-ui, -apple-system, sans-serif' },
+          usePointStyle: true,
+          pointStyle: 'circle',
+        }
+      },
+      tooltip: {
+        backgroundColor: '#1a1a2e',
+        titleFont: { size: 14, weight: '600' },
+        bodyFont: { size: 13 },
+        padding: 14,
+        cornerRadius: 10,
+        boxPadding: 6,
+        callbacks: {
+          label: function (context) {
+            const value = context.raw || 0;
+            const pct = senderCompanyTotal > 0 ? ((value / senderCompanyTotal) * 100).toFixed(1) : 0;
+            return ` ${formatNumber(value)} сум · ${pct}%`;
+          }
+        }
+      }
+    },
+    maintainAspectRatio: false
+  };
+
+  // --- Порог перехода на НДС ---
+  // VAT kicks in once a company's turnover for the calendar year reaches 5 млрд сум.
+  // Deliberately independent of the global period filter: always the current year.
+  const VAT_THRESHOLD = 5000000000;
+  const vatYear = new Date().getFullYear();
+
+  const vatTotals = {};
+  orgRawStats.forEach((e) => {
+    if (!e.date || e.date.getFullYear() !== vatYear) return;
+    vatTotals[e.company] = (vatTotals[e.company] || 0) + e.amount;
+  });
+  const vatCompanies = Object.keys(vatTotals).sort((a, b) => vatTotals[b] - vatTotals[a]);
+  // Fall back to the biggest company until the user picks one explicitly.
+  const activeVatCompany = (vatCompany && vatCompanies.includes(vatCompany)) ? vatCompany : vatCompanies[0];
+  const vatUsed = activeVatCompany ? vatTotals[activeVatCompany] : 0;
+  const vatPct = (vatUsed / VAT_THRESHOLD) * 100;
+  const vatRemaining = Math.max(0, VAT_THRESHOLD - vatUsed);
+  // Green while comfortable, amber approaching, red once the threshold is in reach.
+  const vatColor = vatPct >= 85 ? '#E5484D' : vatPct >= 60 ? '#E8A33D' : '#0F9D8C';
+  const vatColorDark = vatPct >= 85 ? '#C2262B' : vatPct >= 60 ? '#C77F16' : '#0c7a6e';
+  const vatStatusLabel = vatPct >= 100
+    ? 'Порог превышен — НДС применяется'
+    : vatPct >= 85
+      ? 'Порог близко'
+      : vatPct >= 60
+        ? 'Под наблюдением'
+        : 'В пределах нормы';
+
+  const vatChartData = {
+    labels: ['Оборот', 'Остаток до порога'],
+    datasets: [
+      {
+        data: [Math.min(vatUsed, VAT_THRESHOLD), vatRemaining],
+        backgroundColor: [vatColor, '#EAEDF0'],
+        borderColor: ['#fff', '#fff'],
+        borderWidth: 0,
+        circumference: 180,
+        rotation: 270,
+        cutout: '74%',
+        borderRadius: [8, 0],
+      },
+    ],
+  };
+
+  const vatChartOptions = {
+    devicePixelRatio: 3,
+    animation: { animateRotate: true, duration: 800 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1a1a2e',
+        padding: 12,
+        cornerRadius: 10,
+        callbacks: {
+          label: (context) => ` ${formatNumber(Math.round(context.raw))} сум`
         }
       }
     },
@@ -1107,7 +1425,7 @@ const centerTextPlugin = {
       </Box>
 
       {/* New: invoice trend, client tiers, paper leaders, silent clients */}
-      <InvoiceInsightsSection />
+      <InvoiceInsightsSection yearFilter={yearFilter} />
 
       {loading ? (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
@@ -1254,6 +1572,262 @@ const centerTextPlugin = {
               </Grid>
             </Grid>
           </Card>
+
+          {/* Material Distribution Doughnut */}
+          {materialStats.length > 0 && (
+          <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
+            {/* Header row: title + local year filter */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2, mb: 1 }}>
+              <Box>
+                <Typography variant="h6" fontWeight="bold">
+                  Распределение по материалу
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  {materialDateFrom && materialDateTo
+                    ? `с ${format(materialDateFrom, 'd MMM yyyy', { locale: ru })} по ${format(materialDateTo, 'd MMM yyyy', { locale: ru })}`
+                    : 'Нет данных за выбранный период'}
+                  {' · '}{formatNumber(filteredMaterialData.length)} накладных
+                </Typography>
+              </Box>
+              <ToggleButtonGroup
+                value={materialYearFilter}
+                exclusive
+                onChange={(_, v) => { if (v !== null) setMaterialYearFilter(v); }}
+                size="small"
+                sx={{
+                  '& .MuiToggleButton-root': {
+                    px: 2,
+                    py: 0.6,
+                    fontSize: '0.8rem',
+                    color: '#555',
+                    borderColor: '#0F9D8C',
+                    fontWeight: 500,
+                    '&.Mui-selected': {
+                      bgcolor: '#0F9D8C',
+                      color: '#fff',
+                      borderColor: '#0F9D8C',
+                      '&:hover': { bgcolor: '#0c7a6e' }
+                    },
+                    '&:hover': { bgcolor: 'rgba(15, 157, 140, 0.08)' }
+                  }
+                }}
+              >
+                <ToggleButton value="global">
+                  <MuiTooltip title="Использует глобальный фильтр вверху страницы" arrow>
+                    <span>Глобальный</span>
+                  </MuiTooltip>
+                </ToggleButton>
+                <ToggleButton value="all">Все</ToggleButton>
+                <ToggleButton value="2026">2026</ToggleButton>
+                <ToggleButton value="2025">2025</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            {materialTotalQty > 0 ? (
+            <Grid container spacing={4} alignItems="center" sx={{ mt: 1 }}>
+              <Grid item xs={12} md={5}>
+                <Box sx={{ position: 'relative', height: 360 }}>
+                  <Doughnut data={materialChartData} options={materialChartOptions} />
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={7}>
+                <TableContainer component={MuiPaper} variant="outlined" sx={{ borderRadius: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: '#f8f9fa' }}>
+                        <TableCell sx={{ fontWeight: 700, fontSize: '0.82rem' }}>Материал</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.82rem' }}>Штуки</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.82rem' }}>Коробки</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.82rem' }}>Доля</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {materialEntries.map((m) => {
+                        const idx = materialOrder.indexOf(m.name);
+                        return (
+                        <TableRow key={m.name} sx={{ '&:hover': { bgcolor: 'rgba(15, 157, 140, 0.04)' } }}>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                              <Box sx={{
+                                width: 14, height: 14, borderRadius: '4px',
+                                background: `linear-gradient(135deg, ${materialColors[idx]}, ${materialBorders[idx]})`,
+                                boxShadow: `0 2px 4px ${materialColors[idx]}40`
+                              }} />
+                              <Typography variant="body2" fontWeight={500}>{m.name}</Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2">{formatNumber(m.qty)}</Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2" fontWeight={500}>{formatNumber(Math.round(m.qty / 1000))} крб</Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Box sx={{
+                              display: 'inline-block',
+                              bgcolor: `${materialColors[idx]}18`,
+                              color: materialBorders[idx],
+                              fontWeight: 700,
+                              fontSize: '0.82rem',
+                              px: 1.2, py: 0.3, borderRadius: 1
+                            }}>
+                              {((m.qty / materialTotalQty) * 100).toFixed(1)}%
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                        );
+                      })}
+                      <TableRow sx={{ bgcolor: '#f8f9fa' }}>
+                        <TableCell sx={{ fontWeight: 700 }}>Итого</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700 }}>{formatNumber(materialTotalQty)}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700 }}>{formatNumber(Math.round(materialTotalQty / 1000))} крб</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700 }}>100%</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
+            </Grid>
+            ) : (
+              <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
+                <Typography variant="body1">Нет данных за выбранный период</Typography>
+              </Box>
+            )}
+          </Card>
+          )}
+
+          {/* Payment Split: Наличка vs Перечисление */}
+          {paymentRawStats.length > 0 && (
+          <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2, mb: 1 }}>
+              <Box>
+                <Typography variant="h6" fontWeight="bold">
+                  Форма оплаты
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  {paymentDateFrom && paymentDateTo
+                    ? `с ${format(paymentDateFrom, 'd MMM yyyy', { locale: ru })} по ${format(paymentDateTo, 'd MMM yyyy', { locale: ru })}`
+                    : 'Нет данных'}
+                  {' · '}{filteredPaymentData.length} накладных
+                </Typography>
+              </Box>
+              <ToggleButtonGroup
+                value={paymentChartYearFilter}
+                exclusive
+                onChange={(_, v) => { if (v !== null) setPaymentChartYearFilter(v); }}
+                size="small"
+                sx={{
+                  '& .MuiToggleButton-root': {
+                    px: 2, py: 0.6, fontSize: '0.8rem', color: '#555', borderColor: '#0F9D8C', fontWeight: 500,
+                    '&.Mui-selected': { bgcolor: '#0F9D8C', color: '#fff', borderColor: '#0F9D8C', '&:hover': { bgcolor: '#0c7a6e' } },
+                    '&:hover': { bgcolor: 'rgba(15, 157, 140, 0.08)' }
+                  }
+                }}
+              >
+                <ToggleButton value="global">
+                  <MuiTooltip title="Глобальный фильтр" arrow><span>Глобальный</span></MuiTooltip>
+                </ToggleButton>
+                <ToggleButton value="all">Все</ToggleButton>
+                <ToggleButton value="2026">2026</ToggleButton>
+                <ToggleButton value="2025">2025</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            {paymentGrandTotal > 0 ? (
+            <Box sx={{ mt: 3 }}>
+              {/* Stacked bar */}
+              <Box sx={{ width: '100%', height: 48, borderRadius: 3, overflow: 'hidden', display: 'flex', mb: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                <Box sx={{
+                  width: `${cashPct}%`, height: '100%',
+                  background: 'linear-gradient(135deg, #14DB9C, #00B496)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'width 0.6s ease',
+                  minWidth: cashPct > 0 ? '60px' : 0,
+                }}>
+                  {cashPct >= 8 && (
+                    <Typography variant="body2" sx={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem' }}>
+                      {cashPct.toFixed(1)}%
+                    </Typography>
+                  )}
+                </Box>
+                <Box sx={{
+                  width: `${transferPct}%`, height: '100%',
+                  background: 'linear-gradient(135deg, #845EF7, #7048C6)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'width 0.6s ease',
+                  minWidth: transferPct > 0 ? '60px' : 0,
+                }}>
+                  {transferPct >= 8 && (
+                    <Typography variant="body2" sx={{ color: '#fff', fontWeight: 700, fontSize: '0.85rem' }}>
+                      {transferPct.toFixed(1)}%
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+
+              {/* Two cards side by side */}
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <Box sx={{
+                    p: 3, borderRadius: 3,
+                    border: '2px solid #14DB9C',
+                    background: 'linear-gradient(135deg, rgba(20, 219, 156, 0.06), rgba(0, 180, 150, 0.03))',
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <Box sx={{ width: 16, height: 16, borderRadius: '50%', background: 'linear-gradient(135deg, #14DB9C, #00B496)', boxShadow: '0 2px 8px rgba(20, 219, 156, 0.4)' }} />
+                      <Typography variant="body1" fontWeight={600} color="#222">Наличные</Typography>
+                    </Box>
+                    <Typography variant="h4" fontWeight={700} sx={{ color: '#00B496', mb: 0.5 }}>
+                      {formatNumber(cashTotal)} <Typography component="span" variant="body2" color="text.secondary">сум</Typography>
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 3, mt: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        <b>{cashPct.toFixed(1)}%</b> от общего
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <b>{cashCount}</b> накладных
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Box sx={{
+                    p: 3, borderRadius: 3,
+                    border: '2px solid #845EF7',
+                    background: 'linear-gradient(135deg, rgba(132, 94, 247, 0.06), rgba(112, 72, 198, 0.03))',
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <Box sx={{ width: 16, height: 16, borderRadius: '50%', background: 'linear-gradient(135deg, #845EF7, #7048C6)', boxShadow: '0 2px 8px rgba(132, 94, 247, 0.4)' }} />
+                      <Typography variant="body1" fontWeight={600} color="#222">Перечисление</Typography>
+                    </Box>
+                    <Typography variant="h4" fontWeight={700} sx={{ color: '#7048C6', mb: 0.5 }}>
+                      {formatNumber(transferTotal)} <Typography component="span" variant="body2" color="text.secondary">сум</Typography>
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 3, mt: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        <b>{transferPct.toFixed(1)}%</b> от общего
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <b>{transferCount}</b> накладных
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+              </Grid>
+
+              {/* Grand total */}
+              <Box sx={{ mt: 3, p: 2, borderRadius: 2, bgcolor: '#f8f9fa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="body2" fontWeight={600} color="text.secondary">Общая сумма</Typography>
+                <Typography variant="h6" fontWeight={700} color="#111">{formatNumber(paymentGrandTotal)} сум</Typography>
+              </Box>
+            </Box>
+            ) : (
+              <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
+                <Typography variant="body1">Нет данных за выбранный период</Typography>
+              </Box>
+            )}
+          </Card>
+          )}
 
           {/* Top 10 Clients by Invoice Amount - Full Width */}
           <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
@@ -1724,43 +2298,189 @@ const centerTextPlugin = {
             )}
           </Card>
 
-          {/* 4th Container - Sender Company Mini Table */}
+          {/* 4th Container - Sender companies (chart + table) next to the НДС threshold gauge */}
           <Card elevation={3} sx={{ borderRadius: 4, p: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              {yearFilter === 'all' ? 'Накладные по организациям' : `Накладные по организациям за ${yearFilter} год`}
-            </Typography>
-            <TableContainer component={MuiPaper} sx={{ mt: 2 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell><strong>Организация</strong></TableCell>
-                    <TableCell align="right"><strong>Сумма накладных</strong></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {senderCompanyStats.length > 0 ? (
-                    senderCompanyStats.map((item, index) => (
-                      <TableRow key={index} hover>
-                        <TableCell>
-                          <Typography variant="body2" noWrap sx={{ maxWidth: 300 }}>
-                            {item.company}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">{formatNumber(item.total)} сум</TableCell>
+            <Grid container spacing={4}>
+              {/* ---------- LEFT: Накладные по организациям ---------- */}
+              <Grid item xs={12} md={6}>
+                <Typography variant="h6" fontWeight="bold">
+                  {yearFilter === 'all' ? 'Накладные по организациям' : `Накладные по организациям за ${yearFilter} год`}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Всего {formatNumber(senderCompanyTotal)} сум
+                </Typography>
+
+                {senderCompanyStats.length > 0 ? (
+                  <Box sx={{ position: 'relative', height: 300, mt: 2 }}>
+                    <Doughnut data={orgChartData} options={orgChartOptions} />
+                  </Box>
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
+                    <Typography variant="body1">Нет данных за выбранный период</Typography>
+                  </Box>
+                )}
+
+                <TableContainer component={MuiPaper} variant="outlined" sx={{ mt: 2, borderRadius: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: '#f8f9fa' }}>
+                        <TableCell><strong>Организация</strong></TableCell>
+                        <TableCell align="right"><strong>Сумма накладных</strong></TableCell>
+                        <TableCell align="right"><strong>Доля</strong></TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={2} align="center">
-                        <Typography variant="body2" color="text.secondary" py={2}>
-                          Нет данных
+                    </TableHead>
+                    <TableBody>
+                      {senderCompanyStats.length > 0 ? (
+                        senderCompanyStats.map((item, index) => (
+                          <TableRow key={index} hover>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                                <Box sx={{
+                                  width: 14, height: 14, borderRadius: '4px', flexShrink: 0,
+                                  background: `linear-gradient(135deg, ${orgColorFor(item.company, index)}, ${orgBorderFor(item.company, index)})`
+                                }} />
+                                <Typography variant="body2" fontWeight={500} noWrap sx={{ maxWidth: 220 }}>
+                                  {item.company}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell align="right">{formatNumber(item.total)} сум</TableCell>
+                            <TableCell align="right">
+                              {senderCompanyTotal > 0 ? `${((item.total / senderCompanyTotal) * 100).toFixed(1)}%` : '—'}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={3} align="center">
+                            <Typography variant="body2" color="text.secondary" py={2}>
+                              Нет данных
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
+
+              {/* ---------- RIGHT: Порог перехода на НДС ---------- */}
+              <Grid item xs={12} md={6}>
+                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
+                  <Typography variant="h6" fontWeight="bold">
+                    Порог перехода на НДС
+                  </Typography>
+                  <MuiTooltip
+                    title={`НДС применяется, если оборот организации за календарный год достигает ${formatNumber(VAT_THRESHOLD)} сум. Учитывается только ${vatYear} год и не зависит от фильтра вверху страницы.`}
+                    arrow
+                  >
+                    <Typography variant="caption" sx={{ color: '#0F9D8C', fontWeight: 700, cursor: 'help' }}>
+                      ⓘ
+                    </Typography>
+                  </MuiTooltip>
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Оборот за {vatYear} год · порог {formatNumber(VAT_THRESHOLD)} сум
+                </Typography>
+
+                {vatCompanies.length > 0 ? (
+                  <>
+                    {/* One firm at a time — the threshold is per-company */}
+                    <ToggleButtonGroup
+                      value={activeVatCompany}
+                      exclusive
+                      onChange={(_, v) => { if (v !== null) setVatCompany(v); }}
+                      size="small"
+                      sx={{
+                        mt: 2,
+                        flexWrap: 'wrap',
+                        '& .MuiToggleButton-root': {
+                          px: 2, py: 0.6, fontSize: '0.8rem', color: '#555',
+                          borderColor: '#0F9D8C', fontWeight: 500, textTransform: 'none',
+                          '&.Mui-selected': {
+                            bgcolor: '#0F9D8C', color: '#fff', borderColor: '#0F9D8C',
+                            '&:hover': { bgcolor: '#0c7a6e' }
+                          },
+                          '&:hover': { bgcolor: 'rgba(15, 157, 140, 0.08)' }
+                        }
+                      }}
+                    >
+                      {vatCompanies.map((c) => (
+                        <ToggleButton key={c} value={c}>{c}</ToggleButton>
+                      ))}
+                    </ToggleButtonGroup>
+
+                    {/* Half-donut gauge with the reading in the middle */}
+                    <Box sx={{ position: 'relative', height: 210, mt: 3 }}>
+                      <Doughnut data={vatChartData} options={vatChartOptions} />
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          textAlign: 'center',
+                          pointerEvents: 'none'
+                        }}
+                      >
+                        <Typography sx={{ fontSize: 40, fontWeight: 800, lineHeight: 1.1, color: vatColorDark }}>
+                          {vatPct.toFixed(1)}%
                         </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#222' }}>
+                          {formatNumber(Math.round(vatUsed))} сум
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          из {formatNumber(VAT_THRESHOLD)} сум
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    {/* 0 / 5 млрд scale ends */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mt: -1 }}>
+                      <Typography variant="caption" color="text.secondary">0</Typography>
+                      <Typography variant="caption" color="text.secondary">5 млрд</Typography>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        mt: 2, p: 2, borderRadius: 3,
+                        border: `2px solid ${vatColor}`,
+                        background: `${vatColor}0F`
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: vatColor, flexShrink: 0 }} />
+                        <Typography variant="body2" fontWeight={700} sx={{ color: vatColorDark }}>
+                          {activeVatCompany} · {vatStatusLabel}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            Оборот за {vatYear}
+                          </Typography>
+                          <Typography variant="body1" fontWeight={700}>
+                            {formatNumber(Math.round(vatUsed))} сум
+                          </Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'right' }}>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            {vatUsed >= VAT_THRESHOLD ? 'Превышение порога' : 'Осталось до порога'}
+                          </Typography>
+                          <Typography variant="body1" fontWeight={700}>
+                            {formatNumber(Math.round(vatUsed >= VAT_THRESHOLD ? vatUsed - VAT_THRESHOLD : vatRemaining))} сум
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </>
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
+                    <Typography variant="body1">Нет накладных за {vatYear} год</Typography>
+                  </Box>
+                )}
+              </Grid>
+            </Grid>
           </Card>
 
           {/* 5th Container - Logs + Invoice history side by side */}
