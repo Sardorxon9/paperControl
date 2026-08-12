@@ -403,7 +403,7 @@ function fuzzySearchProductTypes(productTypes, query) {
     const normalizedQuery = normalize(lowerQuery);
     const normalizedTranslit = normalize(transliteratedQuery);
 
-    let bestScore = Infinity;
+    let bestScore = Infinity; //  yes 
 
     const fields = [
       { orig: comment, translit: commentTranslit },

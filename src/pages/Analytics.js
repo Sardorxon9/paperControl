@@ -1103,6 +1103,8 @@ export default function Analytics({ user, userRole, onLogout }) {
       .sort((a, b) => a.date.localeCompare(b.date));
   };
 
+
+  // // 
   // Format labels based on scale
   const formatChartLabel = (dateStr, scale) => {
     const date = new Date(dateStr);
