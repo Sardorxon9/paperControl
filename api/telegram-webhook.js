@@ -216,6 +216,9 @@ async function sendMessage(chatId, text, options = {}) {
     });
 
     const data = await response.json();
+    if (!data.ok) {
+      console.error('Telegram sendMessage rejected:', data.description);
+    }
     return data;
   } catch (error) {
     console.error('Error sending message:', error);
@@ -668,14 +671,10 @@ async function handleRestaurantInput(chatId, userId, query) {
     // Reset session
     delete userSessions[userId];
   } else if (groupedArray.length > 1) {
-    // Multiple products for same restaurant or different restaurants
-    userSessions[userId] = {
-      state: 'selecting_product',
-      results: results
-    };
-
-    // Fetch product names for all results
-    const buttons = await Promise.all(results.map(async (client, index) => {
+    // Multiple products for same restaurant or different restaurants.
+    // Carry the client id in callback_data: serverless instances don't share
+    // userSessions, so an index-based lookup fails on the button press.
+    const buttons = await Promise.all(results.map(async (client) => {
       let productInfo = '';
       if (client.productID_2) {
         const productName = await getProductName(client.productID_2);
@@ -687,7 +686,7 @@ async function handleRestaurantInput(chatId, userId, query) {
       const label = `${restaurantName} ${productInfo}`;
       return [{
         text: label.substring(0, 60),
-        callback_data: `select_${index}`
+        callback_data: `selc_${client.id}`
       }];
     }));
 
@@ -707,29 +706,17 @@ async function handleRestaurantInput(chatId, userId, query) {
   }
 }
 
-// Handle product selection
-async function handleProductSelection(chatId, userId, selectedIndex) {
-  const session = userSessions[userId];
-
-  if (!session || !session.results) {
-    await sendMessage(chatId, '❌ Сессия истекла. Пожалуйста, начните снова.');
-    delete userSessions[userId];
-    return;
-  }
-
-  const client = session.results[selectedIndex];
+// Handle product selection (button press from the multiple-results list)
+async function handleProductSelection(chatId, clientId) {
+  const client = await getClientById(clientId);
 
   if (!client) {
-    await sendMessage(chatId, '❌ Ошибка выбора. Попробуйте еще раз.');
-    delete userSessions[userId];
+    await sendMessage(chatId, '❌ Ресторан не найден. Пожалуйста, начните снова.');
     return;
   }
 
   const message = await formatPaperInfoMessage(client);
   await sendMessage(chatId, message);
-
-  // Reset session
-  delete userSessions[userId];
 }
 
 // ============================================================================
@@ -1274,9 +1261,11 @@ export default async function handler(req, res) {
           const message = await formatStandardProductMessage(productType);
           await sendMessage(chatId, message);
         }
+      } else if (data.startsWith('selc_')) {
+        await handleProductSelection(chatId, data.replace('selc_', ''));
       } else if (data.startsWith('select_')) {
-        const index = parseInt(data.replace('select_', ''));
-        await handleProductSelection(chatId, userId, index);
+        // Buttons sent before the stateless fix carry only an index
+        await sendMessage(chatId, '❌ Сессия истекла. Пожалуйста, начните снова.');
       }
 
       res.json({ ok: true });
@@ -1328,8 +1317,10 @@ export default async function handler(req, res) {
 
     // Try to send error to user if we have chat info
     try {
-      if (update && update.message && update.message.chat) {
-        const chatId = update.message.chat.id;
+      const body = req.body || {};
+      const errorChat = body.message?.chat || body.callback_query?.message?.chat;
+      if (errorChat) {
+        const chatId = errorChat.id;
         const errorMsg = `❌ <b>Webhook Error:</b>\n\n${error.message}\n\n<code>${error.stack ? error.stack.substring(0, 400) : 'N/A'}</code>`;
         await sendMessage(chatId, errorMsg);
       }
