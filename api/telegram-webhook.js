@@ -1,4 +1,6 @@
 // api/telegram-webhook.js - Telegram Bot Webhook Handler
+import crypto from 'crypto';
+
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
@@ -6,6 +8,32 @@ const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 const FIREBASE_PROJECT_ID = 'paper-control-6bce2';
 const FIREBASE_API_KEY = 'AIzaSyBoYiTk7tqrpDKOvG9mDHHTlfP77MZ4sKA';
 const FIRESTORE_API = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+
+// Optional: set the same value as `secret_token` in setWebhook so forged POSTs
+// to this URL (with a whitelisted from.id) are rejected.
+const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
+
+// Whitelist: only these Telegram user IDs (from.id) may use the bot.
+// Everyone else is blocked before any handler runs. Source: `users` collection.
+const ALLOWED_USER_IDS = new Set([
+  '46914931',  // Baxtiyor (admin)
+  '504903418', // Sardorxon (admin)
+  '685385466', // Yoqubxon (admin)
+  '545709815', // Alisher (worker)
+]);
+
+// Constant-time comparison of the X-Telegram-Bot-Api-Secret-Token header
+function hasValidWebhookSecret(req) {
+  const got = req.headers['x-telegram-bot-api-secret-token'];
+  if (typeof got !== 'string') return false;
+  const a = Buffer.from(got);
+  const b = Buffer.from(TELEGRAM_WEBHOOK_SECRET);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function isAllowedUser(userId) {
+  return userId !== undefined && ALLOWED_USER_IDS.has(String(userId));
+}
 
 // User session storage
 const userSessions = {};
@@ -1203,6 +1231,45 @@ async function handleOrderConfirm(chatId, userId, parsed, cardMessageId, cardTex
   }
 }
 
+// Who sent this update (callback presser or message author), or undefined
+function getUpdateSender(update) {
+  const source = update.callback_query || update.message || update.edited_message;
+  return source ? source.from : undefined;
+}
+
+// Tell a non-whitelisted user they are blocked. Silent in groups to avoid spam.
+async function rejectUnauthorized(update) {
+  const from = getUpdateSender(update) || {};
+  const name = [from.first_name, from.last_name].filter(Boolean).join(' ');
+  console.warn(`[auth] blocked from.id=${from.id} username=@${from.username || '-'} name="${name}"`);
+
+  try {
+    if (update.callback_query) {
+      await fetch(`${TELEGRAM_API_URL}/answerCallbackQuery`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          callback_query_id: update.callback_query.id,
+          text: '⛔ Доступ запрещён',
+          show_alert: true
+        })
+      });
+      return;
+    }
+
+    const message = update.message || update.edited_message;
+    if (message && message.chat && message.chat.type === 'private') {
+      await sendMessage(
+        message.chat.id,
+        `⛔ Доступ запрещён.\n\nВаш ID: <code>${from.id}</code>`,
+        { reply_markup: { remove_keyboard: true } }
+      );
+    }
+  } catch (e) {
+    console.error('[auth] failed to notify blocked user:', e);
+  }
+}
+
 // Main webhook handler
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -1219,9 +1286,23 @@ export default async function handler(req, res) {
     return;
   }
 
+  if (TELEGRAM_WEBHOOK_SECRET && !hasValidWebhookSecret(req)) {
+    console.warn('[auth] rejected webhook call with bad/missing secret token');
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
   try {
-    const update = req.body;
+    const update = req.body || {};
     console.log('Telegram update received');
+
+    // Whitelist gate — runs before every command, button and callback.
+    // Always answer 200 so Telegram doesn't retry the blocked update.
+    if (!isAllowedUser(getUpdateSender(update)?.id)) {
+      await rejectUnauthorized(update);
+      res.json({ ok: true });
+      return;
+    }
 
     // Handle callback query (button press)
     if (update.callback_query) {
@@ -1319,7 +1400,8 @@ export default async function handler(req, res) {
     try {
       const body = req.body || {};
       const errorChat = body.message?.chat || body.callback_query?.message?.chat;
-      if (errorChat) {
+      // Never leak stack traces to anyone outside the whitelist
+      if (errorChat && isAllowedUser(getUpdateSender(body)?.id)) {
         const chatId = errorChat.id;
         const errorMsg = `❌ <b>Webhook Error:</b>\n\n${error.message}\n\n<code>${error.stack ? error.stack.substring(0, 400) : 'N/A'}</code>`;
         await sendMessage(chatId, errorMsg);
