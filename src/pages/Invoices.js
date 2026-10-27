@@ -66,6 +66,9 @@ import InvoiceHistory from './InvoiceHistory';
 import StandardDesignPicker from '../components/shared/StandardDesignPicker';
 import { searchClients } from '../utils/fuzzySearch';
 
+const CLICHE_NAME = 'Клише (для печати этикеток)';
+const CLICHE_DEFAULT_PRICE = 200000;
+
 const Invoices = ({ currentUser }) => {
   const navigate = useNavigate();
   const [clients, setClients] = useState([]);
@@ -92,6 +95,8 @@ const Invoices = ({ currentUser }) => {
 
   // New state for multiple products - starts empty
   const [invoiceProducts, setInvoiceProducts] = useState([]);
+  // Cliche (label printing plate) line item: null when not added, otherwise { quantity, price }
+  const [cliche, setCliche] = useState(null);
 
   // Branch selection state
   const [clientBranches, setClientBranches] = useState([]);
@@ -350,13 +355,27 @@ const Invoices = ({ currentUser }) => {
     ));
   };
 
+  const addCliche = () => {
+    setCliche({ quantity: '1', price: String(CLICHE_DEFAULT_PRICE) });
+  };
+
+  const updateClicheField = (field, value) => {
+    setCliche(prev => (prev ? { ...prev, [field]: value } : prev));
+  };
+
+  const calculateClicheTotal = () => {
+    if (!cliche) return 0;
+    return (parseFloat(cliche.quantity) || 0) * (parseFloat(cliche.price) || 0);
+  };
+
   // Calculate total amount for all products
   const calculateTotalAmount = () => {
-    return invoiceProducts.reduce((total, product) => {
+    const productsTotal = invoiceProducts.reduce((total, product) => {
       const quantity = parseFloat(product.quantity) || 0;
       const price = parseFloat(product.price) || 0;
       return total + (quantity * price);
     }, 0);
+    return productsTotal + calculateClicheTotal();
   };
 
   // Validate all products and payment type
@@ -367,8 +386,16 @@ const Invoices = ({ currentUser }) => {
     }
 
     // Check if there are any products
-    if (invoiceProducts.length === 0) {
+    if (invoiceProducts.length === 0 && !cliche) {
       return false;
+    }
+
+    if (cliche) {
+      const clicheQuantity = parseFloat(cliche.quantity);
+      const clichePrice = parseFloat(cliche.price);
+      if (isNaN(clicheQuantity) || isNaN(clichePrice) || clicheQuantity <= 0 || clichePrice <= 0) {
+        return false;
+      }
     }
 
     for (const product of invoiceProducts) {
@@ -398,7 +425,7 @@ const Invoices = ({ currentUser }) => {
       let message = 'Пожалуйста, заполните все поля';
       if (!paymentType) {
         message = 'Пожалуйста, выберите тип оплаты';
-      } else if (invoiceProducts.length === 0) {
+      } else if (invoiceProducts.length === 0 && !cliche) {
         message = 'Пожалуйста, добавьте хотя бы один товар';
       }
 
@@ -441,6 +468,15 @@ const Invoices = ({ currentUser }) => {
         }
       });
 
+      if (cliche) {
+        productsForInvoice.push({
+          isCliche: true,
+          productName: CLICHE_NAME,
+          quantity: parseFloat(cliche.quantity),
+          price: parseFloat(cliche.price)
+        });
+      }
+
       // Use selected branch orgName if branch is selected, otherwise use client's orgName
       const orgNameToUse = selectedBranch ? selectedBranch.orgName : selectedClient.displayOrgName;
 
@@ -482,6 +518,15 @@ const Invoices = ({ currentUser }) => {
               price: parseFloat(product.price),
               totalPrice: parseFloat(product.quantity) * parseFloat(product.price)
             };
+          }
+        }),
+        // Kept outside `products` so product quantity/material analytics aren't skewed
+        ...(cliche && {
+          cliche: {
+            name: CLICHE_NAME,
+            quantity: parseFloat(cliche.quantity),
+            price: parseFloat(cliche.price),
+            totalPrice: calculateClicheTotal()
           }
         }),
         totalInvoiceAmount: calculateTotalAmount(),
@@ -539,6 +584,7 @@ const Invoices = ({ currentUser }) => {
     setModalOpen(false);
     setSelectedClient(null);
     setInvoiceProducts([]);
+    setCliche(null);
     setGeneratedInvoiceUrl('');
     setInvoiceNumber('');
     setSenderCompany('White Ray');
@@ -573,6 +619,7 @@ const Invoices = ({ currentUser }) => {
         price: ''
       }
     ]);
+    setCliche(null);
 
     setModalOpen(true);
   };
@@ -925,19 +972,22 @@ const Invoices = ({ currentUser }) => {
     // Generate table rows for multiple products
     const generateProductRows = (products) => {
       return products.map((product, index) => {
-        const productDescription = `( В ${product.packageType} упаковках ${product.gramm} гр )`;
+        const productDescription = product.isCliche
+          ? ''
+          : `<div class="product-description">( В ${product.packageType} упаковках ${product.gramm} гр )</div>`;
         const productTotal = product.quantity * product.price;
+        const priceDisplay = product.isCliche ? product.price.toLocaleString('ru-RU') : product.price;
         
         return `
           <tr class="table-row">
             <td class="col-number">${index + 1}.</td>
             <td class="col-name">
               <div class="product-name">${product.productName}</div>
-              <div class="product-description">${productDescription}</div>
+              ${productDescription}
             </td>
             <td class="col-unit">шт</td>
             <td class="col-quantity">${product.quantity.toLocaleString('ru-RU')}</td>
-            <td class="col-price">${product.price} сум</td>
+            <td class="col-price">${priceDisplay} сум</td>
             <td class="col-total">${productTotal.toLocaleString('ru-RU')} сум</td>
           </tr>
         `;
@@ -1801,19 +1851,31 @@ const Invoices = ({ currentUser }) => {
                   <Typography variant="h6" fontWeight="500" color="#105f58">
                     Товары в накладной
                   </Typography>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Add />}
-                    onClick={addProductRow}
-                    size="medium"
-                  >
-                    Добавить товар
-                  </Button>
+                  <Box display="flex" gap={1.5}>
+                    {!cliche && (
+                      <Button
+                        variant="outlined"
+                        startIcon={<Add />}
+                        onClick={addCliche}
+                        size="medium"
+                      >
+                        Добавить клише
+                      </Button>
+                    )}
+                    <Button
+                      variant="outlined"
+                      startIcon={<Add />}
+                      onClick={addProductRow}
+                      size="medium"
+                    >
+                      Добавить товар
+                    </Button>
+                  </Box>
                 </Box>
               </Box>
 
               {/* No Products Message */}
-              {invoiceProducts.length === 0 && (
+              {invoiceProducts.length === 0 && !cliche && (
                 <Box 
                   sx={{ 
                     mt: 3.5, 
@@ -2090,6 +2152,86 @@ const Invoices = ({ currentUser }) => {
                   )}
                 </Card>
               ))}
+
+              {/* Cliche */}
+              {cliche && (
+                <Card
+                  sx={{
+                    mb: 2.5,
+                    p: 3,
+                    boxShadow: 'none',
+                    border: '1px solid #e0e0e0',
+                    backgroundColor: '#fffaf3',
+                    borderRadius: '10px'
+                  }}
+                >
+                  <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2.5}>
+                    <Typography variant="subtitle1" fontWeight="500">
+                      {CLICHE_NAME}
+                    </Typography>
+                    <IconButton
+                      onClick={() => setCliche(null)}
+                      color="error"
+                      size="medium"
+                      sx={{
+                        backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                        '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.12)' }
+                      }}
+                    >
+                      <Delete fontSize="small" />
+                    </IconButton>
+                  </Box>
+
+                  <Grid container spacing={2.5}>
+                    <Grid item xs={12} sm={4}>
+                      <NumericFormat
+                        customInput={TextField}
+                        fullWidth
+                        label="Количество"
+                        value={cliche.quantity}
+                        onValueChange={(values) => updateClicheField('quantity', values.value)}
+                        thousandSeparator=" "
+                        allowNegative={false}
+                        decimalScale={0}
+                        size="medium"
+                        InputProps={{ sx: { padding: '8px 14px', fontSize: '15px' } }}
+                        InputLabelProps={{ sx: { fontSize: '15px' } }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <NumericFormat
+                        customInput={TextField}
+                        fullWidth
+                        label="Цена за единицу (сум)"
+                        value={cliche.price}
+                        onValueChange={(values) => updateClicheField('price', values.value)}
+                        thousandSeparator=" "
+                        allowNegative={false}
+                        decimalScale={0}
+                        size="medium"
+                        InputProps={{ sx: { padding: '8px 14px', fontSize: '15px' } }}
+                        InputLabelProps={{ sx: { fontSize: '15px' } }}
+                      />
+                    </Grid>
+                  </Grid>
+
+                  {calculateClicheTotal() > 0 && (
+                    <Box
+                      sx={{
+                        mt: 2,
+                        p: 1.5,
+                        backgroundColor: 'rgba(0, 128, 128, 0.06)',
+                        borderRadius: 1,
+                        border: '1px solid rgba(0, 128, 128, 0.12)'
+                      }}
+                    >
+                      <Typography variant="body2" fontWeight="500" color="primary">
+                        Сумма: {calculateClicheTotal().toLocaleString('ru-RU')} сум
+                      </Typography>
+                    </Box>
+                  )}
+                </Card>
+              )}
 
               {/* Total Amount */}
               {calculateTotalAmount() > 0 && (
