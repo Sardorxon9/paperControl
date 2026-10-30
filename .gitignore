@@ -22,3 +22,12 @@ nul
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# secrets — NEVER commit (repo is public; bots scrape GitHub for tokens)
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+.claude/settings.local.json
