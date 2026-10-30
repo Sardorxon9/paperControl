@@ -9,8 +9,9 @@ const FIREBASE_PROJECT_ID = 'paper-control-6bce2';
 const FIREBASE_API_KEY = 'AIzaSyBoYiTk7tqrpDKOvG9mDHHTlfP77MZ4sKA';
 const FIRESTORE_API = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`;
 
-// Optional: set the same value as `secret_token` in setWebhook so forged POSTs
-// to this URL (with a whitelisted from.id) are rejected.
+// Required: must equal the `secret_token` passed to setWebhook, so forged POSTs
+// to this URL (with a whitelisted from.id) are rejected. If unset, every call
+// is rejected (fail closed) rather than silently accepting forged updates.
 const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
 
 // Whitelist: only these Telegram user IDs (from.id) may use the bot.
@@ -1286,7 +1287,13 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (TELEGRAM_WEBHOOK_SECRET && !hasValidWebhookSecret(req)) {
+  if (!TELEGRAM_WEBHOOK_SECRET) {
+    console.error('[auth] TELEGRAM_WEBHOOK_SECRET is not set — rejecting all webhook calls');
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  if (!hasValidWebhookSecret(req)) {
     console.warn('[auth] rejected webhook call with bad/missing secret token');
     res.status(401).json({ error: 'Unauthorized' });
     return;
