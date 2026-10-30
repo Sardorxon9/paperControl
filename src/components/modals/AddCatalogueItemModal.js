@@ -26,13 +26,13 @@ import {
   addDoc,
   serverTimestamp
 } from 'firebase/firestore';
-import { db } from '../../services/firebase';
+import { db, getAuthHeader } from '../../services/firebase';
 import { brandColors } from '../../theme/colors';
 
 // ImageKit upload function
 const uploadToImageKit = async (file) => {
   try {
-    const authResponse = await fetch("/api/auth");
+    const authResponse = await fetch("/api/auth", { headers: await getAuthHeader() });
     if (!authResponse.ok) {
       throw new Error("Failed to get auth parameters from server.");
     }

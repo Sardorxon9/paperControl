@@ -20,7 +20,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../../services/firebase";
+import { db, getAuthHeader } from "../../services/firebase";
 import { brandColors } from "../../theme/colors";
 
 // Default placeholder
@@ -30,7 +30,7 @@ const DEFAULT_PLACEHOLDER_URL =
 // Upload function for ImageKit
 const uploadToImageKit = async (file) => {
   try {
-    const authResponse = await fetch("/api/auth");
+    const authResponse = await fetch("/api/auth", { headers: await getAuthHeader() });
     if (!authResponse.ok) {
       throw new Error("Failed to get auth parameters from server.");
     }

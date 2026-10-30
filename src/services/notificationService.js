@@ -1,4 +1,5 @@
 import { collection, getDocs, query, where } from "firebase/firestore";
+import { getAuthHeader } from "./firebase";
 
 /**
  * Checks if paper remaining is low and sends notifications to admin users via Telegram
@@ -92,7 +93,8 @@ export const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen,
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        ...(await getAuthHeader())
       },
       body: JSON.stringify({
         adminChatIds,

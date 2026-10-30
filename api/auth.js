@@ -1,6 +1,9 @@
 import crypto from "crypto";
+import { requireUser } from "./_auth.js";
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
+  if (!(await requireUser(req, res))) return;
+
   try {
     const IMAGEKIT_PRIVATE_KEY = process.env.IMAGEKIT_PRIVATE_KEY;
     const IMAGEKIT_PUBLIC_KEY = process.env.IMAGEKIT_PUBLIC_KEY;

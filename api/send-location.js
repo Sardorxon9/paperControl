@@ -1,10 +1,12 @@
 // api/send-location.js
+import { requireUser } from './_auth.js';
+
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -20,8 +22,13 @@ export default async function handler(req, res) {
     return;
   }
 
+  const user = await requireUser(req, res);
+  if (!user) return;
+
   try {
-    const { chatId, userName, firstName, restaurantName, latitude, longitude } = req.body;
+    // Only ever send to the caller's own linked chat
+    const chatId = user.chatId;
+    const { userName, firstName, restaurantName, latitude, longitude } = req.body;
 
     if (!chatId || !restaurantName || !latitude || !longitude) {
       return res.status(400).json({ 

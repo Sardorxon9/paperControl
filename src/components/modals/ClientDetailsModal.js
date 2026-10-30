@@ -14,7 +14,7 @@ import {
 } from "firebase/firestore";
 import EditIcon from '@mui/icons-material/Edit';
 import TelegramIcon from '@mui/icons-material/Telegram';
-import { db } from "../../services/firebase";
+import { db, getAuthHeader } from "../../services/firebase";
 import {
   Box,
   Button,
@@ -743,7 +743,8 @@ try {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        ...(await getAuthHeader())
       },
       body: JSON.stringify({
         chatId,

@@ -47,7 +47,7 @@ import {
   addDoc,
   deleteDoc
 } from "firebase/firestore";
-import { db } from "../../services/firebase";
+import { db, getAuthHeader } from "../../services/firebase";
 
 import '../../styles/EditClientForm.css'
 // 🔗 Default placeholder
@@ -57,7 +57,7 @@ const DEFAULT_PLACEHOLDER_URL =
 // 🔧 Upload function (same as in ImageUploadComponent)
 const uploadToImageKit = async (file) => {
   try {
-    const authResponse = await fetch("/api/auth");
+    const authResponse = await fetch("/api/auth", { headers: await getAuthHeader() });
     if (!authResponse.ok) {
       throw new Error("Failed to get auth parameters from server.");
     }

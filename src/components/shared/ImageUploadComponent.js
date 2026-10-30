@@ -14,11 +14,12 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import { getAuthHeader } from '../../services/firebase';
 
 // Function to upload a single image to ImageKit
 const uploadToImageKit = async (file) => {
   try {
-    const authResponse = await fetch('/api/auth');
+    const authResponse = await fetch('/api/auth', { headers: await getAuthHeader() });
     if (!authResponse.ok) {
       throw new Error('Failed to get auth parameters from server.');
     }

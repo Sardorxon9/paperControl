@@ -1,11 +1,13 @@
 // api/send-low-paper-summary.js
+import { requireUser, getAdminChatIds } from './_auth.js';
+
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -21,19 +23,23 @@ export default async function handler(req, res) {
     return;
   }
 
+  const user = await requireUser(req, res);
+  if (!user) return;
+
   try {
     console.log('Low paper summary request body:', req.body);
     console.log('Bot token exists:', !!TELEGRAM_BOT_TOKEN);
 
-    const { adminChatIds, clients } = req.body;
+    const { clients } = req.body;
+    // Recipients come from Firestore, not the request body
+    const adminChatIds = await getAdminChatIds(user.idToken);
 
     // Enhanced validation
     if (!adminChatIds || !Array.isArray(adminChatIds) || adminChatIds.length === 0) {
       console.error('Invalid adminChatIds:', adminChatIds);
       return res.status(400).json({
         success: false,
-        error: 'Missing or invalid adminChatIds array',
-        received: { adminChatIds, type: typeof adminChatIds, isArray: Array.isArray(adminChatIds) }
+        error: 'No admins with a linked Telegram chat'
       });
     }
 

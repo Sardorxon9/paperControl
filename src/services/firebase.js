@@ -24,4 +24,10 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 
-export { db, auth };
+// Login header for our /api routes — they reject calls without a valid login
+const getAuthHeader = async () => {
+  const token = await auth.currentUser?.getIdToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+export { db, auth, getAuthHeader };

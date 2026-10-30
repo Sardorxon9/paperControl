@@ -37,7 +37,7 @@ import {
   History,
   Send
 } from '@mui/icons-material';
-import { db } from "../services/firebase";
+import { db, getAuthHeader } from "../services/firebase";
 import {
   collection,
   getDocs,
@@ -270,8 +270,8 @@ const InvoiceHistory = ({ currentUser }) => {
     try {
       const response = await fetch('/api/send-invoice-telegram', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invoiceId, userUid: currentUser.uID })
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeader()) },
+        body: JSON.stringify({ invoiceId })
       });
 
       const result = await response.json();

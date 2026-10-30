@@ -1,4 +1,5 @@
 import { collection, getDocs, query, where } from "firebase/firestore";
+import { getAuthHeader } from "./firebase";
 
 /**
  * Checks if paper remaining is low and sends notifications to admin users
@@ -47,6 +48,7 @@ const checkAndNotifyLowPaper = async (client, paperRemaining, notifyWhen, db) =>
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(await getAuthHeader()),
         },
         body: JSON.stringify({
           adminChatIds,
@@ -136,6 +138,7 @@ const sendLowPaperSummaryToAdmins = async (db, clients) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(await getAuthHeader()),
         },
         body: JSON.stringify({
           adminChatIds,

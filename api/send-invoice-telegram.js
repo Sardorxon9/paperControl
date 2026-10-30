@@ -1,4 +1,6 @@
 // api/send-invoice-telegram.js - Send invoice PDF to user's Telegram
+import { requireUser } from './_auth.js';
+
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const HTML2PDF_API_KEY = process.env.HTML2PDF_API_KEY;
 
@@ -8,7 +10,7 @@ const FIRESTORE_API = `https://firestore.googleapis.com/v1/projects/${FIREBASE_P
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -21,11 +23,14 @@ export default async function handler(req, res) {
     return;
   }
 
-  try {
-    const { invoiceId, userUid } = req.body;
+  const user = await requireUser(req, res);
+  if (!user) return;
 
-    if (!invoiceId || !userUid) {
-      return res.status(400).json({ success: false, error: 'Missing invoiceId or userUid' });
+  try {
+    const { invoiceId } = req.body;
+
+    if (!invoiceId) {
+      return res.status(400).json({ success: false, error: 'Missing invoiceId' });
     }
 
     if (!TELEGRAM_BOT_TOKEN) {
@@ -36,22 +41,8 @@ export default async function handler(req, res) {
       return res.status(500).json({ success: false, error: 'HTML2PDF_API_KEY not configured' });
     }
 
-    // 1. Fetch user to get chatId
-    const usersResponse = await fetch(
-      `${FIRESTORE_API}/users?pageSize=100`
-    );
-    const usersData = await usersResponse.json();
-
-    let chatId = null;
-    if (usersData.documents) {
-      const userDoc = usersData.documents.find(doc => {
-        const fields = doc.fields;
-        return fields.uID?.stringValue === userUid;
-      });
-      if (userDoc) {
-        chatId = userDoc.fields.chatId?.stringValue;
-      }
-    }
+    // 1. Send only to the caller's own linked chat
+    const chatId = user.chatId;
 
     if (!chatId) {
       return res.status(400).json({ success: false, error: 'User has no Telegram chatId linked' });
